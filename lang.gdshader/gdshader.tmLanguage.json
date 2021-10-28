@@ -1,0 +1,158 @@
+{
+  "name": "GDShader",
+  "fileTypes": [ "gdshader" ],
+  "patterns": [
+    { "include": "#BLOCK_COMMENT" },
+    { "include": "#LINE_COMMENT" },
+    
+    { "include": "#element" },
+    { "include": "#separator" },
+    { "include": "#operator" }
+  ],
+  "repository": {
+    "BLOCK_COMMENT": {
+      "name": "comment.block.gdshader",
+      "begin": "/\\*",
+      "end": "\\*/"
+    },
+    "LINE_COMMENT": {
+      "name": "comment.line.double-slash.gdshader",
+      "begin": "//",
+      "end": "$"
+    },
+    
+    "specialDirective": {
+      "name": "meta.preprocessor.gdshader",
+      "begin": "\\b(shader_type|render_mode)\\b",
+      "beginCaptures": {
+        "1": { "name": "keyword.other.gdshader" }
+      },
+      "patterns": [
+        { "include": "#BLOCK_COMMENT" },
+        { "include": "#LINE_COMMENT" },
+        {
+          "name": "entity.name.class.gdshader",
+          "match": "\\b[a-z_]+\\b"
+        },
+        {
+          "name": "separator.gdshader",
+          "match": ","
+        }
+      ],
+      "end": ";",
+      "endCaptures": {
+        "0": { "name": "separator.gdshader" }
+      }
+    },
+    "modifierKeyword": {
+      "name": "storage.modifier.gdshader",
+      "match": "\\b(?:const|uniform|varying|(?:low|medium|high)p|in|out|inout|flat|smooth)\\b"
+    },
+    "controlKeyword": {
+      "name": "keyword.control.gdshader",
+      "match": "\\b(?:if|else|do|while|for|continue|break|switch|case|default|return|discard)\\b"
+    },
+    "typeKeyword": {
+      "name": "storage.type.gdshader",
+      "match": "\\b(?:void|bool|[biu]?vec[234]|u?int|float|mat[234]|[iu]?sampler(?:3D|2D(?:Array)?)|samplerCube)\\b"
+    },
+    "hintKeyword": {
+      "name": "support.class.gdshader",
+      "match": "\\bhint_(?:color|range|(?:black_)?albedo|normal|white|black|aniso)\\b"
+    },
+    "languageConstant_Bool": {
+      "name": "constant.language.bool.boolean.gdshader",
+      "match": "\\b(?:false|true)\\b"
+    },
+    "varGlobal": {
+      "name": "variable.language.gdshader",
+      "match": "\\b(?:[A-Z][A-Z_0-9]*)\\b"
+    },
+    "L_Int": {
+      "name": "constant.numeric.int.integer.gdshader",
+      "match": "\\b(?:0x[0-9A-Fa-f]+|[0-9]+)\\b"
+    },
+    "L_Float": {
+      "name": "constant.numeric.float.gdshader",
+      "match": "\\b[0-9]+\\.[0-9]*(?:f|e[-+]?[0-9]+)?|\\.[0-9]+(?:f|e[-+]?[0-9]+)?|\\b[0-9]+(?:f|e[-+]?[0-9]*)"
+    },
+    
+    "languageFunction": {
+      "name": "entity.other.inherited-class.gdshader",
+      "match": "\\b(?:vertex|fragment|light)(?=(?:\\s|/\\*(?:\\*(?!/)|[^*])*\\*/)*[(])"
+    },
+    "ID_function": {
+      "name": "entity.name.function.gdshader",
+      "match": "\\b[a-zA-Z_]\\w*(?=(?:\\s|/\\*(?:\\*(?!/)|[^*])*\\*/)*[(])"
+    },
+    "ID_var": {
+      "name": "variable.name.gdshader",
+      "match": "\\b[a-zA-Z_]\\w*\\b"
+    },
+    "ID_property": {
+      "begin": "\\.",
+      "beginCaptures": {
+        "0": { "name": "separator.gdshader" }
+      },
+      "patterns": [
+        { "include": "#BLOCK_COMMENT" },
+        { "include": "#LINE_COMMENT" }
+      ],
+      "end": "\\b([a-zA-Z_]\\w*)\\b|[^/ \t\r\n]",
+      "endCaptures": {
+        "1": { "name": "entity.other.attribute-name.gdshader" }
+      }
+    },
+    
+    "enclosed": {
+      "name": "meta.expression.enclosed.gdshader",
+      "begin": "\\(",
+      "end": "\\)",
+      "captures": {
+        "0": {
+          "name": "delimiter.expression.enclosed.gdshader"
+        }
+      },
+      "patterns": [
+        { "include": "#BLOCK_COMMENT" },
+        { "include": "#LINE_COMMENT" },
+        
+        { "include": "#separator" },
+        { "include": "#element" }
+      ]
+    },
+    "element": {
+      "name": "meta.expression.gdshader",
+      "patterns": [
+        { "include": "#BLOCK_COMMENT" },
+        { "include": "#LINE_COMMENT" },
+        { "include": "#enclosed" },
+        
+        { "include": "#specialDirective" },
+        { "include": "#modifierKeyword" },
+        { "include": "#controlKeyword" },
+        { "include": "#typeKeyword" },
+        { "include": "#hintKeyword" },
+        { "include": "#languageConstant_Bool" },
+        { "include": "#varGlobal" },
+        
+        { "include": "#L_Float" },
+        { "include": "#L_Int" },
+        { "include": "#languageFunction" },
+        { "include": "#ID_function" },
+        { "include": "#ID_var" },
+        { "include": "#ID_property" }
+      ]
+    },
+    
+    "operator": {
+      "name": "keyword.operator.gdshader",
+      "match": "\\<\\<\\=?|\\>\\>\\=?|[-+*/&|<>=!]\\=|\\&\\&|[|][|]|[-+~!*/%<>&^|=]"
+    },
+    "separator": {
+      "name": "separator.gdshader",
+      "match": "[.,;:]"
+    }
+  },
+  "scopeName": "source.gdshader"
+}
