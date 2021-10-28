@@ -1,0 +1,87 @@
+{
+  "name": "godot-files",
+  "version": "0.0.1",
+  "displayName": "Godot Files",
+  "description": "Provides syntax-highlighting for some files supported by Godot Editor.",
+  "icon": "godot-icon.svg",
+  "keywords": [
+    "godot",
+    "gdshader",
+    "shader",
+    "shading",
+    "gd"
+  ],
+  "publisher": "alfish",
+  "license": "0BSD",
+  "engines": {
+    "vscode": "^1.56.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "type": "commonjs",
+  "contributes": {
+    "languages": [
+      {
+        "id": "gdshader",
+        "aliases": [
+          "Godot Shader",
+          "Godot Shading Language",
+          "GDShader"
+        ],
+        "extensions": [
+          ".gdshader"
+        ],
+        "configuration": "./lang.gdshader/gdshader.language-configuration.json"
+      },
+      {
+        "id": "gdasset",
+        "aliases": [
+          "Godot Asset",
+          "GDAsset"
+        ],
+        "extensions": [
+          ".cfg",
+          ".tres",
+          ".tscn",
+          ".godot",
+          ".gdns",
+          ".gdnlib",
+          ".import"
+        ],
+        "configuration": "./lang.gdasset/gdasset.language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "gdshader",
+        "scopeName": "source.gdshader",
+        "path": "./lang.gdshader/gdshader.tmLanguage.json"
+      },
+      {
+        "language": "gdasset",
+        "scopeName": "source.gdasset",
+        "path": "./lang.gdasset/gdasset.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "gdshader",
+        "path": "./lang.gdshader/gdshader.code-snippets"
+      }
+    ],
+    "problemMatchers": [
+    ],
+    "commands": [
+    ]
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/vscode": "^1.56.0"
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "vscode:prepublish": "npm run compile"
+  }
+}

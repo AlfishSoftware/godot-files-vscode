@@ -1,0 +1,35 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "CommonJS",
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "noImplicitThis": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "strict": true,
+    // TS
+    "rootDir": "src",
+    "outDir": "src-gen/js",
+    "sourceMap": true,
+    // JS
+    "allowJs": true,
+    "checkJs": true,
+  },
+  "exclude": [
+    "node_modules",
+    ".vscode-test",
+    "src-gen/js",
+    "dist",
+    "bower_components",
+    "tmp", "temp",
+    "jspm_packages",
+  ],
+  "typeAcquisition": {
+    "enable": true,
+    "include": [
+      "node",
+    ],
+  },
+}
