@@ -31,7 +31,7 @@
         { "include": "#BLOCK_COMMENT" },
         { "include": "#LINE_COMMENT" },
         {
-          "name": "entity.name.class.gdshader",
+          "name": "entity.name.tag.gdshader",
           "match": "\\b[a-z_]+\\b"
         },
         {
@@ -53,11 +53,11 @@
       "match": "\\b(?:if|else|do|while|for|continue|break|switch|case|default|return|discard)\\b"
     },
     "typeKeyword": {
-      "name": "storage.type.gdshader",
+      "name": "support.type.gdshader",
       "match": "\\b(?:void|bool|[biu]?vec[234]|u?int|float|mat[234]|[iu]?sampler(?:3D|2D(?:Array)?)|samplerCube)\\b"
     },
     "hintKeyword": {
-      "name": "support.class.gdshader",
+      "name": "entity.other.inherited-class.gdshader",
       "match": "\\bhint_(?:color|range|(?:black_)?albedo|normal|white|black|aniso)\\b"
     },
     "languageConstant_Bool": {
@@ -78,7 +78,7 @@
     },
     
     "languageFunction": {
-      "name": "entity.other.inherited-class.gdshader",
+      "name": "support.function.gdshader",
       "match": "\\b(?:vertex|fragment|light)(?=(?:\\s|/\\*(?:\\*(?!/)|[^*])*\\*/)*[(])"
     },
     "ID_function": {
