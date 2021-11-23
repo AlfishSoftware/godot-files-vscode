@@ -68,6 +68,10 @@
       {
         "language": "gdshader",
         "path": "./lang.gdshader/gdshader.code-snippets"
+      },
+      {
+        "language": "gdasset",
+        "path": "./lang.gdasset/gdasset.code-snippets"
       }
     ],
     "problemMatchers": [

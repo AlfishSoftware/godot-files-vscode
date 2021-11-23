@@ -14,6 +14,7 @@
 				{ "include": "#stringQuoted" },
 				{ "include": "#literalWord" },
 				{ "include": "#literalNumber" },
+				{ "include": "#variableReference" },
 				{ "include": "#expressionCall" }
 			]
 		},
@@ -46,18 +47,27 @@
 			"end": "\""
 		},
 		"propertyAssignment": {
+			"match": "\\b((?:[a-zA-Z0-9_-]*[./])*[a-zA-Z0-9_-]+)\\b\\s*(=)",
+			"captures": {
+				"1": {
+					"patterns": [
+						{ "name": "punctuation.separator.namespace.gdasset", "match": "[./]" },
+						{ "include": "#literalNumber" },
+						{ "name": "variable.other.property.gdasset",
+							"match": "[a-zA-Z_-][a-zA-Z0-9_-]*(?=(?:[./][0-9]+)*$)" },
+						{ "name": "entity.name.namespace.gdasset", "match": "." }
+					]
+				},
+				"2": { "name": "punctuation.separator.key-value.gdasset" }
+			}
+		},
+		"attributeAssignment": {
 			"match": "\\b((?:[a-zA-Z0-9_-]*[./])*)([a-zA-Z0-9_-]+)\\b\\s*(=)",
 			"captures": {
 				"1": {
 					"patterns": [
-						{
-							"name": "punctuation.separator.namespace.gdasset",
-							"match": "[./]"
-						},
-						{
-							"name": "entity.other.attribute-name.namespace.gdasset",
-							"match": "."
-						}
+						{ "name": "punctuation.separator.namespace.gdasset", "match": "[./]" },
+						{ "name": "entity.other.attribute-name.namespace.gdasset", "match": "." }
 					]
 				},
 				"2": { "name": "entity.other.attribute-name.localname.gdasset" },
@@ -66,18 +76,21 @@
 		},
 		"literalWord": {
 			"name": "constant.language.gdasset",
-			"match": "\\b(?:null|true|false)\\b"
+			"match": "\\b(?:null|false|true|inf|inf_neg|nan)\\b"
 		},
 		"literalNumber": {
 			"name": "constant.numeric.gdasset",
-			"match": "\\b[0-9]+(?:\\.[0-9]+)?\\b"
+			"match": "-?\\b[0-9]+(?:\\.[0-9]+)?(?:e[-+]?[0-9]+)?\\b"
+		},
+		"variableReference": {
+			"name": "variable.name.gdasset",
+			"match": "\\b(?:Sub|Ext)Resource\\s*[(]\\s*[0-9]+\\s*[)]"
 		},
 		"expressionCall": {
 			"name": "meta.call.gdasset",
-			"begin": "\\b(?:((?:Sub|Ext)Resource)|(\\w+))\\s*([(])",
+			"begin": "\\b(\\w+)\\s*([(])",
 			"beginCaptures": {
-				"1": { "name": "variable.language.gdasset" },
-				"2": { "name": "entity.name.function.gdasset" }
+				"1": { "name": "entity.name.function.gdasset" }
 			},
 			"patterns": [
 				{ "include": "#propertyAssignment" },
@@ -120,7 +133,7 @@
 						"3": { "name": "entity.name.namespace.gdasset" }
 					}
 				},
-				{ "include": "#propertyAssignment" },
+				{ "include": "#attributeAssignment" },
 				{ "include": "#expression" }
 			],
 			"end": "\\]",

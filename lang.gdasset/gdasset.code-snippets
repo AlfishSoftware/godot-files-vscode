@@ -1,0 +1,44 @@
+{
+	// === LANGUAGE CONSTANTS ===
+	"Null": {
+		"prefix": "null",
+		"body": "null",
+		"description": "A null value.",
+	},
+	"False": {
+		"prefix": "false",
+		"body": "false",
+		"description": "A false value.",
+	},
+	"True": {
+		"prefix": "true",
+		"body": "true",
+		"description": "A true value.",
+	},
+	"+Infinity": {
+		"prefix": "inf",
+		"body": "inf",
+		"description": "A value of positive infinity.",
+	},
+	"-Infinity": {
+		"prefix": "inf_neg",
+		"body": "inf_neg",
+		"description": "A value of negative infinity.",
+	},
+	"NaN": {
+		"prefix": "nan",
+		"body": "nan",
+		"description": "A Not-a-Number value.",
+	},
+	// === VARIABLE REFERENCES ===
+	"sub_resource": {
+		"prefix": "SubResource",
+		"body": "SubResource( ${id} )",
+		"description": "A reference to a sub-resource by id.",
+	},
+	"ext_resource": {
+		"prefix": "ExtResource",
+		"body": "ExtResource( ${id} )",
+		"description": "A reference to an external resource by id.",
+	},
+}
