@@ -31,7 +31,7 @@
         { "include": "#BLOCK_COMMENT" },
         { "include": "#LINE_COMMENT" },
         {
-          "name": "entity.name.tag.gdshader",
+          "name": "entity.other.inherited-class.gdshader",
           "match": "\\b[a-z_]+\\b"
         },
         {
@@ -57,7 +57,7 @@
       "match": "\\b(?:void|bool|[biu]?vec[234]|u?int|float|mat[234]|[iu]?sampler(?:3D|2D(?:Array)?)|samplerCube)\\b"
     },
     "hintKeyword": {
-      "name": "entity.other.inherited-class.gdshader",
+      "name": "storage.type.gdshader",
       "match": "\\bhint_(?:color|range|(?:black_)?albedo|normal|white|black|aniso)\\b"
     },
     "languageConstant_Bool": {
