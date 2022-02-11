@@ -44,6 +44,7 @@
           ".cfg",
           ".tres",
           ".tscn",
+          ".escn",
           ".godot",
           ".gdns",
           ".gdnlib",

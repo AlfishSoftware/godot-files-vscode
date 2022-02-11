@@ -3,6 +3,7 @@
     "GLES",
     "bfnrt",
     "clearCoat",
+    "escn",
     "flowMaps",
     "fragCoord",
     "gdasset",
@@ -11,6 +12,7 @@
     "gdshader",
     "mipmaps",
     "modelView",
-    "normalMap"
+    "normalMap",
+    "tscn",
   ],
 }
