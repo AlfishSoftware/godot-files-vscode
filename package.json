@@ -9,7 +9,13 @@
     "gdshader",
     "shader",
     "shading",
-    "gd"
+    "gd",
+    "asset",
+    "config",
+    "properties",
+    "ini",
+    "freedesktop",
+    "xdg"
   ],
   "publisher": "alfish",
   "license": "0BSD",
@@ -37,6 +43,7 @@
       {
         "id": "gdasset",
         "aliases": [
+          "Asset Properties",
           "Godot Asset",
           "GDAsset"
         ],
@@ -51,6 +58,19 @@
           ".import"
         ],
         "configuration": "./lang.gdasset/gdasset.language-configuration.json"
+      },
+      {
+        "id": "asset-properties",
+        "aliases": [
+          "Configuration Definition",
+          "Desktop Entry"
+        ],
+        "extensions": [
+          ".desktop",
+          ".directory"
+        ],
+        "firstLine": "\\[Desktop Entry\\]",
+        "configuration": "./lang.asset-properties/asset-properties.language-configuration.json"
       }
     ],
     "grammars": [
@@ -63,6 +83,11 @@
         "language": "gdasset",
         "scopeName": "source.gdasset",
         "path": "./lang.gdasset/gdasset.tmLanguage.json"
+      },
+      {
+        "language": "asset-properties",
+        "scopeName": "source.gdasset",
+        "path": "./lang.gdasset/gdasset.tmLanguage.json"
       }
     ],
     "snippets": [
@@ -73,6 +98,10 @@
       {
         "language": "gdasset",
         "path": "./lang.gdasset/gdasset.code-snippets"
+      },
+      {
+        "language": "asset-properties",
+        "path": "./lang.asset-properties/asset-properties.code-snippets"
       }
     ],
     "problemMatchers": [
