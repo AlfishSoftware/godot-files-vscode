@@ -1,15 +1,16 @@
 {
   "cSpell.words": [
-    "GLES",
     "bfnrt",
     "clearCoat",
     "escn",
     "flowMaps",
     "fragCoord",
+    "functionlike",
     "gdasset",
     "gdnlib",
     "gdns",
     "gdshader",
+    "GLES",
     "mipmaps",
     "modelView",
     "normalMap",

@@ -33,12 +33,12 @@
 	// === VARIABLE REFERENCES ===
 	"sub_resource": {
 		"prefix": "SubResource",
-		"body": "SubResource( ${id} )",
+		"body": "SubResource( ${1:id} )",
 		"description": "A reference to a sub-resource by id.",
 	},
 	"ext_resource": {
 		"prefix": "ExtResource",
-		"body": "ExtResource( ${id} )",
+		"body": "ExtResource( ${1:id} )",
 		"description": "A reference to an external resource by id.",
 	},
 }
