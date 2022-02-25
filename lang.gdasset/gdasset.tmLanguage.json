@@ -62,24 +62,30 @@
 				"2": { "name": "comment.block.character.escape.gdasset" }
 			}
 		},
+		"stringQuotedGuid": {
+			"name": "string.quoted.double.guid.gdasset",
+			"match": "(\")([0-9A-Fa-f]{32}|[0-9A-Fa-f]{8}(?:-[0-9A-Fa-f]{4}){3}-[0-9A-Fa-f]{12})(\")",
+			"captures": {
+				"1": { "name": "punctuation.definition.string.quoted.double.guid.gdasset" },
+				"2": { "name": "string.quoted.double.content.guid.gdasset" },
+				"3": { "name": "punctuation.definition.string.quoted.double.guid.gdasset" }
+			}
+		},
 		"dictionaryKeyQuoted": {
 			"name": "string.dictionary-key.quoted.double.gdasset",
-			"match": "(\")((?:\\\\.|[^\"\\\\])*)(\")(?=\\s*:)",
+			"match": "(\")([a-zA-Z_][a-zA-Z0-9_-]*\\b)(\")(?=\\s*:)",
 			"captures": {
 				"1": { "name": "punctuation.definition.entity.string.dictionary-key.quoted.double.gdasset" },
-				"2": {
-					"name": "entity.string.dictionary-key.quoted.double.content.gdasset",
-					"patterns": [
-						{ "include": "#characterEscape" }
-					]
-				},
+				"2": { "name": "entity.string.dictionary-key.quoted.double.content.gdasset" },
 				"3": { "name": "punctuation.definition.entity.string.dictionary-key.quoted.double.gdasset" }
 			}
 		},
 		"dictionaryKey": {
 			"name": "meta.structure.dictionary.key.gdasset",
 			"patterns": [
-				{ "include": "#dictionaryKeyQuoted" }
+				{ "include": "#stringQuotedGuid" },
+				{ "include": "#dictionaryKeyQuoted" },
+				{ "include": "#expression" }
 			]
 		},
 		"dictionaryValue": {
@@ -124,14 +130,14 @@
 			"end": "\\]"
 		},
 		"propertyAssignment": {
-			"match": "\\b((?:[\\w-]*[./])*[\\w-]+)\\b(?:\\s*\\[([\\w\\\\/.:!@$%+-]+)\\])?\\s*(=)",
+			"match": "((?:\\b[\\w-]+\\b[./])*\\b[\\w-]+\\b)(?:\\s*\\[([\\w\\\\/.:!@$%+-]+)\\])?\\s*(=)",
 			"captures": {
 				"1": {
 					"patterns": [
 						{ "name": "punctuation.separator.namespace.gdasset", "match": "[./]" },
 						{ "include": "#literalNumber" },
 						{ "name": "variable.other.property.gdasset",
-							"match": "[\\w-]+(?=(?:[./][0-9]+)*$)" },
+							"match": "\\b[\\w-]+\\b(?=(?:/[0-9]+)*$)" },
 						{ "name": "entity.name.variable.field.gdasset", "match": "." }
 					]
 				},
@@ -140,7 +146,7 @@
 			}
 		},
 		"attributeAssignment": {
-			"match": "\\b((?:[\\w-]*[./])*)([\\w-]+)\\b\\s*(=)",
+			"match": "((?:\\b[\\w-]+\\b[./])*)(\\b[\\w-]+\\b)\\s*(=)",
 			"captures": {
 				"1": {
 					"patterns": [
@@ -158,7 +164,7 @@
 		},
 		"literalNumber": {
 			"name": "constant.numeric.gdasset",
-			"match": "(?<![.])-?\\b[0-9]+(?:\\.[0-9]+)?(?:e[-+]?[0-9]+)?\\b(?=[,;#)\\]}]|\\s|$)"
+			"match": "(?<![.])-?\\b[0-9]+(?:\\.[0-9]+)?(?:e[-+]?[0-9]+)?\\b"
 		},
 		"extResourceReference": {
 			"name": "meta.reference.resource.ext.gdasset",
