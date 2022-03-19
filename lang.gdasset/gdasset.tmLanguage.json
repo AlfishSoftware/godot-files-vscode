@@ -226,6 +226,22 @@
 					}
 				},
 				{
+					"match": "\\b(signal)\\s*(=)\\s*\"(\\w+)\"",
+					"captures": {
+						"1": { "name": "entity.other.attribute-name.signal.gdasset" },
+						"2": { "name": "punctuation.separator.key-value.gdasset" },
+						"3": { "name": "entity.name.type.delegate.gdasset" }
+					}
+				},
+				{
+					"match": "\\b(method)\\s*(=)\\s*\"(\\w+)\"",
+					"captures": {
+						"1": { "name": "entity.other.attribute-name.method.gdasset" },
+						"2": { "name": "punctuation.separator.key-value.gdasset" },
+						"3": { "name": "entity.name.function.member.gdasset" }
+					}
+				},
+				{
 					"match": "(?<=\\[ext_resource\\s+)\\b(path)\\s*(=)\\s*\"(.+?)\"",
 					"captures": {
 						"1": { "name": "entity.other.attribute-name.path.link.gdasset" },
@@ -234,7 +250,7 @@
 					}
 				},
 				{
-					"match": "\\b(path|parent)\\s*(=)\\s*\"(.+?)\"",
+					"match": "\\b(path|parent|from|to)\\s*(=)\\s*\"(.+?)\"",
 					"captures": {
 						"1": { "name": "entity.other.attribute-name.reference.gdasset" },
 						"2": { "name": "punctuation.separator.key-value.gdasset" },
