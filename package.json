@@ -90,7 +90,11 @@
       {
         "language": "gdasset",
         "scopeName": "source.gdasset",
-        "path": "./lang.gdasset/gdasset.tmLanguage.json"
+        "path": "./lang.gdasset/gdasset.tmLanguage.json",
+        "embeddedLanguages": {
+          "meta.embedded.block.gdshader": "gdshader",
+          "meta.embedded.block.gdscript": "gdscript"
+        }
       },
       {
         "language": "asset-properties",
