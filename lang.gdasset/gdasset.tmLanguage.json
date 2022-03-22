@@ -164,7 +164,7 @@
 		},
 		"literalNumber": {
 			"name": "constant.numeric.gdasset",
-			"match": "(?<![.])-?\\b[0-9]+(?:\\.[0-9]+)?(?:e[-+]?[0-9]+)?\\b"
+			"match": "(?<![.])-?\\b[0-9]+(?:\\.[0-9]+)?(?:e[-+]?[0-9]+)?\\b(?=$|[\\s#;,}\\]):=])"
 		},
 		"extResourceReference": {
 			"name": "meta.reference.resource.ext.gdasset",
@@ -210,8 +210,8 @@
 			}
 		},
 		"section": {
-			"name": "meta.section.gdasset",
-			"begin": "^\\s*(\\[)\\s*([^\\[\\] \t\r\n]+)(?=.*?\\]\\s*(?:[;#].*)?$)",
+			"name": "meta.section.header.gdasset",
+			"begin": "^\\s*(\\[)\\s*([^\\[\\]\\s]+)(?=.*?\\]\\s*(?:[;#].*)?$)",
 			"beginCaptures": {
 				"1": { "name": "punctuation.definition.section.gdasset" },
 				"2": { "name": "keyword.other.section.gdasset entity.name.section.gdasset" }
