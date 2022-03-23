@@ -12,6 +12,7 @@
     "gdscript",
     "gdshader",
     "GLES",
+    "godot",
     "mipmaps",
     "modelView",
     "normalMap",

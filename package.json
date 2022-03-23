@@ -3,7 +3,14 @@
   "version": "0.0.1",
   "displayName": "Godot Files",
   "description": "Provides syntax-highlighting for some files supported by Godot Editor.",
-  "icon": "godot-icon.svg",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AlfishSoftware/godot-files-vscode"
+  },
+  "bugs": {
+    "url": "https://github.com/AlfishSoftware/godot-files-vscode/issues"
+  },
+  "icon": "godot.png",
   "keywords": [
     "godot",
     "gdshader",
