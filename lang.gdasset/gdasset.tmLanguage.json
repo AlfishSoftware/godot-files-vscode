@@ -212,22 +212,24 @@
 			}
 		},
 		"resourceShader": {
-			"begin": "^\\s*(\\[)\\s*(sub_resource)\\s+(type)\\s*(=)\\s*\"(Shader)\"\\s*(.*?)(\\])\\s*(?=(?:[;#].*)?$)",
+			"begin": "^\\s*(\\[)\\s*(sub_resource)\\s+(type)\\s*(=)\\s*(\")(Shader)(\")\\s*(.*?)(\\])\\s*(?=(?:[;#].*)?$)",
 			"beginCaptures": {
 				"0": { "name": "meta.section.header.shader.gdasset" },
 				"1": { "name": "punctuation.definition.section.gdasset" },
 				"2": { "name": "keyword.other.section.gdasset entity.name.section.gdasset" },
 				"3": { "name": "entity.other.attribute-name.type.gdasset" },
 				"4": { "name": "punctuation.separator.key-value.gdasset" },
-				"5": { "name": "storage.type.gdasset" },
-				"6": {
+				"5": { "name": "punctuation.definition.string.quoted.double.gdasset" },
+				"6": { "name": "storage.type.gdasset" },
+				"7": { "name": "punctuation.definition.string.quoted.double.gdasset" },
+				"8": {
 					"patterns": [
 						{ "include": "#attributeId" },
 						{ "include": "#attributeAssignment" },
 						{ "include": "#expression" }
 					]
 				},
-				"7": { "name": "punctuation.definition.section.gdasset" }
+				"9": { "name": "punctuation.definition.section.gdasset" }
 			},
 			"patterns": [
 				{ "include": "#comment" },
@@ -255,22 +257,24 @@
 			}
 		},
 		"resourceGDScript": {
-			"begin": "^\\s*(\\[)\\s*(sub_resource)\\s+(type)\\s*(=)\\s*\"(GDScript)\"\\s*(.*?)(\\])\\s*(?=(?:[;#].*)?$)",
+			"begin": "^\\s*(\\[)\\s*(sub_resource)\\s+(type)\\s*(=)\\s*(\")(GDScript)(\")\\s*(.*?)(\\])\\s*(?=(?:[;#].*)?$)",
 			"beginCaptures": {
 				"0": { "name": "meta.section.header.gdscript.gdasset" },
 				"1": { "name": "punctuation.definition.section.gdasset" },
 				"2": { "name": "keyword.other.section.gdasset entity.name.section.gdasset" },
 				"3": { "name": "entity.other.attribute-name.type.gdasset" },
 				"4": { "name": "punctuation.separator.key-value.gdasset" },
-				"5": { "name": "storage.type.gdasset" },
-				"6": {
+				"5": { "name": "punctuation.definition.string.quoted.double.gdasset" },
+				"6": { "name": "storage.type.gdasset" },
+				"7": { "name": "punctuation.definition.string.quoted.double.gdasset" },
+				"8": {
 					"patterns": [
 						{ "include": "#attributeId" },
 						{ "include": "#attributeAssignment" },
 						{ "include": "#expression" }
 					]
 				},
-				"7": { "name": "punctuation.definition.section.gdasset" }
+				"9": { "name": "punctuation.definition.section.gdasset" }
 			},
 			"patterns": [
 				{ "include": "#comment" },
@@ -316,51 +320,75 @@
 			},
 			"patterns": [
 				{
-					"match": "\\b(type)\\s*(=)\\s*\"(\\w+)\"",
+					"match": "\\b(type)\\s*(=)\\s*(\")(\\w+)(\")",
 					"captures": {
 						"1": { "name": "entity.other.attribute-name.type.gdasset" },
 						"2": { "name": "punctuation.separator.key-value.gdasset" },
-						"3": { "name": "storage.type.gdasset" }
+						"3": { "name": "punctuation.definition.string.quoted.double.gdasset" },
+						"4": { "name": "storage.type.gdasset" },
+						"5": { "name": "punctuation.definition.string.quoted.double.gdasset" }
 					}
 				},
 				{
-					"match": "\\b(signal)\\s*(=)\\s*\"(\\w+)\"",
+					"match": "\\b(signal)\\s*(=)\\s*(\")(\\w+)(\")",
 					"captures": {
 						"1": { "name": "entity.other.attribute-name.signal.gdasset" },
 						"2": { "name": "punctuation.separator.key-value.gdasset" },
-						"3": { "name": "entity.name.type.delegate.gdasset" }
+						"3": { "name": "punctuation.definition.string.quoted.double.gdasset" },
+						"4": { "name": "entity.name.type.delegate.gdasset" },
+						"5": { "name": "punctuation.definition.string.quoted.double.gdasset" }
 					}
 				},
 				{
-					"match": "\\b(method)\\s*(=)\\s*\"(\\w+)\"",
+					"match": "\\b(method)\\s*(=)\\s*(\")(\\w+)(\")",
 					"captures": {
 						"1": { "name": "entity.other.attribute-name.method.gdasset" },
 						"2": { "name": "punctuation.separator.key-value.gdasset" },
-						"3": { "name": "entity.name.function.member.gdasset" }
+						"3": { "name": "punctuation.definition.string.quoted.double.gdasset" },
+						"4": { "name": "entity.name.function.member.gdasset" },
+						"5": { "name": "punctuation.definition.string.quoted.double.gdasset" }
 					}
 				},
 				{
-					"match": "(?<=\\[ext_resource\\s+)\\b(path)\\s*(=)\\s*\"(.+?)\"",
+					"match": "(?<=\\[ext_resource\\s+)\\b(path)\\s*(=)\\s*(\")(.+?)(\")",
 					"captures": {
 						"1": { "name": "entity.other.attribute-name.path.link.gdasset" },
 						"2": { "name": "punctuation.separator.key-value.gdasset" },
-						"3": { "name": "markup.underline.link.gdasset" }
+						"3": { "name": "punctuation.definition.string.quoted.double.gdasset" },
+						"4": { "name": "markup.underline.link.gdasset",
+							"patterns": [
+								{ "include": "#characterEscape" }
+							]
+						},
+						"5": { "name": "punctuation.definition.string.quoted.double.gdasset" }
 					}
 				},
 				{
-					"match": "\\b(path|parent|from|to)\\s*(=)\\s*\"(.+?)\"",
+					"match": "\\b(path|parent|from|to)\\s*(=)\\s*(\")(.+?)(\")",
 					"captures": {
 						"1": { "name": "entity.other.attribute-name.reference.gdasset" },
 						"2": { "name": "punctuation.separator.key-value.gdasset" },
-						"3": { "name": "variable.other.object.gdasset" }
+						"3": { "name": "punctuation.definition.string.quoted.double.gdasset" },
+						"4": { "name": "variable.other.object.gdasset",
+							"patterns": [
+								{ "include": "#characterEscape" }
+							]
+						},
+						"5": { "name": "punctuation.definition.string.quoted.double.gdasset" }
 					}
 				},
 				{
-					"match": "\\b(name)\\s*(=)\\s*\"(.+?)\"",
+					"match": "\\b(name)\\s*(=)\\s*(\")(.+?)(\")",
 					"captures": {
 						"1": { "name": "entity.other.attribute-name.name.gdasset" },
 						"2": { "name": "punctuation.separator.key-value.gdasset" },
-						"3": { "name": "entity.name.object.gdasset" }
+						"3": { "name": "punctuation.definition.string.quoted.double.gdasset" },
+						"4": { "name": "entity.name.object.gdasset",
+							"patterns": [
+								{ "include": "#characterEscape" }
+							]
+						},
+						"5": { "name": "punctuation.definition.string.quoted.double.gdasset" }
 					}
 				},
 				{ "include": "#attributeId" },
