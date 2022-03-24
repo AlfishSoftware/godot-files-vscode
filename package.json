@@ -27,12 +27,16 @@
   "publisher": "alfish",
   "license": "0BSD",
   "engines": {
-    "vscode": "^1.56.0"
+    "vscode": "^1.64.0"
   },
   "categories": [
     "Programming Languages"
   ],
   "type": "commonjs",
+  "main": "./src/extension.js",
+  "activationEvents": [
+    "onLanguage:gdasset"
+  ],
   "contributes": {
     "languages": [
       {
@@ -147,6 +151,6 @@
   "scripts": {
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "vscode:prepublish": "npm run compile"
+    "vscode:prepublish": "npm prune --production && npm run compile"
   }
 }

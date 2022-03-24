@@ -2,6 +2,9 @@
   "compilerOptions": {
     "target": "ESNext",
     "module": "CommonJS",
+    "lib": [
+      "ESNext",
+    ],
     "noFallthroughCasesInSwitch": true,
     "noImplicitAny": true,
     "noImplicitReturns": true,
@@ -11,21 +14,17 @@
     "strict": true,
     // TS
     "rootDir": "src",
-    "outDir": "src-gen/js",
     "sourceMap": true,
     // JS
     "allowJs": true,
     "checkJs": true,
   },
   "exclude": [
+    "src/**/*.js",
     "node_modules",
     ".vscode-test",
-    "src-gen/js",
-    "dist",
-    "bower_components",
-    "tmp", "temp",
-    "jspm_packages",
   ],
+  // JS
   "typeAcquisition": {
     "enable": true,
     "include": [
