@@ -49,6 +49,10 @@
           "dark": "./lang.gdshader/godot.svg",
           "light": "./lang.gdshader/godot.svg"
         },
+        "mimetypes": [
+          "application/x-godot-shader"
+        ],
+        "firstLine": "^\\s*shader_type\\s+(spatial|canvas_item|particles)\\s*;\\s*(//.*)?$",
         "configuration": "./lang.gdshader/gdshader.language-configuration.json"
       },
       {
@@ -58,12 +62,14 @@
           "Godot Asset",
           "GDAsset"
         ],
+        "filenames": [
+          "project.godot"
+        ],
         "extensions": [
           ".cfg",
           ".tres",
           ".tscn",
           ".escn",
-          ".godot",
           ".gdns",
           ".gdnlib",
           ".import"
@@ -72,6 +78,12 @@
           "dark": "./lang.gdasset/godot.dark.svg",
           "light": "./lang.gdasset/godot.light.svg"
         },
+        "mimetypes": [
+          "application/x-godot-project",
+          "application/x-godot-resource",
+          "application/x-godot-scene"
+        ],
+        "firstLine": "^\\[(remap|preset\\.\\d+|gd_(scene|resource type=\".*?\") load_steps=\\d+ format=\\d+)\\]$",
         "configuration": "./lang.gdasset/gdasset.language-configuration.json"
       },
       {
@@ -84,7 +96,7 @@
           ".desktop",
           ".directory"
         ],
-        "firstLine": "\\[Desktop Entry\\]",
+        "firstLine": "^\\[Desktop Entry\\]$",
         "configuration": "./lang.asset-properties/asset-properties.language-configuration.json"
       }
     ],
