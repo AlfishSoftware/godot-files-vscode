@@ -13,7 +13,7 @@
 		"description": "Time since the engine has started, in seconds (always positive).",
 	},
 	
-	// particle vertex
+	// particles vertex
 	"inout vec4 p.v.COLOR": {
 		"prefix": "_pv.COLOR",
 		"body": "COLOR",
