@@ -35,7 +35,8 @@
   "type": "commonjs",
   "main": "./src/extension.js",
   "activationEvents": [
-    "onLanguage:gdasset"
+    "onLanguage:gdasset",
+    "onLanguage:config-definition"
   ],
   "contributes": {
     "languages": [
@@ -62,7 +63,7 @@
       {
         "id": "gdasset",
         "aliases": [
-          "Asset Properties",
+          "Properties Definition",
           "Godot Asset",
           "GDAsset"
         ],
@@ -91,9 +92,9 @@
         "configuration": "./lang.gdasset/gdasset.language-configuration.json"
       },
       {
-        "id": "asset-properties",
+        "id": "config-definition",
         "aliases": [
-          "Configuration Definition",
+          "Configuration Properties",
           "Desktop Entry"
         ],
         "extensions": [
@@ -101,7 +102,7 @@
           ".directory"
         ],
         "firstLine": "^\\[Desktop Entry\\]$",
-        "configuration": "./lang.asset-properties/asset-properties.language-configuration.json"
+        "configuration": "./lang.config-definition/config-definition.language-configuration.json"
       }
     ],
     "grammars": [
@@ -120,7 +121,7 @@
         }
       },
       {
-        "language": "asset-properties",
+        "language": "config-definition",
         "scopeName": "source.gdasset",
         "path": "./lang.gdasset/gdasset.tmLanguage.json"
       }
@@ -135,8 +136,8 @@
         "path": "./lang.gdasset/gdasset.code-snippets"
       },
       {
-        "language": "asset-properties",
-        "path": "./lang.asset-properties/asset-properties.code-snippets"
+        "language": "config-definition",
+        "path": "./lang.config-definition/config-definition.code-snippets"
       }
     ],
     "problemMatchers": [
