@@ -70,7 +70,8 @@ function makeSectionSymbol(
 
 class GDAssetProvider implements
   vscode.DocumentSymbolProvider,
-  vscode.DefinitionProvider
+  vscode.DefinitionProvider,
+  vscode.HoverProvider
 {
   static docs: vscode.DocumentSelector = ['gdasset', 'config-definition'];
   
@@ -153,7 +154,7 @@ class GDAssetProvider implements
     const wordRange = document.getWordRangeAtPosition(position);
     if (!wordRange) return null;
     const word = document.getText(wordRange);
-    const match = word.match(/^((?:Ext|Sub)Resource)\s*\(\s*(\d+)\s*\)$/);
+    let match = word.match(/^((?:Ext|Sub)Resource)\s*\(\s*(\d+)\s*\)$/);
     if (match) {
       const keyword = match[1] as 'ExtResource' | 'SubResource';
       const id = +match[2];
@@ -162,14 +163,72 @@ class GDAssetProvider implements
       const s = gdasset.ids[keyword][id];
       if (!s) return null;
       return new vscode.Location(document.uri, s.range);
+    } else if (match = word.match(/^"res:\/\/([^"\\]*)"$/)) {
+      let resUri = await resPathToUri(match[1], document);
+      if (resUri) return new vscode.Location(resUri, new vscode.Position(0, 0));
     }
     return null;
   }
+  
+  async provideHover(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken
+  ): Promise<vscode.Hover | null> {
+    if (document.languageId != 'gdasset') return null;
+    const wordRange = document.getWordRangeAtPosition(position);
+    if (!wordRange) return null;
+    const word = document.getText(wordRange);
+    let match = word.match(/^((?:Ext|Sub)Resource)\s*\(\s*(\d+)\s*\)$/);
+    let hover = [], resPath;
+    if (match) {
+      const keyword = match[1] as 'ExtResource' | 'SubResource';
+      const id = +match[2];
+      const gdasset = this.defs[document.uri.toString(true)];
+      if (!gdasset) return null;
+      const s = gdasset.ids[keyword][id];
+      if (!s) return null;
+      const code = document.getText(s.range);
+      if (!s.name.startsWith('res://'))
+        return new vscode.Hover(new vscode.MarkdownString(`\`\`\`gdasset\n${code}\n\`\`\``, false), wordRange);
+      resPath = s.name.substring(6);
+      hover.push(new vscode.MarkdownString(`\`\`\`gdasset\n${code}\n\`\`\``, false));
+    } else if (match = word.match(/^"res:\/\/([^"\\]*)"$/)) {
+      resPath = match[1];
+    } else return null;
+    // show link to res:// path if available
+    let md = await resPathToMarkdown(resPath, document);
+    if (!md) return null;
+    hover.push(new vscode.MarkdownString(md, false));
+    return new vscode.Hover(hover, wordRange);
+  }
+}
+
+async function resPathToUri(resPath: string, document: vscode.TextDocument) {
+  //TODO function: use document.uri and go up until project.godot is found
+  const workspace = vscode.workspace.getWorkspaceFolder(document.uri);
+  if (!workspace) return null;
+  const resUri = workspace.uri.with({ path: workspace.uri.path + '/' + resPath });
+  const projUri = workspace.uri.with({ path: workspace.uri.path + '/project.godot' });
+  try {
+    const projStat = vscode.workspace.fs.stat(projUri);
+    const resStat = vscode.workspace.fs.stat(resUri);
+    await projStat; await resStat;
+  } catch {
+    return null;
+  }
+  return resUri;
+}
+async function resPathToMarkdown(resPath: string, document: vscode.TextDocument) {
+  const resUri = await resPathToUri(resPath, document);
+  if (!resUri) return `\`res://${resPath}\``;
+  if (/\.(svg)$/.test(resPath))
+    return `[\`res://${resPath}\`][1]\n\n[![](${resUri})][1]\n\n[1]: ${resUri}`;
+  if (/\.(png|gif|jpe?g|bmp)$/.test(resPath))
+    return `[![res://${resPath}](${resUri})][1]\n\n[1]: ${resUri}`;
+  return `[\`res://${resPath}\`](${resUri})`;
 }
 
 export function activate(ctx: vscode.ExtensionContext) {
   let provider = new GDAssetProvider(), docs = GDAssetProvider.docs;
   ctx.subscriptions.push(vscode.languages.registerDocumentSymbolProvider(docs, provider));
   ctx.subscriptions.push(vscode.languages.registerDefinitionProvider(docs, provider));
-  //TODO hover provider
+  ctx.subscriptions.push(vscode.languages.registerHoverProvider(docs, provider));
 }
