@@ -6,6 +6,10 @@ class GDAsset {
   nodePath(n: string) {
     return this.rootNode ? n.replace(/^\.(?=\/|$)/, escapeReplacement(this.rootNode)) : n;
   }
+  ids = {
+    ExtResource: [] as (vscode.DocumentSymbol | undefined)[],
+    SubResource: [] as (vscode.DocumentSymbol | undefined)[],
+  };
 }
 
 function makeSectionSymbol(
@@ -15,55 +19,59 @@ function makeSectionSymbol(
   gdasset: GDAsset,
 ) {
   const [, header, tag, rest] = match;
-  const attributes: { [field: string]: string | undefined } = {};
-  for (const assignment of rest.matchAll(/\b([\w-]+)\b\s*=\s*(?:(\d+)|"([^"]*)")/g))
+  const attributes: { [field: string]: string | undefined; } = {};
+  let id;
+  for (const assignment of rest.matchAll(/\b([\w-]+)\b\s*=\s*(?:(\d+)|"([^"]*)")/g)) {
+    if (assignment[1] == 'id' && assignment[2]) id = +assignment[2];
     attributes[assignment[1]] = assignment[2] ?? GDAssetProvider.unescapeString(assignment[3]);
-  let name: string, detail, kind;
+  }
+  let s = new vscode.DocumentSymbol(tag, rest, vscode.SymbolKind.Object, line.range, line.range);
   switch (tag) {
     case 'gd_scene':
-      name = document.uri.path.replace(/^\/(?:.*\/)*(.*?)(?:\.[^.]*)?$/, '$1');
-      detail = 'PackedScene';
-      kind = vscode.SymbolKind.File;
+      s.name = document.uri.path.replace(/^\/(?:.*\/)*(.*?)(?:\.[^.]*)?$/, '$1');
+      s.detail = 'PackedScene';
+      s.kind = vscode.SymbolKind.File;
       break;
     case 'gd_resource':
-      name = document.uri.path.replace(/^\/(.*\/)*/, '');
-      detail = attributes.type;
-      kind = vscode.SymbolKind.File;
+      s.name = document.uri.path.replace(/^\/(.*\/)*/, '');
+      s.detail = attributes.type ?? '';
+      s.kind = vscode.SymbolKind.File;
       break;
     case 'ext_resource':
-      name = attributes.path ?? tag;
-      detail = attributes.type;
-      kind = vscode.SymbolKind.Variable;
+      if (id)
+        gdasset.ids.ExtResource[id] = s;
+      s.name = attributes.path ?? tag;
+      s.detail = attributes.type ?? '';
+      s.kind = vscode.SymbolKind.Variable;
       break;
     case 'sub_resource':
-      name = '::' + attributes.id;
-      detail = attributes.type;
-      kind = vscode.SymbolKind.Object;
+      if (id) {
+        gdasset.ids.SubResource[id] = s;
+        s.name = '::' + id;
+      }
+      s.detail = attributes.type ?? '';
       break;
     case 'node':
       if (attributes.parent == undefined)
-        name = (gdasset.rootNode = attributes.name) ?? tag;
-      else name = gdasset.nodePath(attributes.parent) + '/' + attributes.name;
-      detail = attributes.type;
-      kind = vscode.SymbolKind.Object;
+        s.name = (gdasset.rootNode = attributes.name) ?? tag;
+      else s.name = gdasset.nodePath(attributes.parent) + '/' + attributes.name;
+      s.detail = attributes.type ?? '';
       break;
     case 'connection':
       if (attributes.from && attributes.to && attributes.method)
-        name = `${gdasset.nodePath(attributes.from)}→${gdasset.nodePath(attributes.to)}::${attributes.method}`;
-      else name = tag;
-      detail = attributes.signal;
-      kind = vscode.SymbolKind.Event;
-      break;
-    default:
-      name = tag;
-      detail = rest;
-      kind = vscode.SymbolKind.Object;
+        s.name = `${gdasset.nodePath(attributes.from)}→${gdasset.nodePath(attributes.to)}::${attributes.method}`;
+      else s.name = tag;
+      s.detail = attributes.signal ?? '';
+      s.kind = vscode.SymbolKind.Event;
       break;
   }
-  return new vscode.DocumentSymbol(name, detail ?? '', kind, line.range, line.range);
+  return s;
 }
 
-class GDAssetProvider implements vscode.DocumentSymbolProvider {
+class GDAssetProvider implements
+  vscode.DocumentSymbolProvider,
+  vscode.DefinitionProvider
+{
   static docs: vscode.DocumentSelector = ['gdasset', 'config-definition'];
   
   public static unescapeString(partInsideQuotes: string) {
@@ -83,9 +91,12 @@ class GDAssetProvider implements vscode.DocumentSymbolProvider {
     return s;
   }
   
-  public async provideDocumentSymbols(document: vscode.TextDocument, token: vscode.CancellationToken
+  defs: { [uri: string]: GDAsset | undefined } = {};
+  
+  async provideDocumentSymbols(document: vscode.TextDocument, token: vscode.CancellationToken
   ): Promise<vscode.DocumentSymbol[]> {
-    const gdasset = document.languageId == 'gdasset' ? new GDAsset() : null;
+    const gdasset = document.languageId != 'gdasset' ? null :
+      this.defs[document.uri.toString(true)] = new GDAsset();
     let previousLine: vscode.TextLine | undefined;
     let currentSection: vscode.DocumentSymbol | undefined;
     let currentProperty: vscode.DocumentSymbol | null = null;
@@ -135,8 +146,30 @@ class GDAssetProvider implements vscode.DocumentSymbolProvider {
       currentSection.range = new vscode.Range(currentSection.range.start, previousLine.range.end);
     return symbols;
   }
+  
+  async provideDefinition(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken
+  ): Promise<vscode.Definition | null> {
+    if (document.languageId != 'gdasset') return null;
+    const wordRange = document.getWordRangeAtPosition(position);
+    if (!wordRange) return null;
+    const word = document.getText(wordRange);
+    const match = word.match(/^((?:Ext|Sub)Resource)\s*\(\s*(\d+)\s*\)$/);
+    if (match) {
+      const keyword = match[1] as 'ExtResource' | 'SubResource';
+      const id = +match[2];
+      const gdasset = this.defs[document.uri.toString(true)];
+      if (!gdasset) return null;
+      const s = gdasset.ids[keyword][id];
+      if (!s) return null;
+      return new vscode.Location(document.uri, s.range);
+    }
+    return null;
+  }
 }
 
 export function activate(ctx: vscode.ExtensionContext) {
-  ctx.subscriptions.push(vscode.languages.registerDocumentSymbolProvider(GDAssetProvider.docs, new GDAssetProvider()));
+  let provider = new GDAssetProvider(), docs = GDAssetProvider.docs;
+  ctx.subscriptions.push(vscode.languages.registerDocumentSymbolProvider(docs, provider));
+  ctx.subscriptions.push(vscode.languages.registerDefinitionProvider(docs, provider));
+  //TODO hover provider
 }
