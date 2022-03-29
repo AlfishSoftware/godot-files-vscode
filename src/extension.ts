@@ -162,10 +162,15 @@ class GDAssetProvider implements
       if (!gdasset) return null;
       const s = gdasset.ids[keyword][id];
       if (!s) return null;
+      if (keyword == 'ExtResource') {
+        let d = document.getText(s.selectionRange).indexOf(' path="');
+        d = d < 0 ? 0 : d + 7;
+        return new vscode.Location(document.uri, s.range.start.translate(0, d));
+      }
       return new vscode.Location(document.uri, s.range);
     } else if (match = word.match(/^"res:\/\/([^"\\]*)"$/)) {
       let resUri = await resPathToUri(match[1], document);
-      if (resUri) return new vscode.Location(resUri, new vscode.Position(0, 0));
+      if (resUri instanceof vscode.Uri) return new vscode.Location(resUri, new vscode.Position(0, 0));
     }
     return null;
   }
@@ -185,22 +190,38 @@ class GDAssetProvider implements
       if (!gdasset) return null;
       const s = gdasset.ids[keyword][id];
       if (!s) return null;
-      const code = document.getText(s.range);
-      if (!s.name.startsWith('res://'))
-        return new vscode.Hover(new vscode.MarkdownString(`\`\`\`gdasset\n${code}\n\`\`\``, false), wordRange);
+      const md = new vscode.MarkdownString();
+      if (/^::\d+$/.test(s.name)) {
+        resPath = await resPathOfDocument(document);
+        resPath = resPath ? 'res://' + resPath : document.uri.path.replace(/(?:.*\/)+/, '');
+        md.appendCodeblock(`preload("${resPath}::${id}") as ${s.detail}`, 'gdscript');
+        return new vscode.Hover(md, wordRange);
+      }
       resPath = s.name.substring(6);
-      hover.push(new vscode.MarkdownString(`\`\`\`gdasset\n${code}\n\`\`\``, false));
+      md.appendCodeblock(`preload("${s.name}") as ${s.detail}`, 'gdscript');
+      hover.push(md);
     } else if (match = word.match(/^"res:\/\/([^"\\]*)"$/)) {
       resPath = match[1];
     } else return null;
     // show link to res:// path if available
-    let md = await resPathToMarkdown(resPath, document);
-    if (!md) return null;
-    hover.push(new vscode.MarkdownString(md, false));
+    hover.push(await resPathToMarkdown(resPath, document));
     return new vscode.Hover(hover, wordRange);
   }
 }
 
+async function resPathOfDocument(document: vscode.TextDocument) {
+  //TODO function: use document.uri and go up until project.godot is found
+  const workspace = vscode.workspace.getWorkspaceFolder(document.uri);
+  if (!workspace) return null;
+  const projUri = workspace.uri.with({ path: workspace.uri.path + '/project.godot' });
+  try {
+    const projStat = vscode.workspace.fs.stat(projUri);
+    await projStat;
+  } catch {
+    return null;
+  }
+  return vscode.workspace.asRelativePath(document.uri, false);
+}
 async function resPathToUri(resPath: string, document: vscode.TextDocument) {
   //TODO function: use document.uri and go up until project.godot is found
   const workspace = vscode.workspace.getWorkspaceFolder(document.uri);
@@ -212,18 +233,19 @@ async function resPathToUri(resPath: string, document: vscode.TextDocument) {
     const resStat = vscode.workspace.fs.stat(resUri);
     await projStat; await resStat;
   } catch {
-    return null;
+    return resUri.toString();
   }
   return resUri;
 }
 async function resPathToMarkdown(resPath: string, document: vscode.TextDocument) {
   const resUri = await resPathToUri(resPath, document);
-  if (!resUri) return `\`res://${resPath}\``;
-  if (/\.(svg)$/.test(resPath))
-    return `[\`res://${resPath}\`][1]\n\n[![](${resUri})][1]\n\n[1]: ${resUri}`;
-  if (/\.(png|gif|jpe?g|bmp)$/.test(resPath))
-    return `[![res://${resPath}](${resUri})][1]\n\n[1]: ${resUri}`;
-  return `[\`res://${resPath}\`](${resUri})`;
+  const md = new vscode.MarkdownString();
+  md.supportHtml = true;
+  if (!(resUri instanceof vscode.Uri))
+    return md.appendMarkdown(`<div title="${resUri ?? ''}">File not found</div>`);
+  if (/\.(svg|png|gif|jpe?g|bmp)$/.test(resPath))
+    return md.appendMarkdown(`[<img height=128 src="${resUri}"/>](${resUri})`);
+  return md.appendMarkdown(`[Open file](${resUri})`);
 }
 
 export function activate(ctx: vscode.ExtensionContext) {
