@@ -240,6 +240,10 @@ async function resPathToUri(resPath: string, document: vscode.TextDocument) {
   }
   return resUri;
 }
+const fontTest = `\
+<tspan>JFK GOT MY VHS, PC AND XLR WEB QUIZ</tspan>
+<tspan x="0" y="20">new job: fix mr. gluck's hazy tv pdq!</tspan>
+<tspan x="0" y="40">Oo0 Ili1 Zz2 3 A4 S5 G6 T7 B8 g9</tspan>`;
 async function resPathToMarkdown(resPath: string, document: vscode.TextDocument) {
   const resUri = await resPathToUri(resPath, document);
   const md = new vscode.MarkdownString();
@@ -248,6 +252,17 @@ async function resPathToMarkdown(resPath: string, document: vscode.TextDocument)
     return md.appendMarkdown(`<div title="${resUri ?? ''}">File not found</div>`);
   if (/\.(svg|png|gif|jpe?g|bmp)$/.test(resPath))
     return md.appendMarkdown(`[<img height=128 src="${resUri}"/>](${resUri})`);
+  let match = /\.(ttf|otf|woff)$/.exec(resPath);
+  if (match) {
+    const bytes = await vscode.workspace.fs.readFile(resUri);
+    const dataUrl = `data:font/${match[1]};base64,${Buffer.from(bytes).toString('base64')}`;
+    const t = encodeURIComponent(fontTest).replace("'", "%27");
+    return md.appendMarkdown(`[<img src='data:image/svg+xml,\
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="64"><style>\
+@font-face{font-family:F;src:url("${dataUrl}")}\
+text{font-family:F;dominant-baseline:text-before-edge}\
+</style><text>${t}</text></svg>'/>](${resUri})`);
+  }
   return md.appendMarkdown(`[Open file](${resUri})`);
 }
 
