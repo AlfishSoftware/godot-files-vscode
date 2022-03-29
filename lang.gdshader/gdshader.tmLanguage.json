@@ -2,14 +2,19 @@
   "name": "GDShader",
   "fileTypes": [ "gdshader" ],
   "patterns": [
-    { "include": "#BLOCK_COMMENT" },
-    { "include": "#LINE_COMMENT" },
+    { "include": "#comment" },
     
     { "include": "#element" },
     { "include": "#separator" },
     { "include": "#operator" }
   ],
   "repository": {
+    "comment": {
+      "patterns": [
+        { "include": "#BLOCK_COMMENT" },
+        { "include": "#LINE_COMMENT" }
+      ]
+    },
     "BLOCK_COMMENT": {
       "name": "comment.block.gdshader",
       "begin": "/\\*",
@@ -28,21 +33,17 @@
         "1": { "name": "keyword.other.gdshader" }
       },
       "patterns": [
-        { "include": "#BLOCK_COMMENT" },
-        { "include": "#LINE_COMMENT" },
+        { "include": "#comment" },
         {
           "name": "entity.other.inherited-class.gdshader",
           "match": "\\b[a-z_]+\\b"
         },
         {
-          "name": "separator.gdshader",
+          "name": "punctuation.separator.comma.gdshader",
           "match": ","
         }
       ],
-      "end": ";",
-      "endCaptures": {
-        "0": { "name": "separator.gdshader" }
-      }
+      "end": "(?=;)"
     },
     "modifierKeyword": {
       "name": "storage.modifier.gdshader",
@@ -92,11 +93,10 @@
     "ID_property": {
       "begin": "\\.",
       "beginCaptures": {
-        "0": { "name": "separator.gdshader" }
+        "0": { "name": "punctuation.accessor.gdshader" }
       },
       "patterns": [
-        { "include": "#BLOCK_COMMENT" },
-        { "include": "#LINE_COMMENT" }
+        { "include": "#comment" }
       ],
       "end": "\\b([a-zA-Z_]\\w*)\\b|[^/ \t\r\n]",
       "endCaptures": {
@@ -114,8 +114,7 @@
         }
       },
       "patterns": [
-        { "include": "#BLOCK_COMMENT" },
-        { "include": "#LINE_COMMENT" },
+        { "include": "#comment" },
         
         { "include": "#separator" },
         { "include": "#element" }
@@ -124,8 +123,7 @@
     "element": {
       "name": "meta.expression.gdshader",
       "patterns": [
-        { "include": "#BLOCK_COMMENT" },
-        { "include": "#LINE_COMMENT" },
+        { "include": "#comment" },
         { "include": "#enclosed" },
         
         { "include": "#specialDirective" },
@@ -150,8 +148,12 @@
       "match": "\\<\\<\\=?|\\>\\>\\=?|[-+*/&|<>=!]\\=|\\&\\&|[|][|]|[-+~!*/%<>&^|=]"
     },
     "separator": {
-      "name": "separator.gdshader",
-      "match": "[.,;:]"
+      "patterns": [
+        { "match": "[.]", "name": "punctuation.accessor.gdshader" },
+        { "match": "[,]", "name": "punctuation.separator.comma.gdshader" },
+        { "match": "[;]", "name": "punctuation.terminator.statement.gdshader" },
+        { "match": "[:]", "name": "keyword.operator.type.annotation.gdshader" }
+      ]
     }
   },
   "scopeName": "source.gdshader"
