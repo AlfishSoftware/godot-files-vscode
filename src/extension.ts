@@ -4,7 +4,8 @@ function escapeReplacement(s: string) { return s.replace(/\$/g, '$$$$'); }
 class GDAsset {
   rootNode: string | undefined = undefined;
   nodePath(n: string) {
-    return this.rootNode ? n.replace(/^\.(?=\/|$)/, escapeReplacement(this.rootNode)) : n;
+    if (!this.rootNode || !n) return n;
+    return n == '.' ? this.rootNode : `${this.rootNode}/${n}`;
   }
   ids = {
     ExtResource: [] as (vscode.DocumentSymbol | undefined)[],
@@ -50,6 +51,7 @@ function makeSectionSymbol(
         s.name = '::' + id;
       }
       s.detail = attributes.type ?? '';
+      s.kind = vscode.SymbolKind.File;
       break;
     case 'node':
       if (attributes.parent == undefined)
@@ -120,7 +122,7 @@ class GDAssetProvider implements
         symbols.push(currentSection);
         currentProperty = null;
       } else if (match = line.text.match(
-        /^(((?:[\p{L}\w-]+[./])*[\p{L}\w-]+)(?:\s*\[([\w\\/.:!@$%+-]+)\])?)\s*=/u
+        /^\s*(((?:[\p{L}\w-]+[./])*[\p{L}\w-]+)(?:\s*\[([\w\\/.:!@$%+-]+)\])?)\s*=/u
       )) {
         // Property Assignment
         const [, prop, key, index] = match;
@@ -141,6 +143,7 @@ class GDAssetProvider implements
         // Still in value of previous property
         currentProperty.range = new vscode.Range(currentProperty.range.start, line.range.end);
       }
+      //TODO detect string start and eat it until end
       previousLine = line;
     }
     if (currentSection && previousLine)
