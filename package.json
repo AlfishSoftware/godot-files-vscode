@@ -27,7 +27,7 @@
   "publisher": "alfish",
   "license": "0BSD",
   "engines": {
-    "vscode": "^1.64.0"
+    "vscode": "^1.66.0"
   },
   "categories": [
     "Programming Languages"
@@ -148,7 +148,7 @@
   "dependencies": {},
   "devDependencies": {
     "@types/node": "^17.0.23",
-    "@types/vscode": "^1.64.0"
+    "@types/vscode": "^1.66.0"
   },
   "scripts": {
     "compile": "tsc -p ./",
