@@ -51,8 +51,8 @@
           ".gdshader"
         ],
         "icon": {
-          "dark": "./lang.gdshader/godot.svg",
-          "light": "./lang.gdshader/godot.svg"
+          "dark": "./lang.gdshader/gdshader.svg",
+          "light": "./lang.gdshader/gdshader.svg"
         },
         "mimetypes": [
           "application/x-godot-shader"
