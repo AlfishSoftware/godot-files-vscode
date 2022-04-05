@@ -54,8 +54,8 @@
           ".gdshader"
         ],
         "icon": {
-          "dark": "./lang.gdshader/gdshader.svg",
-          "light": "./lang.gdshader/gdshader.svg"
+          "dark": "./lang.gdshader/gdshader.dark.svg",
+          "light": "./lang.gdshader/gdshader.light.svg"
         },
         "mimetypes": [
           "application/x-godot-shader"
@@ -88,11 +88,12 @@
           "Textual Resource Properties"
         ],
         "extensions": [
-          ".tres"
+          ".tres",
+          ".gdns"
         ],
         "icon": {
-          "dark": "./lang.gdasset/godot.dark.svg",
-          "light": "./lang.gdasset/godot.light.svg"
+          "dark": "./lang.gdasset/godot-resource.dark.svg",
+          "light": "./lang.gdasset/godot-resource.light.svg"
         },
         "mimetypes": [
           "application/x-godot-resource"
@@ -111,8 +112,8 @@
           ".escn"
         ],
         "icon": {
-          "dark": "./lang.gdasset/godot.dark.svg",
-          "light": "./lang.gdasset/godot.light.svg"
+          "dark": "./lang.gdasset/godot-scene.dark.svg",
+          "light": "./lang.gdasset/godot-scene.light.svg"
         },
         "mimetypes": [
           "application/x-godot-scene"
@@ -131,15 +132,14 @@
           "export_presets.cfg"
         ],
         "extensions": [
-          ".gdns",
-          ".gdnlib",
-          ".import"
+          ".import",
+          ".gdnlib"
         ],
         "icon": {
-          "dark": "./lang.gdasset/godot.dark.svg",
-          "light": "./lang.gdasset/godot.light.svg"
+          "dark": "./lang.gdasset/godot-asset.dark.svg",
+          "light": "./lang.gdasset/godot-asset.light.svg"
         },
-        "firstLine": "^\\[(remap|preset\\.\\d+)\\]$",
+        "firstLine": "^\\[(remap|general|preset\\.\\d+)\\]$",
         "configuration": "./lang.gdasset/gdasset.language-configuration.json"
       },
       {
@@ -153,6 +153,10 @@
           ".desktop",
           ".directory"
         ],
+        "icon": {
+          "dark": "./lang.gdasset/godot-asset.dark.svg",
+          "light": "./lang.gdasset/godot-asset.light.svg"
+        },
         "firstLine": "^\\[Desktop Entry\\]$",
         "configuration": "./lang.config-definition/config-definition.language-configuration.json"
       }
