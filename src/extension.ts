@@ -75,7 +75,13 @@ class GDAssetProvider implements
   vscode.DefinitionProvider,
   vscode.HoverProvider
 {
-  static docs: vscode.DocumentSelector = ['gdasset', 'config-definition'];
+  static docs: vscode.DocumentSelector = [
+    'godot-project',
+    'godot-resource',
+    'godot-scene',
+    'godot-asset',
+    'config-definition',
+  ];
   
   public static unescapeString(partInsideQuotes: string) {
     let s = '';
@@ -98,7 +104,7 @@ class GDAssetProvider implements
   
   async provideDocumentSymbols(document: vscode.TextDocument, token: vscode.CancellationToken
   ): Promise<vscode.DocumentSymbol[]> {
-    const gdasset = document.languageId != 'gdasset' ? null :
+    const gdasset = document.languageId == 'config-definition' ? null :
       this.defs[document.uri.toString(true)] = new GDAsset();
     let previousLine: vscode.TextLine | undefined;
     let currentSection: vscode.DocumentSymbol | undefined;
@@ -153,7 +159,7 @@ class GDAssetProvider implements
   
   async provideDefinition(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken
   ): Promise<vscode.Definition | null> {
-    if (document.languageId != 'gdasset') return null;
+    if (document.languageId == 'config-definition') return null;
     const wordRange = document.getWordRangeAtPosition(position);
     if (!wordRange) return null;
     const word = document.getText(wordRange);
@@ -180,7 +186,7 @@ class GDAssetProvider implements
   
   async provideHover(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken
   ): Promise<vscode.Hover | null> {
-    if (document.languageId != 'gdasset') return null;
+    if (document.languageId == 'config-definition') return null;
     const wordRange = document.getWordRangeAtPosition(position);
     if (!wordRange) return null;
     const word = document.getText(wordRange);
