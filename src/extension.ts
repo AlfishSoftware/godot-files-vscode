@@ -11,12 +11,24 @@ class GDAsset {
     ExtResource: [] as (vscode.DocumentSymbol | undefined)[],
     SubResource: [] as (vscode.DocumentSymbol | undefined)[],
   };
+  strings: { range: vscode.Range, value: string; }[] = [];
+  comments: { range: vscode.Range, value: string; }[] = [];
+  stringContaining(place: vscode.Position | vscode.Range) {
+    for (const token of this.strings)
+      if (token.range.contains(place)) return token;
+    return null;
+  }
+  commentContaining(place: vscode.Position | vscode.Range) {
+    for (const token of this.comments)
+      if (token.range.contains(place)) return token;
+    return null;
+  }
 }
 
 function makeSectionSymbol(
   document: vscode.TextDocument,
   match: RegExpMatchArray,
-  line: vscode.TextLine,
+  range: vscode.Range,
   gdasset: GDAsset,
 ) {
   const [, header, tag, rest] = match;
@@ -26,7 +38,7 @@ function makeSectionSymbol(
     if (assignment[1] == 'id' && assignment[2]) id = +assignment[2];
     attributes[assignment[1]] = assignment[2] ?? GDAssetProvider.unescapeString(assignment[3]);
   }
-  let s = new vscode.DocumentSymbol(tag, rest, vscode.SymbolKind.Object, line.range, line.range);
+  let s = new vscode.DocumentSymbol(tag, rest, vscode.SymbolKind.Object, range, range);
   switch (tag) {
     case 'gd_scene':
       s.name = document.uri.path.replace(/^\/(?:.*\/)*(.*?)(?:\.[^.]*)?$/, '$1');
@@ -106,30 +118,35 @@ class GDAssetProvider implements
   ): Promise<vscode.DocumentSymbol[]> {
     const gdasset = document.languageId == 'config-definition' ? null :
       this.defs[document.uri.toString(true)] = new GDAsset();
-    let previousLine: vscode.TextLine | undefined;
+    let previousEnd: vscode.Position | undefined;
     let currentSection: vscode.DocumentSymbol | undefined;
     let currentProperty: vscode.DocumentSymbol | null = null;
-    const symbols = [];
-    for (let i = 0; i < document.lineCount; i++) {
-      const line = document.lineAt(i);
-      let match = line.text.match(
+    const symbols: vscode.DocumentSymbol[] = [];
+    const n = document.lineCount;
+    for (let i = 0, j = 0; i < n;) {
+      const range = document.validateRange(new vscode.Range(i, j, i, Infinity));
+      const text = document.getText(range);
+      let match;
+      if (j == 0 && (match = text.match(
         /^(\[\s*([\p{L}\w-]+(?:\s+[\p{L}\w-]+|\s+"[^"\\]*")*(?=\s*\])|[^\[\]\s]+)\s*(.*?)\s*\])\s*([;#].*)?$/u
-      );
-      if (match) {
+      ))) {
         // Section Header
-        if (currentSection && previousLine)
-          currentSection.range = new vscode.Range(currentSection.range.start, previousLine.range.end);
+        if (currentSection && previousEnd)
+          currentSection.range = new vscode.Range(currentSection.range.start, previousEnd);
         if (gdasset)
-          currentSection = makeSectionSymbol(document, match, line, gdasset);
+          currentSection = makeSectionSymbol(document, match, range, gdasset);
         else {
           const [, header, tag, rest] = match;
-          currentSection = new vscode.DocumentSymbol(tag, rest, vscode.SymbolKind.Object, line.range, line.range);
+          currentSection = new vscode.DocumentSymbol(tag, rest, vscode.SymbolKind.Object, range, range);
         }
         symbols.push(currentSection);
         currentProperty = null;
-      } else if (match = line.text.match(
+        previousEnd = range.end;
+        i++;
+        continue;
+      } else if (j == 0 && (match = text.match(
         /^\s*(((?:[\p{L}\w-]+[./])*[\p{L}\w-]+)(?:\s*\[([\w\\/.:!@$%+-]+)\])?)\s*=/u
-      )) {
+      ))) {
         // Property Assignment
         const [, prop, key, index] = match;
         let s = currentSection?.children ?? symbols;
@@ -137,49 +154,92 @@ class GDAssetProvider implements
           const p = `${key}[]`;
           let parentProp = s.find(value => value.name == p);
           if (!parentProp)
-            s.push(parentProp = new vscode.DocumentSymbol(p, '', vscode.SymbolKind.Array, line.range, line.range));
-          parentProp.range = new vscode.Range(parentProp.range.start, line.range.end);
+            s.push(parentProp = new vscode.DocumentSymbol(p, '', vscode.SymbolKind.Array, range, range));
+          parentProp.range = new vscode.Range(parentProp.range.start, range.end);
           s = parentProp.children;
         }
         if (currentSection)
-          currentSection.range = new vscode.Range(currentSection.range.start, line.range.end);
-        currentProperty = new vscode.DocumentSymbol(prop, '', vscode.SymbolKind.Property, line.range, line.range);
+          currentSection.range = new vscode.Range(currentSection.range.start, range.end);
+        currentProperty = new vscode.DocumentSymbol(prop, '', vscode.SymbolKind.Property, range, range);
         s.push(currentProperty);
-      } else if (currentProperty && !/^\s*(?:[;#].*)?$/.test(line.text)) {
-        // Still in value of previous property
-        currentProperty.range = new vscode.Range(currentProperty.range.start, line.range.end);
+        j = match[0].length;
+        previousEnd = new vscode.Position(i, j);
+        continue;
+      } else if (match = text.match(/^(\s*)([;#].*)?$/)) {
+        // No more non-ignored tokens until end of line; only Line Comment or Whitespace
+        if (gdasset && match[2]) {
+          j += match[1].length;
+          gdasset.comments.push({ range: new vscode.Range(i, j, i, range.end.character), value: match[2] });
+        }
+        previousEnd = range.end;
+        j = 0; i++;
+        continue;
       }
-      //TODO detect string start and eat it until end
-      previousLine = line;
+      // Parse values within line
+      if (text.startsWith('"')) {
+        // String
+        let str = "";
+        let s = text.substring(1); j++;
+        lines: while (true) {
+          for (const [sub] of s.matchAll(/"|(?:\\["nrt\\bf]|\\u[0-9A-Fa-f]{4}|\\$|\\?[^"\r\n])+/gmu)) {
+            j += sub.length;
+            if (sub == '"') break lines;
+            str += GDAssetProvider.unescapeString(sub);
+          }
+          str += "\n";
+          j = 0; i++;
+          if (i >= n) break;
+          s = document.lineAt(i).text;
+        }
+        if (i >= n) break;
+        if (gdasset)
+          gdasset.strings.push({ range: new vscode.Range(range.start.line, range.start.character, i, j), value: str });
+      } else if (match = text.match(/^\s+/)) {
+        // Whitespace
+        j += match[0].length;
+      } else {
+        // Any other token
+        match = text.match(/^[^"\s]+/);
+        j += match![0].length;
+      }
+      if (currentProperty) {
+        // Still in value of previous property
+        const start = currentProperty.range.start;
+        const endChar = i > range.end.line ? j : range.end.character;
+        currentProperty.range = new vscode.Range(start.line, start.character, i, endChar);
+      }
+      previousEnd = new vscode.Position(i, j);
     }
-    if (currentSection && previousLine)
-      currentSection.range = new vscode.Range(currentSection.range.start, previousLine.range.end);
+    if (currentSection && previousEnd)
+      currentSection.range = new vscode.Range(currentSection.range.start, previousEnd);
     return symbols;
   }
   
   async provideDefinition(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken
   ): Promise<vscode.Definition | null> {
     if (document.languageId == 'config-definition') return null;
+    const gdasset = this.defs[document.uri.toString(true)];
+    if (!gdasset || gdasset.commentContaining(position)) return null;
     const wordRange = document.getWordRangeAtPosition(position);
     if (!wordRange) return null;
     const word = document.getText(wordRange);
-    let match = word.match(/^((?:Ext|Sub)Resource)\s*\(\s*(\d+)\s*\)$/);
-    if (match) {
+    const wordIsResPath = isResPath(word, wordRange, document);
+    let match;
+    if (wordIsResPath) {
+      let resUri = await resPathToUri(word, document);
+      if (resUri instanceof vscode.Uri) return new vscode.Location(resUri, new vscode.Position(0, 0));
+    } else if (match = word.match(/^((?:Ext|Sub)Resource)\s*\(\s*(\d+)\s*\)$/)) {
       const keyword = match[1] as 'ExtResource' | 'SubResource';
       const id = +match[2];
-      const gdasset = this.defs[document.uri.toString(true)];
-      if (!gdasset) return null;
       const s = gdasset.ids[keyword][id];
       if (!s) return null;
+      if (gdasset.stringContaining(position)) return null;
       if (keyword == 'ExtResource') {
         let d = document.getText(s.selectionRange).indexOf(' path="');
         d = d < 0 ? 0 : d + 7;
         return new vscode.Location(document.uri, s.range.start.translate(0, d));
       }
       return new vscode.Location(document.uri, s.range);
-    } else if (isResPath(word, wordRange, document)) {
-      let resUri = await resPathToUri(word, document);
-      if (resUri instanceof vscode.Uri) return new vscode.Location(resUri, new vscode.Position(0, 0));
     }
     return null;
   }
@@ -187,11 +247,15 @@ class GDAssetProvider implements
   async provideHover(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken
   ): Promise<vscode.Hover | null> {
     if (document.languageId == 'config-definition') return null;
+    const gdasset = this.defs[document.uri.toString(true)];
+    if (!gdasset || gdasset.commentContaining(position)) return null;
     const wordRange = document.getWordRangeAtPosition(position);
     if (!wordRange) return null;
     const word = document.getText(wordRange);
+    const wordIsResPath = isResPath(word, wordRange, document);
+    if (!wordIsResPath && gdasset.stringContaining(position)) return null;
     let hover = [], resPath, match;
-    if (word == 'ext_resource' || isResPath(word, wordRange, document)) {
+    if (word == 'ext_resource' || wordIsResPath) {
       const line = document.lineAt(position).text;
       match = /^\[\s*ext_resource\s+path\s*=\s*"([^"\\]*)"\s*type\s*=\s*"([^"\\]*)"/.exec(line);
       if (word == 'ext_resource') {
@@ -219,8 +283,6 @@ class GDAssetProvider implements
     } else if (match = word.match(/^((?:Ext|Sub)Resource)\s*\(\s*(\d+)\s*\)$/)) {
       const keyword = match[1] as 'ExtResource' | 'SubResource';
       const id = +match[2];
-      const gdasset = this.defs[document.uri.toString(true)];
-      if (!gdasset) return null;
       const s = gdasset.ids[keyword][id];
       if (!s) return null;
       const md = new vscode.MarkdownString();
