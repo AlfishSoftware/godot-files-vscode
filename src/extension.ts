@@ -177,8 +177,8 @@ class GDAssetProvider implements
         return new vscode.Location(document.uri, s.range.start.translate(0, d));
       }
       return new vscode.Location(document.uri, s.range);
-    } else if (match = word.match(/^"res:\/\/([^"\\]*)"$/)) {
-      let resUri = await resPathToUri(match[1], document);
+    } else if (isResPath(word, wordRange, document)) {
+      let resUri = await resPathToUri(word, document);
       if (resUri instanceof vscode.Uri) return new vscode.Location(resUri, new vscode.Position(0, 0));
     }
     return null;
@@ -190,9 +190,33 @@ class GDAssetProvider implements
     const wordRange = document.getWordRangeAtPosition(position);
     if (!wordRange) return null;
     const word = document.getText(wordRange);
-    let match = word.match(/^((?:Ext|Sub)Resource)\s*\(\s*(\d+)\s*\)$/);
-    let hover = [], resPath;
-    if (match) {
+    let hover = [], resPath, match;
+    if (word == 'ext_resource' || isResPath(word, wordRange, document)) {
+      const line = document.lineAt(position).text;
+      match = /^\[\s*ext_resource\s+path\s*=\s*"([^"\\]*)"\s*type\s*=\s*"([^"\\]*)"/.exec(line);
+      if (word == 'ext_resource') {
+        if (!match) return null;
+        resPath = match[1];
+      } else resPath = word;
+      hover.push(preloadMarkdown(resPath, match ? match[2] : null));
+    } else if (word == 'sub_resource') {
+      const line = document.lineAt(position).text;
+      match = /^\[\s*sub_resource\s+type\s*=\s*"([^"\\]*)"\s*id\s*=\s*(\d+)\b/.exec(line);
+      if (!match) return null;
+      const [, type, id] = match;
+      resPath = await resPathOfDocument(document);
+      return new vscode.Hover(preloadMarkdown(`${resPath}::${id}`, type), wordRange);
+    } else if (word == 'gd_resource') {
+      const line = document.lineAt(position).text;
+      match = /^\[\s*gd_resource\s+type\s*=\s*"([^"\\]*)"/.exec(line);
+      if (!match) return null;
+      return new vscode.Hover(preloadMarkdown(await resPathOfDocument(document), match[1]), wordRange);
+    } else if (word == 'gd_scene') {
+      const line = document.lineAt(position).text;
+      match = /^\[\s*gd_scene\b/.exec(line);
+      if (!match) return null;
+      return new vscode.Hover(preloadMarkdown(await resPathOfDocument(document), 'PackedScene'), wordRange);
+    } else if (match = word.match(/^((?:Ext|Sub)Resource)\s*\(\s*(\d+)\s*\)$/)) {
       const keyword = match[1] as 'ExtResource' | 'SubResource';
       const id = +match[2];
       const gdasset = this.defs[document.uri.toString(true)];
@@ -200,17 +224,14 @@ class GDAssetProvider implements
       const s = gdasset.ids[keyword][id];
       if (!s) return null;
       const md = new vscode.MarkdownString();
-      if (/^::\d+$/.test(s.name)) {
+      if (keyword == 'SubResource') {
         resPath = await resPathOfDocument(document);
-        resPath = resPath ? 'res://' + resPath : document.uri.path.replace(/(?:.*\/)+/, '');
         md.appendCodeblock(`preload("${resPath}::${id}") as ${s.detail}`, 'gdscript');
         return new vscode.Hover(md, wordRange);
       }
-      resPath = s.name.substring(6);
-      md.appendCodeblock(`preload("${s.name}") as ${s.detail}`, 'gdscript');
+      resPath = s.name;
+      md.appendCodeblock(`preload("${resPath}") as ${s.detail}`, 'gdscript');
       hover.push(md);
-    } else if (match = word.match(/^"res:\/\/([^"\\]*)"$/)) {
-      resPath = match[1];
     } else return null;
     // show link to res:// path if available
     hover.push(await resPathToMarkdown(resPath, document));
@@ -218,30 +239,48 @@ class GDAssetProvider implements
   }
 }
 
+function isResPath(word: string, wordRange: vscode.Range, document: vscode.TextDocument) {
+  if (/^res:\/\/[^"\\]*$/.test(word)) return true;
+  const r = new vscode.Range(wordRange.start.line, 0, wordRange.end.line, wordRange.end.character + 1);
+  return /(?<=^\[\s*ext_resource\s+path\s*=\s*")[^"\\]*(?="$)/.test(document.getText(r));
+}
+function preloadMarkdown(resPath: string, type?: string | null) {
+  let code = `preload("${resPath}")`;
+  if (type) code += ` as ${type}`;
+  return new vscode.MarkdownString().appendCodeblock(code, 'gdscript');
+}
 async function resPathOfDocument(document: vscode.TextDocument) {
   //TODO function: use document.uri and go up until project.godot is found
   const workspace = vscode.workspace.getWorkspaceFolder(document.uri);
-  if (!workspace) return null;
-  const projUri = workspace.uri.with({ path: workspace.uri.path + '/project.godot' });
-  try {
-    const projStat = vscode.workspace.fs.stat(projUri);
-    await projStat;
-  } catch {
-    return null;
+  if (workspace) {
+    const projUri = vscode.Uri.joinPath(workspace.uri, 'project.godot');
+    try {
+      await vscode.workspace.fs.stat(projUri);
+      return 'res://' + vscode.Uri.file(vscode.workspace.asRelativePath(document.uri, false)).path;
+    } catch { }
   }
-  return vscode.workspace.asRelativePath(document.uri, false);
+  return document.uri.path.replace(/^(?:.*\/)+/, ''); // fallback to document file name (relative path)
 }
+const uriRegex = /^[a-zA-Z][a-zA-Z0-9.+-]*:\/\/[^\x00-\x1F "<>\\^`{|}\x7F-\x9F]*$/;
 async function resPathToUri(resPath: string, document: vscode.TextDocument) {
-  //TODO function: use document.uri and go up until project.godot is found
-  const workspace = vscode.workspace.getWorkspaceFolder(document.uri);
-  if (!workspace) return null;
-  const resUri = workspace.uri.with({ path: workspace.uri.path + '/' + resPath });
-  const projUri = workspace.uri.with({ path: workspace.uri.path + '/project.godot' });
-  try {
-    const projStat = vscode.workspace.fs.stat(projUri);
-    const resStat = vscode.workspace.fs.stat(resUri);
-    await projStat; await resStat;
-  } catch {
+  let resUri, resStat;
+  if (resPath.startsWith('res://')) {
+    //TODO function: use document.uri and go up until project.godot is found
+    const workspace = vscode.workspace.getWorkspaceFolder(document.uri);
+    if (!workspace) return resPath;
+    const projStat = vscode.workspace.fs.stat(vscode.Uri.joinPath(workspace.uri, 'project.godot'));
+    resUri = vscode.Uri.joinPath(workspace.uri, resPath.substring(6));
+    resStat = vscode.workspace.fs.stat(resUri);
+    try { await projStat; } catch {
+      return resPath;
+    }
+  } else {
+    if (uriRegex.test(resPath))
+      return resPath; // better not to load arbitrary URI schemes like http, etc
+    resUri = vscode.Uri.joinPath(document.uri, '..', resPath); // path is relative to folder of document
+    resStat = vscode.workspace.fs.stat(resUri);
+  }
+  try { await resStat; } catch {
     return resUri.toString();
   }
   return resUri;
@@ -255,7 +294,7 @@ async function resPathToMarkdown(resPath: string, document: vscode.TextDocument)
   const md = new vscode.MarkdownString();
   md.supportHtml = true;
   if (!(resUri instanceof vscode.Uri))
-    return md.appendMarkdown(`<div title="${resUri ?? ''}">File not found</div>`);
+    return md.appendMarkdown(`<div title="${resUri}">File not found</div>`);
   if (/\.(svg|png|gif|jpe?g|bmp)$/.test(resPath))
     return md.appendMarkdown(`[<img height=128 src="${resUri}"/>](${resUri})`);
   let match = /\.(ttf|otf|woff)$/.exec(resPath);
@@ -264,7 +303,7 @@ async function resPathToMarkdown(resPath: string, document: vscode.TextDocument)
     const dataUrl = `data:font/${match[1]};base64,${Buffer.from(bytes).toString('base64')}`;
     const t = encodeURIComponent(fontTest).replace("'", "%27");
     return md.appendMarkdown(`[<img src='data:image/svg+xml,\
-<svg xmlns="http://www.w3.org/2000/svg" width="400" height="64"><style>\
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="80" style="background:white;margin:4px"><style>\
 @font-face{font-family:F;src:url("${dataUrl}")}\
 text{font-family:F;dominant-baseline:text-before-edge}\
 </style><text>${t}</text></svg>'/>](${resUri})`);
