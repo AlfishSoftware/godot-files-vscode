@@ -27,8 +27,10 @@ Parsing of INI-like files is very simplistic (line-based; doesn't use a more rob
 While it works well enough for the majority of use cases, some edge cases may parse incorrectly.
 
 Currently, if you have embedded code (like gdscript/gdshader) in asset strings, it may interfere with parsing:
-- Property assignments in strings may incorrectly appear in outline as an asset property
 - Line comments and unclosed block comments may interfere with string terminator quote
+- Double-quoted strings inside GDScript code strings (`\"text...\"`) won't have proper syntax highlighting
+- VSCode is not recognizing "embeddedLanguages" properly for some reason (bug?), so things like toggling comments,
+  snippets, etc. won't consider the embedded language's context
 
 ## Support
 

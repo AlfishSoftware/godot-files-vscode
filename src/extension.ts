@@ -177,6 +177,7 @@ class GDAssetProvider implements
       }
       // Parse values within line
       if (text.startsWith('"')) {
+        //TODO also check negative look-behind for any weird char touching open"
         // String
         let str = "";
         let s = text.substring(1); j++;
@@ -318,7 +319,7 @@ async function resPathOfDocument(document: vscode.TextDocument) {
     const projUri = vscode.Uri.joinPath(workspace.uri, 'project.godot');
     try {
       await vscode.workspace.fs.stat(projUri);
-      return 'res://' + vscode.Uri.file(vscode.workspace.asRelativePath(document.uri, false)).path;
+      return 'res:/' + vscode.Uri.file(vscode.workspace.asRelativePath(document.uri, false)).path;
     } catch { }
   }
   return document.uri.path.replace(/^(?:.*\/)+/, ''); // fallback to document file name (relative path)
