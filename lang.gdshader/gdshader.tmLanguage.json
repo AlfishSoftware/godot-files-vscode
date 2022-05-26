@@ -170,7 +170,7 @@
     },
     "hintKeyword": {
       "name": "storage.type.annotation.gdshader",
-      "match": "\\b(hint_(?:color|range|(?:black_)?albedo|normal|white|black|aniso|anisotropy|roughness_(?:[rgba]|normal|gray))|filter_(?:nearest|linear)(?:_mipmap(?:_anisotropic)?)?|repeat_(?:en|dis)able)\\b",
+      "match": "\\b(source_color|hint_(?:color|range|(?:black_)?albedo|normal|(?:default_)?(?:white|black)|aniso|anisotropy|roughness_(?:[rgba]|normal|gray))|filter_(?:nearest|linear)(?:_mipmap(?:_anisotropic)?)?|repeat_(?:en|dis)able)\\b",
       "captures": {
         "1": { "name": "support.type.annotation.gdshader" }
       }

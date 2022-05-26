@@ -32,6 +32,8 @@ Currently, if you have embedded code (like gdscript/gdshader) in asset strings, 
 - VSCode is not recognizing "embeddedLanguages" properly for some reason (bug?), so things like toggling comments,
   snippets, etc. won't consider the embedded language's context
 
+Target is mostly Godot 3 for now (some Godot 4 features may be supported, but not actively tested).
+
 ## Support
 
 ❤️ If you think this is useful and want to contribute, check [alfish.itch.io].
