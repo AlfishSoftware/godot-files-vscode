@@ -87,7 +87,7 @@
     },
     "hintKeyword": {
       "name": "storage.type.annotation.gdshader",
-      "match": "\\b(hint_(?:color|range|(?:black_)?albedo|normal|white|black|aniso))\\b|(?<=:\\s*)\\b[a-z_]+\\b",
+      "match": "\\b(hint_(?:color|range|(?:black_)?albedo|normal|white|black|aniso))\\b",
       "captures": {
         "1": { "name": "support.type.annotation.gdshader" }
       }
