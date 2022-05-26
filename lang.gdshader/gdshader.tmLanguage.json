@@ -10,8 +10,9 @@
       "patterns": [
         { "include": "#comment" },
         { "include": "#enclosed" },
-        { "include": "#keyword" },
         { "include": "#classifier" },
+        { "include": "#definition" },
+        { "include": "#keyword" },
         { "include": "#element" },
         { "include": "#separator" },
         { "include": "#operator" }
@@ -49,24 +50,106 @@
     
     "classifier": {
       "name": "meta.classifier.gdshader",
-      "begin": "\\b(?:shader_type|render_mode)\\b",
-      "beginCaptures": {
-        "0": { "name": "keyword.language.classifier.gdshader" }
-      },
+      "begin": "(?=\\b(?:shader_type|render_mode)\\b)",
       "patterns": [
         { "include": "#comment" },
+        { "include": "#keyword" },
         { "include": "#identifierClassification" },
-        { "include": "#separatorComma" }
+        { "include": "#separator" }
       ],
-      "end": "(?=;)"
+      "end": "(?<=;)"
+    },
+    "classifierKeyword": {
+      "name": "keyword.language.classifier.gdshader",
+      "match": "\\b(?:shader_type|render_mode)\\b"
     },
     "identifierClassification": {
       "name": "entity.other.inherited-class.gdshader",
       "match": "\\b[a-z_]+\\b"
     },
     
+    "definition": {
+      "patterns": [
+        { "include": "#structDefinition" }
+      ]
+    },
+    "arraySize": {
+      "name": "meta.array-size.gdshader",
+      "begin": "\\[",
+      "end": "\\]",
+      "captures": {
+        "0": { "name": "punctuation.bracket.gdshader" }
+      },
+      "patterns": [
+        { "include": "#comment" },
+        { "include": "#keyword" },
+        { "include": "#element" },
+        { "include": "#separator" }
+      ]
+    },
+    "structDefinition": {
+      "begin": "(?=\\b(?:struct)\\b)",
+      "patterns": [
+        { "include": "#comment" },
+        { "include": "#keyword" },
+        { "include": "#structName" },
+        { "include": "#structDefinitionBlock" },
+        { "include": "#separator" }
+      ],
+      "end": "(?<=;)"
+    },
+    "structKeyword": {
+      "name": "keyword.other.struct.gdshader",
+      "match": "\\b(?:struct)\\b"
+    },
+    "structName": {
+      "name": "entity.name.type.struct.gdshader",
+      "match": "\\b[a-zA-Z_]\\w*\\b"
+    },
+    "structDefinitionBlock": {
+      "name": "meta.definition.block.struct.gdshader",
+      "begin": "\\{",
+      "end": "\\}",
+      "captures": {
+        "0": { "name": "punctuation.definition.block.struct.gdshader" }
+      },
+      "patterns": [
+        { "include": "#comment" },
+        { "include": "#modifierKeyword" },
+        { "include": "#fieldDefinition" },
+        { "include": "#keyword" },
+        { "include": "#any" }
+      ]
+    },
+    "fieldDefinition": {
+      "name": "meta.definition.field.gdshader",
+      "begin": "\\b[a-zA-Z_]\\w*\\b",
+      "beginCaptures": {
+        "0": {
+          "patterns": [
+            { "include": "#typeKeyword" },
+            { "match": ".+", "name": "entity.name.type.gdshader" }
+          ]
+        }
+      },
+      "patterns": [
+        { "include": "#comment" },
+        { "include": "#keyword" },
+        { "include": "#arraySize" },
+        { "include": "#fieldName" },
+        { "include": "#any" }
+      ],
+      "end": "(?<=;)"
+    },
+    "fieldName": {
+      "name": "entity.name.variable.field.gdshader",
+      "match": "\\b[a-zA-Z_]\\w*\\b"
+    },
+    
     "keyword": {
       "patterns": [
+        { "include": "#classifierKeyword" },
+        { "include": "#structKeyword" },
         { "include": "#modifierKeyword" },
         { "include": "#controlKeyword" },
         { "include": "#typeKeyword" },
@@ -75,7 +158,7 @@
     },
     "modifierKeyword": {
       "name": "storage.modifier.gdshader",
-      "match": "\\b(?:const|uniform|varying|(?:low|medium|high)p|in|out|inout|flat|smooth)\\b"
+      "match": "\\b(?:const|global|instance|uniform|varying|(?:low|medium|high)p|in|out|inout|flat|smooth)\\b"
     },
     "controlKeyword": {
       "name": "keyword.control.gdshader",
@@ -87,7 +170,7 @@
     },
     "hintKeyword": {
       "name": "storage.type.annotation.gdshader",
-      "match": "\\b(hint_(?:color|range|(?:black_)?albedo|normal|white|black|aniso))\\b",
+      "match": "\\b(hint_(?:color|range|(?:black_)?albedo|normal|white|black|aniso|anisotropy|roughness_(?:[rgba]|normal|gray))|filter_(?:nearest|linear)(?:_mipmap(?:_anisotropic)?)?|repeat_(?:en|dis)able)\\b",
       "captures": {
         "1": { "name": "support.type.annotation.gdshader" }
       }
@@ -99,10 +182,14 @@
         { "include": "#literalInt" },
         { "include": "#literalBool" },
         
+        { "include": "#identifierType" },
+        
+        { "include": "#constructor" },
         { "include": "#processorFunction" },
         { "include": "#identifierFunction" },
         
         { "include": "#identifierField" },
+        { "include": "#constantFloat" },
         { "include": "#languageVariable" },
         { "include": "#identifierVariable" }
       ]
@@ -114,13 +201,22 @@
     },
     "literalInt": {
       "name": "constant.numeric.integer.gdshader",
-      "match": "\\b(?:0[xX][0-9A-Fa-f]+|\\d+)\\b"
+      "match": "\\b(?:0[xX][0-9A-Fa-f]+|\\d+[uU]?)\\b"
     },
     "literalBool": {
       "name": "constant.language.boolean.gdshader",
       "match": "\\b(?:false|true)\\b"
     },
     
+    "identifierType": {
+      "name": "entity.name.type.gdshader",
+      "match": "\\b[a-zA-Z_]\\w*(?=(?:\\s*\\[\\s*\\w*\\s*\\])?\\s+[a-zA-Z_]\\w*\\b)"
+    },
+    
+    "constructor": {
+      "name": "entity.name.type.constructor.gdshader",
+      "match": "\\b[a-zA-Z_]\\w*(?=\\s*\\[\\s*\\w*\\s*\\]\\s*[(])|\\b[A-Z]\\w*(?=\\s*[(])"
+    },
     "processorFunction": {
       "name": "support.function.gdshader",
       "match": "\\b(?:vertex|fragment|light)(?=(?:\\s|/\\*(?:\\*(?!/)|[^*])*\\*/)*[(])"
@@ -133,6 +229,10 @@
     "identifierField": {
       "name": "entity.name.variable.field.gdshader",
       "match": "(?<=[.]\\s*)[a-zA-Z_]\\w*\\b"
+    },
+    "constantFloat": {
+      "name": "constant.language.float.gdshader",
+      "match": "\\b(?:E|PI|TAU)\\b"
     },
     "languageVariable": {
       "name": "variable.language.gdshader",
