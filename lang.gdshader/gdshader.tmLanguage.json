@@ -219,7 +219,7 @@
     },
     "processorFunction": {
       "name": "support.function.gdshader",
-      "match": "\\b(?:vertex|fragment|light)(?=(?:\\s|/\\*(?:\\*(?!/)|[^*])*\\*/)*[(])"
+      "match": "\\b(?:vertex|fragment|light|start|process|sky|fog)(?=(?:\\s|/\\*(?:\\*(?!/)|[^*])*\\*/)*[(])"
     },
     "identifierFunction": {
       "name": "entity.name.function.gdshader",
