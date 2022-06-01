@@ -24,4 +24,10 @@
     ["\"", "\""],
     ["'", "'"],
   ],
+  "folding": {
+    "markers": {
+      "start": "^[ \\t]*//#region\\b",
+      "end": "^[ \\t]*//#endregion\\b",
+    },
+  },
 }
