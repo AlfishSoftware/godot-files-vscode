@@ -115,7 +115,7 @@
       },
       "patterns": [
         { "include": "#comment" },
-        { "include": "#modifierKeyword" },
+        { "include": "#precisionKeyword" },
         { "include": "#fieldDefinition" },
         { "include": "#keyword" },
         { "include": "#any" }
@@ -150,30 +150,32 @@
       "patterns": [
         { "include": "#classifierKeyword" },
         { "include": "#structKeyword" },
-        { "include": "#modifierKeyword" },
         { "include": "#controlKeyword" },
+        { "include": "#modifierKeyword" },
+        { "include": "#precisionKeyword" },
         { "include": "#typeKeyword" },
         { "include": "#hintKeyword" }
       ]
     },
-    "modifierKeyword": {
-      "name": "storage.modifier.gdshader",
-      "match": "\\b(?:const|global|instance|uniform|varying|(?:low|medium|high)p|in|out|inout|flat|smooth)\\b"
-    },
     "controlKeyword": {
       "name": "keyword.control.gdshader",
       "match": "\\b(?:if|else|do|while|for|continue|break|switch|case|default|return|discard)\\b"
+    },
+    "modifierKeyword": {
+      "name": "storage.modifier.gdshader",
+      "match": "\\b(?:const|global|instance|uniform|varying|in|out|inout|flat|smooth)\\b"
+    },
+    "precisionKeyword": {
+      "name": "storage.type.built-in.primitive.precision.gdshader",
+      "match": "\\b(?:low|medium|high)p\\b"
     },
     "typeKeyword": {
       "name": "support.type.gdshader",
       "match": "\\b(?:void|bool|[biu]?vec[234]|u?int|float|mat[234]|[iu]?sampler(?:3D|2D(?:Array)?)|samplerCube)\\b"
     },
     "hintKeyword": {
-      "name": "storage.type.annotation.gdshader",
-      "match": "\\b(source_color|hint_(?:color|range|(?:black_)?albedo|normal|(?:default_)?(?:white|black)|aniso|anisotropy|roughness_(?:[rgba]|normal|gray))|filter_(?:nearest|linear)(?:_mipmap(?:_anisotropic)?)?|repeat_(?:en|dis)able)\\b",
-      "captures": {
-        "1": { "name": "support.type.annotation.gdshader" }
-      }
+      "name": "support.type.annotation.gdshader",
+      "match": "\\b(?:source_color|hint_(?:color|range|(?:black_)?albedo|normal|(?:default_)?(?:white|black)|aniso|anisotropy|roughness_(?:[rgba]|normal|gray))|filter_(?:nearest|linear)(?:_mipmap(?:_anisotropic)?)?|repeat_(?:en|dis)able)\\b"
     },
     
     "element": {
@@ -188,6 +190,7 @@
         { "include": "#processorFunction" },
         { "include": "#identifierFunction" },
         
+        { "include": "#swizzling" },
         { "include": "#identifierField" },
         { "include": "#constantFloat" },
         { "include": "#languageVariable" },
@@ -226,6 +229,10 @@
       "match": "\\b[a-zA-Z_]\\w*(?=(?:\\s|/\\*(?:\\*(?!/)|[^*])*\\*/)*[(])"
     },
     
+    "swizzling": {
+      "name": "variable.other.property.gdshader",
+      "match": "(?<=[.]\\s*)(?:[xyzw]{2,4}|[rgba]{2,4}|[stpq]{2,4})\\b"
+    },
     "identifierField": {
       "name": "entity.name.variable.field.gdshader",
       "match": "(?<=[.]\\s*)[a-zA-Z_]\\w*\\b"
