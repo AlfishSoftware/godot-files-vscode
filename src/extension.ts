@@ -8,8 +8,8 @@ class GDAsset {
     return n == '.' ? this.rootNode : `${this.rootNode}/${n}`;
   }
   ids = {
-    ExtResource: [] as (vscode.DocumentSymbol | undefined)[],
-    SubResource: [] as (vscode.DocumentSymbol | undefined)[],
+    ExtResource: {} as { [id: string]: vscode.DocumentSymbol | undefined },
+    SubResource: {} as { [id: string]: vscode.DocumentSymbol | undefined },
   };
   strings: { range: vscode.Range, value: string; }[] = [];
   comments: { range: vscode.Range, value: string; }[] = [];
@@ -33,10 +33,11 @@ function makeSectionSymbol(
 ) {
   const [, header, tag, rest] = match;
   const attributes: { [field: string]: string | undefined; } = {};
-  let id;
-  for (const assignment of rest.matchAll(/\b([\w-]+)\b\s*=\s*(?:(\d+)|"([^"]*)")/g)) {
-    if (assignment[1] == 'id' && assignment[2]) id = +assignment[2];
-    attributes[assignment[1]] = assignment[2] ?? GDAssetProvider.unescapeString(assignment[3]);
+  let id: string | undefined;
+  for (const assignment of rest.matchAll(/\b([\w-]+)\b\s*=\s*(?:(\d+)|"([^"\\]*)")/g)) {
+    let value = assignment[2] ?? GDAssetProvider.unescapeString(assignment[3]);
+    attributes[assignment[1]] = value;
+    if (assignment[1] == 'id') id = value;
   }
   let s = new vscode.DocumentSymbol(tag, rest, vscode.SymbolKind.Object, range, range);
   switch (tag) {
@@ -97,7 +98,7 @@ class GDAssetProvider implements
   
   public static unescapeString(partInsideQuotes: string) {
     let s = '';
-    for (const m of partInsideQuotes.matchAll(/\\(["ntr\\bf]|u[0-9A-Fa-f]{4})|\\$|\\?([^])/g)) {
+    for (const m of partInsideQuotes.matchAll(/\\(["bfnrt\\]|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{6})|\\$|\\?([^])/gmu)) {
       switch (m[1]) {
         case '\\': case '"': s += m[1]; continue;
         case 'n': s += '\n'; continue;
@@ -182,7 +183,7 @@ class GDAssetProvider implements
         let str = "";
         let s = text.substring(1); j++;
         lines: while (true) {
-          for (const [sub] of s.matchAll(/"|(?:\\["nrt\\bf]|\\u[0-9A-Fa-f]{4}|\\$|\\?[^"\r\n])+/gmu)) {
+          for (const [sub] of s.matchAll(/"|(?:\\(?:["bfnrt\\]|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{6}|$)|\\?[^"\r\n])+/gmu)) {
             j += sub.length;
             if (sub == '"') break lines;
             str += GDAssetProvider.unescapeString(sub);
@@ -229,9 +230,9 @@ class GDAssetProvider implements
     if (wordIsResPath) {
       let resUri = await resPathToUri(word, document);
       if (resUri instanceof vscode.Uri) return new vscode.Location(resUri, new vscode.Position(0, 0));
-    } else if (match = word.match(/^((?:Ext|Sub)Resource)\s*\(\s*(\d+)\s*\)$/)) {
+    } else if (match = word.match(/^((?:Ext|Sub)Resource)\s*\(\s*(?:(\d+)|"([^"\\]*)")\s*\)$/)) {
       const keyword = match[1] as 'ExtResource' | 'SubResource';
-      const id = +match[2];
+      const id = match[2] ?? GDAssetProvider.unescapeString(match[3]);
       const s = gdasset.ids[keyword][id];
       if (!s) return null;
       if (gdasset.stringContaining(position)) return null;
@@ -258,38 +259,48 @@ class GDAssetProvider implements
     let hover = [], resPath, match;
     if (word == 'ext_resource' || wordIsResPath) {
       const line = document.lineAt(position).text;
-      match = /^\[\s*ext_resource\s+path\s*=\s*"([^"\\]*)"\s*type\s*=\s*"([^"\\]*)"/.exec(line);
+      match = /^\[\s*ext_resource\s+.*?\bid\s*=\s*(?:(\d+)\b|"([^"\\]*)")/.exec(line);
+      let s;
       if (word == 'ext_resource') {
         if (!match) return null;
-        resPath = match[1];
-      } else resPath = word;
-      hover.push(preloadMarkdown(resPath, match ? match[2] : null));
+        s = gdasset.ids.ExtResource[match[1] ?? GDAssetProvider.unescapeString(match[2])];
+        resPath = s?.name ?? '';
+      } else {
+        resPath = word;
+        let extIds = gdasset.ids.ExtResource;
+        for (const id in extIds) {
+          if (extIds[id]?.name != word) continue;
+          s = extIds[id];
+          break;
+        }
+      }
+      hover.push(loadMarkdown(resPath, '', s?.detail ?? null));
     } else if (word == 'sub_resource') {
       const line = document.lineAt(position).text;
-      match = /^\[\s*sub_resource\s+type\s*=\s*"([^"\\]*)"\s*id\s*=\s*(\d+)\b/.exec(line);
+      match = /^\[\s*sub_resource\s+type\s*=\s*"([^"\\]*)"\s*id\s*=\s*(?:(\d+)\b|"([^"\\]*)")/.exec(line);
       if (!match) return null;
-      const [, type, id] = match;
+      const [, type, idN, idS] = match, id = idN ?? GDAssetProvider.unescapeString(idS);
       resPath = await resPathOfDocument(document);
-      return new vscode.Hover(preloadMarkdown(`${resPath}::${id}`, type), wordRange);
+      return new vscode.Hover(loadMarkdown(resPath, id, type), wordRange);
     } else if (word == 'gd_resource') {
       const line = document.lineAt(position).text;
       match = /^\[\s*gd_resource\s+type\s*=\s*"([^"\\]*)"/.exec(line);
       if (!match) return null;
-      return new vscode.Hover(preloadMarkdown(await resPathOfDocument(document), match[1]), wordRange);
+      return new vscode.Hover(loadMarkdown(await resPathOfDocument(document), '', match[1]), wordRange);
     } else if (word == 'gd_scene') {
       const line = document.lineAt(position).text;
       match = /^\[\s*gd_scene\b/.exec(line);
       if (!match) return null;
-      return new vscode.Hover(preloadMarkdown(await resPathOfDocument(document), 'PackedScene'), wordRange);
-    } else if (match = word.match(/^((?:Ext|Sub)Resource)\s*\(\s*(\d+)\s*\)$/)) {
+      return new vscode.Hover(loadMarkdown(await resPathOfDocument(document), '', 'PackedScene'), wordRange);
+    } else if (match = word.match(/^((?:Ext|Sub)Resource)\s*\(\s*(?:(\d+)|"([^"\\]*)")\s*\)$/)) {
       const keyword = match[1] as 'ExtResource' | 'SubResource';
-      const id = +match[2];
+      const id = match[2] ?? GDAssetProvider.unescapeString(match[3]);
       const s = gdasset.ids[keyword][id];
       if (!s) return null;
       const md = new vscode.MarkdownString();
       if (keyword == 'SubResource') {
         resPath = await resPathOfDocument(document);
-        md.appendCodeblock(`preload("${resPath}::${id}") as ${s.detail}`, 'gdscript');
+        md.appendCodeblock(`load("${resPath}::${id}") as ${s.detail}`, 'gdscript');
         return new vscode.Hover(md, wordRange);
       }
       resPath = s.name;
@@ -307,8 +318,8 @@ function isResPath(word: string, wordRange: vscode.Range, document: vscode.TextD
   const r = new vscode.Range(wordRange.start.line, 0, wordRange.end.line, wordRange.end.character + 1);
   return /(?<=^\[\s*ext_resource\s+path\s*=\s*")[^"\\]*(?="$)/.test(document.getText(r));
 }
-function preloadMarkdown(resPath: string, type?: string | null) {
-  let code = `preload("${resPath}")`;
+function loadMarkdown(resPath: string, id: string, type: string | null) {
+  let code = id ? `load("${resPath}::${id}")` : `preload("${resPath}")`;
   if (type) code += ` as ${type}`;
   return new vscode.MarkdownString().appendCodeblock(code, 'gdscript');
 }
