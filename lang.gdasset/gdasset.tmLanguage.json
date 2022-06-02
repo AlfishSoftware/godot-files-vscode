@@ -247,6 +247,26 @@
 			"begin": "(?<=\\b(?:code|(?:\\b\\w+\\b/)*expression)\\s*=\\s*)\"",
 			"contentName": "meta.embedded.block.gdshader source.gdshader",
 			"patterns": [
+				{
+					"name": "comment.line.double-slash.gdshader",
+					"match": "(\\\\)?/(\\\\)?/(?:\\\\[\"\\\\]|[^\"\\n\\r])*",
+					"captures": {
+						"1": { "name": "comment.block.character.escape.gdasset" },
+						"2": { "name": "comment.block.character.escape.gdasset" }
+					}
+				},
+				{
+					"name": "comment.block.gdshader",
+					"captures": {
+						"1": { "name": "comment.block.character.escape.gdasset" },
+						"2": { "name": "comment.block.character.escape.gdasset" }
+					},
+					"begin": "(\\\\)?/(\\\\)?\\*",
+					"patterns": [
+						{ "include": "#characterEscape" }
+					],
+					"end": "(\\\\)?\\*(\\\\)?/|(?=\")"
+				},
 				{ "include": "#characterEscape" },
 				{ "include": "source.gdshader" }
 			],
@@ -294,6 +314,14 @@
 			},
 			"contentName": "meta.embedded.block.gdscript source.gdscript",
 			"patterns": [
+				{
+					"name": "comment.line.number-sign.gdscript",
+					"match": "(\\\\)?(#)(?:\\\\[\"\\\\]|[^\"\\n\\r])*",
+					"captures": {
+						"1": { "name": "comment.block.character.escape.gdasset" },
+						"2": { "name": "punctuation.definition.comment.number-sign.gdscript" }
+					}
+				},
 				{
 					"name": "string.quoted.double.gdscript",
 					"captures": {
