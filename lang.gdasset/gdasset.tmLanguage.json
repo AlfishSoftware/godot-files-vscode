@@ -294,12 +294,60 @@
 			},
 			"contentName": "meta.embedded.block.gdscript source.gdscript",
 			"patterns": [
+				{
+					"name": "string.quoted.double.gdscript",
+					"captures": {
+						"1": { "name": "comment.block.character.escape.gdasset" }
+					},
+					"begin": "(\\\\)\"",
+					"patterns": [
+						{ "include": "#characterEscapeGDScript" },
+						{ "include": "#characterEscape" }
+					],
+					"end": "(\\\\)\"|(?=\")"
+				},
+				{
+					"name": "string.quoted.single.gdscript",
+					"captures": {
+						"1": { "name": "comment.block.character.escape.gdasset" }
+					},
+					"begin": "(\\\\)?'",
+					"patterns": [
+						{ "include": "#characterEscapeGDScript" },
+						{ "include": "#characterEscape" }
+					],
+					"end": "(\\\\)?'|(?=\")"
+				},
 				{ "include": "#characterEscape" },
+				{
+					"comment": "Overriden because it interferes with escaped quote pattern.",
+					"name": "meta.function.gdscript",
+					"match": "\\b(func)\\s+([A-Za-z_]\\w*)\\b(?=\\s*[(])",
+					"captures": {
+						"1": { "name": "storage.type.function.gdscript" },
+						"2": { "name": "entity.name.function.gdscript" }
+					}
+				},
+				{
+					"comment": "Overriden because it interferes with escaped quote pattern.",
+					"name": "meta.function-call.gdscript support.function.gdscript",
+					"match": "\\b[A-Za-z_]\\w*\\b(?=\\s*[(])"
+				},
 				{ "include": "source.gdscript" }
 			],
 			"end": "\"",
 			"endCaptures": {
 				"0": { "name": "punctuation.definition.string.quoted.double.gdasset" }
+			}
+		},
+		"characterEscapeGDScript": {
+			"match": "(\\\\)(?:(\\\\(?:[abfnrtv']|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{6}|(\\\\)[\"'\\\\]|$))|(\\\\(\\\\)?[^\"]))",
+			"captures": {
+				"1": { "name": "comment.block.character.escape.gdasset" },
+				"2": { "name": "constant.character.escape.gdscript" },
+				"3": { "name": "comment.block.character.escape.gdasset" },
+				"4": { "name": "invalid.illegal.unknown-escape.gdscript" },
+				"5": { "name": "comment.block.character.escape.gdasset" }
 			}
 		},
 		"attributeId": {

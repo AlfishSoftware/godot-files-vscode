@@ -28,7 +28,6 @@ While it works well enough for the majority of use cases, some edge cases may pa
 
 Currently, if you have embedded code (like gdscript/gdshader) in asset strings, it may interfere with parsing:
 - Line comments and unclosed block comments may interfere with string terminator quote
-- Double-quoted strings inside GDScript code strings (`\"text...\"`) won't have proper syntax highlighting
 - VSCode is not recognizing "embeddedLanguages" properly for some reason (bug?), so things like toggling comments,
   snippets, etc. won't consider the embedded language's context
 
