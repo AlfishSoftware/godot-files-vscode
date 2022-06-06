@@ -219,7 +219,7 @@
 			"begin": "^\\s*(\\[)\\s*(sub_resource)\\s+(type)\\s*(=)\\s*(\")((?:Visual)?Shader(?:[A-Z_0-9]\\w*)?)(\")\\s*(.*?)(\\])\\s*(?=(?:[;#].*)?$)",
 			"beginCaptures": {
 				"0": { "name": "meta.section.header.shader.gdasset" },
-				"1": { "name": "punctuation.definition.section.gdasset" },
+				"1": { "name": "punctuation.definition.tag.gdasset" },
 				"2": { "name": "entity.name.section.gdasset entity.name.tag.localname.gdasset" },
 				"3": { "name": "entity.other.attribute-name.type.gdasset" },
 				"4": { "name": "punctuation.separator.key-value.gdasset" },
@@ -233,7 +233,7 @@
 						{ "include": "#expression" }
 					]
 				},
-				"9": { "name": "punctuation.definition.section.gdasset" }
+				"9": { "name": "punctuation.definition.tag.gdasset" }
 			},
 			"patterns": [
 				{ "include": "#comment" },
@@ -279,7 +279,7 @@
 			"begin": "^\\s*(\\[)\\s*(sub_resource)\\s+(type)\\s*(=)\\s*(\")(GDScript)(\")\\s*(.*?)(\\])\\s*(?=(?:[;#].*)?$)",
 			"beginCaptures": {
 				"0": { "name": "meta.section.header.gdscript.gdasset" },
-				"1": { "name": "punctuation.definition.section.gdasset" },
+				"1": { "name": "punctuation.definition.tag.gdasset" },
 				"2": { "name": "entity.name.section.gdasset entity.name.tag.localname.gdasset" },
 				"3": { "name": "entity.other.attribute-name.type.gdasset" },
 				"4": { "name": "punctuation.separator.key-value.gdasset" },
@@ -293,7 +293,7 @@
 						{ "include": "#expression" }
 					]
 				},
-				"9": { "name": "punctuation.definition.section.gdasset" }
+				"9": { "name": "punctuation.definition.tag.gdasset" }
 			},
 			"patterns": [
 				{ "include": "#comment" },
@@ -392,7 +392,7 @@
 			"name": "meta.section.header.gdasset",
 			"begin": "^\\s*(\\[)\\s*([^\\[\\]\\s]+)(?=.*?\\]\\s*(?:[;#].*)?$)",
 			"beginCaptures": {
-				"1": { "name": "punctuation.definition.section.gdasset" },
+				"1": { "name": "punctuation.definition.tag.gdasset" },
 				"2": { "name": "entity.name.section.gdasset entity.name.tag.localname.gdasset" }
 			},
 			"patterns": [
@@ -478,7 +478,7 @@
 			],
 			"end": "\\]",
 			"endCaptures": {
-				"0": { "name": "punctuation.definition.section.gdasset" }
+				"0": { "name": "punctuation.definition.tag.gdasset" }
 			}
 		}
 	}
