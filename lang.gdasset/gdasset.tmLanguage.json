@@ -350,16 +350,14 @@
 				{
 					"comment": "Overriden because it interferes with escaped quote pattern.",
 					"name": "meta.function.gdscript",
-					"match": "\\b(func)\\s+([A-Za-z_]\\w*)\\b(?=\\s*[(])",
+					"match": "\\s*\\b(?:(?:[a-z]+\\s+)*(?:func|signal)\\s+)?[A-Za-z_]\\w*\\s*[(]",
 					"captures": {
-						"1": { "name": "storage.type.function.gdscript" },
-						"2": { "name": "entity.name.function.gdscript" }
+						"0": {
+							"patterns": [
+								{ "include": "source.gdscript" }
+							]
+						}
 					}
-				},
-				{
-					"comment": "Overriden because it interferes with escaped quote pattern.",
-					"name": "meta.function-call.gdscript support.function.gdscript",
-					"match": "\\b[A-Za-z_]\\w*\\b(?=\\s*[(])"
 				},
 				{ "include": "source.gdscript" }
 			],
