@@ -1,0 +1,6 @@
+**/._*/
+**/.gitignore
+**/*.src.svg
+**/*.ts
+**/tsconfig.json
+.vscode/

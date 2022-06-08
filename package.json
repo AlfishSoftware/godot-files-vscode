@@ -1,0 +1,249 @@
+{
+  "name": "godot-files",
+  "version": "0.0.1",
+  "displayName": "Godot Files",
+  "description": "Provides syntax-highlighting for some files supported by Godot Editor.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AlfishSoftware/godot-files-vscode"
+  },
+  "bugs": {
+    "url": "https://github.com/AlfishSoftware/godot-files-vscode/issues"
+  },
+  "sponsor": {
+    "url": "https://alfish.itch.io"
+  },
+  "icon": "godot.png",
+  "keywords": [
+    "godot",
+    "gdshader",
+    "shader",
+    "shading",
+    "gd",
+    "asset",
+    "config",
+    "properties",
+    "ini",
+    "freedesktop",
+    "xdg"
+  ],
+  "publisher": "alfish",
+  "license": "0BSD",
+  "engines": {
+    "vscode": "^1.66.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "type": "commonjs",
+  "main": "./src/extension.js",
+  "activationEvents": [
+    "onLanguage:godot-project",
+    "onLanguage:godot-resource",
+    "onLanguage:godot-scene",
+    "onLanguage:godot-asset",
+    "onLanguage:config-definition"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "godot-shader",
+        "aliases": [
+          "Godot Shader",
+          "Godot Shading Language",
+          "GDShader"
+        ],
+        "extensions": [
+          ".gdshader"
+        ],
+        "filenamePatterns": [
+          "*.gdshader"
+        ],
+        "icon": {
+          "dark": "./lang.gdshader/gdshader.dark.svg",
+          "light": "./lang.gdshader/gdshader.light.svg"
+        },
+        "mimetypes": [
+          "application/x-godot-shader"
+        ],
+        "firstLine": "^\\s*shader_type\\s+(spatial|canvas_item|particles|sky|fog)\\s*;\\s*(//.*)?$",
+        "configuration": "./lang.gdshader/gdshader.language-configuration.json"
+      },
+      {
+        "id": "godot-project",
+        "aliases": [
+          "Godot Project Definition",
+          "Godot Project Properties Asset"
+        ],
+        "filenames": [
+          "project.godot"
+        ],
+        "icon": {
+          "dark": "./lang.gdasset/godot-project.dark.svg",
+          "light": "./lang.gdasset/godot-project.light.svg"
+        },
+        "mimetypes": [
+          "application/x-godot-project"
+        ],
+        "configuration": "./lang.gdasset/gdasset.language-configuration.json"
+      },
+      {
+        "id": "godot-resource",
+        "aliases": [
+          "Resource Asset Definition",
+          "Textual Resource Properties"
+        ],
+        "extensions": [
+          ".tres",
+          ".gdns"
+        ],
+        "icon": {
+          "dark": "./lang.gdasset/godot-resource.dark.svg",
+          "light": "./lang.gdasset/godot-resource.light.svg"
+        },
+        "mimetypes": [
+          "application/x-godot-resource"
+        ],
+        "firstLine": "^\\[(gd_resource type=\".*?\" load_steps=\\d+ format=\\d+)\\]$",
+        "configuration": "./lang.gdasset/gdasset.language-configuration.json"
+      },
+      {
+        "id": "godot-scene",
+        "aliases": [
+          "Scene Asset Definition",
+          "Textual Scene Properties"
+        ],
+        "extensions": [
+          ".tscn",
+          ".escn"
+        ],
+        "icon": {
+          "dark": "./lang.gdasset/godot-scene.dark.svg",
+          "light": "./lang.gdasset/godot-scene.light.svg"
+        },
+        "mimetypes": [
+          "application/x-godot-scene"
+        ],
+        "firstLine": "^\\[(gd_scene load_steps=\\d+ format=\\d+)\\]$",
+        "configuration": "./lang.gdasset/gdasset.language-configuration.json"
+      },
+      {
+        "id": "godot-asset",
+        "aliases": [
+          "Asset Properties Definition",
+          "Godot Asset",
+          "GDAsset"
+        ],
+        "filenames": [
+          "export_presets.cfg"
+        ],
+        "extensions": [
+          ".import",
+          ".gdnlib"
+        ],
+        "icon": {
+          "dark": "./lang.gdasset/godot-asset.dark.svg",
+          "light": "./lang.gdasset/godot-asset.light.svg"
+        },
+        "firstLine": "^\\[(remap|general|preset\\.\\d+)\\]$",
+        "configuration": "./lang.gdasset/gdasset.language-configuration.json"
+      },
+      {
+        "id": "config-definition",
+        "aliases": [
+          "Configuration Properties",
+          "Desktop Entry"
+        ],
+        "extensions": [
+          ".cfg",
+          ".desktop",
+          ".directory"
+        ],
+        "icon": {
+          "dark": "./lang.gdasset/godot-asset.dark.svg",
+          "light": "./lang.gdasset/godot-asset.light.svg"
+        },
+        "firstLine": "^\\[Desktop Entry\\]$",
+        "configuration": "./lang.config-definition/config-definition.language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "godot-shader",
+        "scopeName": "source.gdshader.a",
+        "path": "./lang.gdshader/gdshader.tmLanguage.json"
+      },
+      {
+        "language": "godot-project",
+        "scopeName": "source.gdasset",
+        "path": "./lang.gdasset/gdasset.tmLanguage.json"
+      },
+      {
+        "language": "godot-resource",
+        "scopeName": "source.gdasset",
+        "path": "./lang.gdasset/gdasset.tmLanguage.json",
+        "embeddedLanguages": {
+          "meta.embedded.block.gdshader": "gdshader",
+          "meta.embedded.block.gdscript": "gdscript"
+        }
+      },
+      {
+        "language": "godot-scene",
+        "scopeName": "source.gdasset",
+        "path": "./lang.gdasset/gdasset.tmLanguage.json",
+        "embeddedLanguages": {
+          "meta.embedded.block.gdshader": "gdshader",
+          "meta.embedded.block.gdscript": "gdscript"
+        }
+      },
+      {
+        "language": "godot-asset",
+        "scopeName": "source.gdasset",
+        "path": "./lang.gdasset/gdasset.tmLanguage.json"
+      },
+      {
+        "language": "config-definition",
+        "scopeName": "source.gdasset",
+        "path": "./lang.gdasset/gdasset.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "gdshader",
+        "path": "./lang.gdshader/gdshader.code-snippets"
+      },
+      {
+        "language": "godot-project",
+        "path": "./lang.gdasset/gdasset.code-snippets"
+      },
+      {
+        "language": "godot-resource",
+        "path": "./lang.gdasset/gdasset.code-snippets"
+      },
+      {
+        "language": "godot-scene",
+        "path": "./lang.gdasset/gdasset.code-snippets"
+      },
+      {
+        "language": "godot-asset",
+        "path": "./lang.gdasset/gdasset.code-snippets"
+      },
+      {
+        "language": "config-definition",
+        "path": "./lang.config-definition/config-definition.code-snippets"
+      }
+    ],
+    "problemMatchers": [],
+    "commands": []
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^17.0.23",
+    "@types/vscode": "^1.66.0"
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "vscode:prepublish": "npm prune --production && npm run compile"
+  }
+}

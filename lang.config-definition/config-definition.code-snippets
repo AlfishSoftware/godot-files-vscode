@@ -1,0 +1,18 @@
+{
+	// === LANGUAGE CONSTANTS ===
+	"Null": {
+		"prefix": "null",
+		"body": "null",
+		"description": "A null value.",
+	},
+	"False": {
+		"prefix": "false",
+		"body": "false",
+		"description": "A false value.",
+	},
+	"True": {
+		"prefix": "true",
+		"body": "true",
+		"description": "A true value.",
+	},
+}
