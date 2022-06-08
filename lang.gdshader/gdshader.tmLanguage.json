@@ -1,7 +1,7 @@
 {
   "name": "GDShader",
   "fileTypes": [ "gdshader" ],
-  "scopeName": "source.gdshader",
+  "scopeName": "source.gdshader.a",
   "patterns": [
     { "include": "#any" }
   ],
