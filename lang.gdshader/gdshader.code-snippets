@@ -1,0 +1,714 @@
+{
+	//TODO === RENDER MODES ===
+	
+	//TODO === FUNCTIONS ===
+	
+	// === VARIABLES ===
+	//TODO fix type from descr to id
+	
+	// global
+	"float TIME": {
+		"prefix": "_.TIME",
+		"body": "TIME",
+		"description": "Time since the engine has started, in seconds (always positive).",
+	},
+	
+	// particles vertex
+	"inout vec4 p.v.COLOR": {
+		"prefix": "_pv.COLOR",
+		"body": "COLOR",
+		"description": "Particle color, can be written to and accessed in mesh's vertex function.",
+	},
+	"p.v.VELOCITY": {
+		"prefix": "_pv.VELOCITY",
+		"body": "VELOCITY",
+		"description": "Particle velocity, can be modified.\n[inout vec3]",
+	},
+	"p.v.MASS": {
+		"prefix": "_pv.MASS",
+		"body": "MASS",
+		"description": "Particle mass, use for attractors (not implemented in 3.1).\n[out float]",
+	},
+	"p.v.ACTIVE": {
+		"prefix": "_pv.ACTIVE",
+		"body": "ACTIVE",
+		"description": "true when Particle is active, can be set to false.\n[inout bool]",
+	},
+	"p.v.RESTART": {
+		"prefix": "_pv.RESTART",
+		"body": "RESTART",
+		"description": "true when particle must restart (lifetime cycled).\n[in bool]",
+	},
+	"p.v.CUSTOM": {
+		"prefix": "_pv.CUSTOM",
+		"body": "CUSTOM",
+		"description": "Custom particle data. Accessible from shader of mesh as INSTANCE_CUSTOM.\n[inout vec4]",
+	},
+	"p.v.TRANSFORM": {
+		"prefix": "_pv.TRANSFORM",
+		"body": "TRANSFORM",
+		"description": "Particle transform.\n[inout mat4]",
+	},
+	"p.v.LIFETIME": {
+		"prefix": "_pv.LIFETIME",
+		"body": "LIFETIME",
+		"description": "Particle lifetime.\n[in float]",
+	},
+	"p.v.DELTA": {
+		"prefix": "_pv.DELTA",
+		"body": "DELTA",
+		"description": "Delta process time.\n[in float]",
+	},
+	"p.v.NUMBER": {
+		"prefix": "_pv.NUMBER",
+		"body": "NUMBER",
+		"description": "Unique number since emission start.\n[in uint]",
+	},
+	"p.v.INDEX": {
+		"prefix": "_pv.INDEX",
+		"body": "INDEX",
+		"description": "Particle index (from total particles).\n[in int]",
+	},
+	"p.v.EMISSION_TRANSFORM": {
+		"prefix": "_pv.EMISSION_TRANSFORM",
+		"body": "EMISSION_TRANSFORM",
+		"description": "Emitter transform (used for non-local systems).\n[in mat4]",
+	},
+	"p.v.RANDOM_SEED": {
+		"prefix": "_pv.RANDOM_SEED",
+		"body": "RANDOM_SEED",
+		"description": "Random seed used as base for random.\n[in uint]",
+	},
+	
+	// canvas_item vertex
+	"c.v.WORLD_MATRIX": {
+		"prefix": "_cv.WORLD_MATRIX",
+		"body": "WORLD_MATRIX",
+		"description": "Image space to view space transform.\n[in mat4]",
+	},
+	"c.v.EXTRA_MATRIX": {
+		"prefix": "_cv.EXTRA_MATRIX",
+		"body": "EXTRA_MATRIX",
+		"description": "Extra transform.\n[in mat4]",
+	},
+	"c.v.PROJECTION_MATRIX": {
+		"prefix": "_cv.PROJECTION_MATRIX",
+		"body": "PROJECTION_MATRIX",
+		"description": "View space to clip space transform.\n[in mat4]",
+	},
+	"c.v.INSTANCE_CUSTOM": {
+		"prefix": "_cv.INSTANCE_CUSTOM",
+		"body": "INSTANCE_CUSTOM",
+		"description": "Instance custom data.\n[in vec4]",
+	},
+	"c.v.AT_LIGHT_PASS": {
+		"prefix": "_cv.AT_LIGHT_PASS",
+		"body": "AT_LIGHT_PASS",
+		"description": "true if this is a light pass.\n[in bool]",
+	},
+	"c.v.VERTEX": {
+		"prefix": "_cv.VERTEX",
+		"body": "VERTEX",
+		"description": "Vertex, in image space.\n[inout vec2]",
+	},
+	"c.v.TEXTURE_PIXEL_SIZE": {
+		"prefix": "_cv.TEXTURE_PIXEL_SIZE",
+		"body": "TEXTURE_PIXEL_SIZE",
+		"description": "Normalized pixel size of default 2D texture. For a Sprite with a texture of size 64x32px, TEXTURE_PIXEL_SIZE = vec2(1/64, 1/32)\n[in vec2]",
+	},
+	"c.v.UV": {
+		"prefix": "_cv.UV",
+		"body": "UV",
+		"description": "Texture coordinates.\n[inout vec2]",
+	},
+	"c.v.COLOR": {
+		"prefix": "_cv.COLOR",
+		"body": "COLOR",
+		"description": "Color from vertex primitive.\n[inout vec4]",
+	},
+	"c.v.MODULATE": {
+		"prefix": "_cv.MODULATE",
+		"body": "MODULATE",
+		"description": "Final modulate color. If used, COLOR will not be multiplied by modulate automatically after the fragment function.\n[in vec4]",
+	},
+	"c.v.POINT_SIZE": {
+		"prefix": "_cv.POINT_SIZE",
+		"body": "POINT_SIZE",
+		"description": "Point size for point drawing.\n[inout float]",
+	},
+	
+	// canvas_item fragment
+	"c.f.FRAGCOORD": {
+		"prefix": "_cf.FRAGCOORD",
+		"body": "FRAGCOORD",
+		"description": "Coordinate of pixel center. In screen space. xy specifies position in window, z specifies fragment depth if DEPTH is not used. Origin is lower-left.\n[in vec4]",
+	},
+	"c.f.NORMAL": {
+		"prefix": "_cf.NORMAL",
+		"body": "NORMAL",
+		"description": "Normal read from NORMAL_TEXTURE. Writable.\n[inout vec3]",
+	},
+	"c.f.NORMALMAP": {
+		"prefix": "_cf.NORMALMAP",
+		"body": "NORMALMAP",
+		"description": "Configures normal maps meant for 3D for use in 2D. If used, overwrites NORMAL.\n[out vec3]",
+	},
+	"c.f.NORMALMAP_DEPTH": {
+		"prefix": "_cf.NORMALMAP_DEPTH",
+		"body": "NORMALMAP_DEPTH",
+		"description": "Normalmap depth for scaling.\n[inout float]",
+	},
+	"c.f.UV": {
+		"prefix": "_cf.UV",
+		"body": "UV",
+		"description": "UV from vertex function.\n[in vec2]",
+	},
+	"c.f.COLOR": {
+		"prefix": "_cf.COLOR",
+		"body": "COLOR",
+		"description": "Color from vertex function and output fragment color. If unused, will be set to TEXTURE color.\n[inout vec4]",
+	},
+	"c.f.MODULATE": {
+		"prefix": "_cf.MODULATE",
+		"body": "MODULATE",
+		"description": "Final modulate color. If used, COLOR will not be multiplied by modulate automatically after the fragment function.\n[in vec4]",
+	},
+	"c.f.TEXTURE": {
+		"prefix": "_cf.TEXTURE",
+		"body": "TEXTURE",
+		"description": "Default 2D texture.\n[in sampler2D]",
+	},
+	"c.f.NORMAL_TEXTURE": {
+		"prefix": "_cf.NORMAL_TEXTURE",
+		"body": "NORMAL_TEXTURE",
+		"description": "Default 2D normal texture.\n[in sampler2D]",
+	},
+	"c.f.TEXTURE_PIXEL_SIZE": {
+		"prefix": "_cf.TEXTURE_PIXEL_SIZE",
+		"body": "TEXTURE_PIXEL_SIZE",
+		"description": "Normalized pixel size of default 2D texture. For a Sprite with a texture of size 64x32px, TEXTURE_PIXEL_SIZE = vec2(1/64, 1/32)\n[in vec2]",
+	},
+	"c.f.SCREEN_UV": {
+		"prefix": "_cf.SCREEN_UV",
+		"body": "SCREEN_UV",
+		"description": "Screen UV for use with SCREEN_TEXTURE.\n[in vec2]",
+	},
+	"c.f.SCREEN_PIXEL_SIZE": {
+		"prefix": "_cf.SCREEN_PIXEL_SIZE",
+		"body": "SCREEN_PIXEL_SIZE",
+		"description": "Size of individual pixels. Equal to inverse of resolution.\n[in vec2]",
+	},
+	"c.f.POINT_COORD": {
+		"prefix": "_cf.POINT_COORD",
+		"body": "POINT_COORD",
+		"description": "Coordinate for drawing points.\n[in vec2]",
+	},
+	"c.f.AT_LIGHT_PASS": {
+		"prefix": "_cf.AT_LIGHT_PASS",
+		"body": "AT_LIGHT_PASS",
+		"description": "true if this is a light pass.\n[in bool]",
+	},
+	"c.f.SCREEN_TEXTURE": {
+		"prefix": "_cf.SCREEN_TEXTURE",
+		"body": "SCREEN_TEXTURE",
+		"description": "Screen texture, mipmaps contain gaussian blurred versions.\n[in sampler2D]",
+	},
+	
+	// canvas_item light
+	"c.l.FRAGCOORD": {
+		"prefix": "_cl.FRAGCOORD",
+		"body": "FRAGCOORD",
+		"description": "Coordinate of pixel center. In screen space. xy specifies position in window, z specifies fragment depth if DEPTH is not used. Origin is lower-left.\n[in vec4]",
+	},
+	"c.l.NORMAL": {
+		"prefix": "_cl.NORMAL",
+		"body": "NORMAL",
+		"description": "Input Normal. Although this value is passed in, normal calculation still happens outside of this function.\n[in vec3]",
+	},
+	"c.l.UV": {
+		"prefix": "_cl.UV",
+		"body": "UV",
+		"description": "UV from vertex function, equivalent to the UV in the fragment function.\n[in vec2]",
+	},
+	"c.l.COLOR": {
+		"prefix": "_cl.COLOR",
+		"body": "COLOR",
+		"description": "Input Color. This is the output of the fragment function (with final modulation applied, if MODULATE is not used in any function of the shader).\n[in vec4]",
+	},
+	"c.l.MODULATE": {
+		"prefix": "_cl.MODULATE",
+		"body": "MODULATE",
+		"description": "Final modulate color. If used, COLOR will not be multiplied by modulate automatically after the fragment function.\n[in vec4]",
+	},
+	"c.l.TEXTURE": {
+		"prefix": "_cl.TEXTURE",
+		"body": "TEXTURE",
+		"description": "Current texture in use for CanvasItem.\n[in sampler2D]",
+	},
+	"c.l.TEXTURE_PIXEL_SIZE": {
+		"prefix": "_cl.TEXTURE_PIXEL_SIZE",
+		"body": "TEXTURE_PIXEL_SIZE",
+		"description": "Normalized pixel size of default 2D texture. For a Sprite with a texture of size 64x32px, TEXTURE_PIXEL_SIZE = vec2(1/64, 1/32)\n[in vec2]",
+	},
+	"c.l.SCREEN_UV": {
+		"prefix": "_cl.SCREEN_UV",
+		"body": "SCREEN_UV",
+		"description": "SCREEN_TEXTURE Coordinate (for using with screen texture).\n[in vec2]",
+	},
+	"c.l.POINT_COORD": {
+		"prefix": "_cl.POINT_COORD",
+		"body": "POINT_COORD",
+		"description": "UV for Point Sprite.\n[in vec2]",
+	},
+	"c.l.LIGHT_VEC": {
+		"prefix": "_cl.LIGHT_VEC",
+		"body": "LIGHT_VEC",
+		"description": "Vector from light to fragment in local coordinates. It can be modified to alter illumination direction when normal maps are used.\n[inout vec2]",
+	},
+	"c.l.SHADOW_VEC": {
+		"prefix": "_cl.SHADOW_VEC",
+		"body": "SHADOW_VEC",
+		"description": "Vector from light to fragment in local coordinates. It can be modified to alter shadow computation.\n[inout vec2]",
+	},
+	"c.l.LIGHT_HEIGHT": {
+		"prefix": "_cl.LIGHT_HEIGHT",
+		"body": "LIGHT_HEIGHT",
+		"description": "Height of Light. Only effective when normals are used.\n[inout float]",
+	},
+	"c.l.LIGHT_COLOR": {
+		"prefix": "_cl.LIGHT_COLOR",
+		"body": "LIGHT_COLOR",
+		"description": "Color of Light.\n[inout vec4]",
+	},
+	"c.l.LIGHT_UV": {
+		"prefix": "_cl.LIGHT_UV",
+		"body": "LIGHT_UV",
+		"description": "UV for Light texture.\n[in vec2]",
+	},
+	"c.l.SHADOW_COLOR": {
+		"prefix": "_cl.SHADOW_COLOR",
+		"body": "SHADOW_COLOR",
+		"description": "Shadow Color of Light.\n[out vec4]",
+	},
+	"c.l.LIGHT": {
+		"prefix": "_cl.LIGHT",
+		"body": "LIGHT",
+		"description": "Value from the Light texture and output color. Can be modified. If not used, the light function is ignored.\n[inout vec4]",
+	},
+	
+	// spatial vertex
+	"s.v.VIEWPORT_SIZE": {
+		"prefix": "_sv.VIEWPORT_SIZE",
+		"body": "VIEWPORT_SIZE",
+		"description": "Size of viewport (in pixels).\n[in vec2]",
+	},
+	"s.v.WORLD_MATRIX": {
+		"prefix": "_sv.WORLD_MATRIX",
+		"body": "WORLD_MATRIX",
+		"description": "Model space to world space transform.\n[inout mat4]",
+	},
+	"s.v.INV_CAMERA_MATRIX": {
+		"prefix": "_sv.INV_CAMERA_MATRIX",
+		"body": "INV_CAMERA_MATRIX",
+		"description": "World space to view space transform.\n[in mat4]",
+	},
+	"s.v.PROJECTION_MATRIX": {
+		"prefix": "_sv.PROJECTION_MATRIX",
+		"body": "PROJECTION_MATRIX",
+		"description": "View space to clip space transform.\n[inout mat4]",
+	},
+	"s.v.CAMERA_MATRIX": {
+		"prefix": "_sv.CAMERA_MATRIX",
+		"body": "CAMERA_MATRIX",
+		"description": "View space to world space transform.\n[in mat4]",
+	},
+	"s.v.MODELVIEW_MATRIX": {
+		"prefix": "_sv.MODELVIEW_MATRIX",
+		"body": "MODELVIEW_MATRIX",
+		"description": "Model space to view space transform (use if possible).\n[inout mat4]",
+	},
+	"s.v.INV_PROJECTION_MATRIX": {
+		"prefix": "_sv.INV_PROJECTION_MATRIX",
+		"body": "INV_PROJECTION_MATRIX",
+		"description": "Clip space to view space transform.\n[inout mat4]",
+	},
+	"s.v.VERTEX": {
+		"prefix": "_sv.VERTEX",
+		"body": "VERTEX",
+		"description": "Vertex in local coordinates.\n[inout vec3]",
+	},
+	"s.v.POSITION": {
+		"prefix": "_sv.POSITION",
+		"body": "POSITION",
+		"description": "If written to, overrides final vertex position.\n[out vec4]",
+	},
+	"s.v.NORMAL": {
+		"prefix": "_sv.NORMAL",
+		"body": "NORMAL",
+		"description": "Normal in local coordinates.\n[inout vec3]",
+	},
+	"s.v.TANGENT": {
+		"prefix": "_sv.TANGENT",
+		"body": "TANGENT",
+		"description": "Tangent in local coordinates.\n[inout vec3]",
+	},
+	"s.v.BINORMAL": {
+		"prefix": "_sv.BINORMAL",
+		"body": "BINORMAL",
+		"description": "Binormal in local coordinates.\n[inout vec3]",
+	},
+	"s.v.ROUGHNESS": {
+		"prefix": "_sv.ROUGHNESS",
+		"body": "ROUGHNESS",
+		"description": "Roughness for vertex lighting.\n[out float]",
+	},
+	"s.v.UV": {
+		"prefix": "_sv.UV",
+		"body": "UV",
+		"description": "UV main channel.\n[inout vec2]",
+	},
+	"s.v.UV2": {
+		"prefix": "_sv.UV2",
+		"body": "UV2",
+		"description": "UV secondary channel.\n[inout vec2]",
+	},
+	"s.v.OUTPUT_IS_SRGB": {
+		"prefix": "_sv.OUTPUT_IS_SRGB",
+		"body": "OUTPUT_IS_SRGB",
+		"description": "true when calculations happen in sRGB color space (true in GLES2, false in GLES3).\n[in bool]",
+	},
+	"s.v.COLOR": {
+		"prefix": "_sv.COLOR",
+		"body": "COLOR",
+		"description": "Color from vertices.\n[inout vec4]",
+	},
+	"s.v.POINT_SIZE": {
+		"prefix": "_sv.POINT_SIZE",
+		"body": "POINT_SIZE",
+		"description": "Point size for point rendering.\n[inout float]",
+	},
+	"s.v.INSTANCE_ID": {
+		"prefix": "_sv.INSTANCE_ID",
+		"body": "INSTANCE_ID",
+		"description": "Instance ID for instancing.\n[in int]",
+	},
+	"s.v.INSTANCE_CUSTOM": {
+		"prefix": "_sv.INSTANCE_CUSTOM",
+		"body": "INSTANCE_CUSTOM",
+		"description": "Instance custom data (for particles, mostly).\n[in vec4]",
+	},
+	
+	// spatial fragment
+	"s.f.VIEWPORT_SIZE": {
+		"prefix": "_sf.VIEWPORT_SIZE",
+		"body": "VIEWPORT_SIZE",
+		"description": "Size of viewport (in pixels).\n[in vec2]",
+	},
+	"s.f.FRAGCOORD": {
+		"prefix": "_sf.FRAGCOORD",
+		"body": "FRAGCOORD",
+		"description": "Coordinate of pixel center in screen space. xy specifies position in window, z specifies fragment depth if DEPTH is not used. Origin is lower-left.\n[in vec4]",
+	},
+	"s.f.WORLD_MATRIX": {
+		"prefix": "_sf.WORLD_MATRIX",
+		"body": "WORLD_MATRIX",
+		"description": "Model space to world space transform.\n[in mat4]",
+	},
+	"s.f.INV_CAMERA_MATRIX": {
+		"prefix": "_sf.INV_CAMERA_MATRIX",
+		"body": "INV_CAMERA_MATRIX",
+		"description": "World space to view space transform.\n[in mat4]",
+	},
+	"s.f.CAMERA_MATRIX": {
+		"prefix": "_sf.CAMERA_MATRIX",
+		"body": "CAMERA_MATRIX",
+		"description": "View space to world space transform.\n[in mat4]",
+	},
+	"s.f.PROJECTION_MATRIX": {
+		"prefix": "_sf.PROJECTION_MATRIX",
+		"body": "PROJECTION_MATRIX",
+		"description": "View space to clip space transform.\n[in mat4]",
+	},
+	"s.f.INV_PROJECTION_MATRIX": {
+		"prefix": "_sf.INV_PROJECTION_MATRIX",
+		"body": "INV_PROJECTION_MATRIX",
+		"description": "Clip space to view space transform.\n[in mat4]",
+	},
+	"s.f.VERTEX": {
+		"prefix": "_sf.VERTEX",
+		"body": "VERTEX",
+		"description": "Vertex that comes from vertex function (default, in view space).\n[in vec3]",
+	},
+	"s.f.VIEW": {
+		"prefix": "_sf.VIEW",
+		"body": "VIEW",
+		"description": "Vector from camera to fragment position (in view space).\n[in vec3]",
+	},
+	"s.f.FRONT_FACING": {
+		"prefix": "_sf.FRONT_FACING",
+		"body": "FRONT_FACING",
+		"description": "true if current face is front face.\n[in bool]",
+	},
+	"s.f.NORMAL": {
+		"prefix": "_sf.NORMAL",
+		"body": "NORMAL",
+		"description": "Normal that comes from vertex function (default, in view space).\n[inout vec3]",
+	},
+	"s.f.TANGENT": {
+		"prefix": "_sf.TANGENT",
+		"body": "TANGENT",
+		"description": "Tangent that comes from vertex function.\n[inout vec3]",
+	},
+	"s.f.BINORMAL": {
+		"prefix": "_sf.BINORMAL",
+		"body": "BINORMAL",
+		"description": "Binormal that comes from vertex function.\n[inout vec3]",
+	},
+	"s.f.NORMALMAP": {
+		"prefix": "_sf.NORMALMAP",
+		"body": "NORMALMAP",
+		"description": "Set normal here if reading normal from a texture instead of NORMAL.\n[out vec3]",
+	},
+	"s.f.NORMALMAP_DEPTH": {
+		"prefix": "_sf.NORMALMAP_DEPTH",
+		"body": "NORMALMAP_DEPTH",
+		"description": "Depth from variable above. Defaults to 1.0.\n[out float]",
+	},
+	"s.f.UV": {
+		"prefix": "_sf.UV",
+		"body": "UV",
+		"description": "UV that comes from vertex function.\n[in vec2]",
+	},
+	"s.f.UV2": {
+		"prefix": "_sf.UV2",
+		"body": "UV2",
+		"description": "UV2 that comes from vertex function.\n[in vec2]",
+	},
+	"s.f.OUTPUT_IS_SRGB": {
+		"prefix": "_sf.OUTPUT_IS_SRGB",
+		"body": "OUTPUT_IS_SRGB",
+		"description": "true when calculations happen in sRGB color space (true in GLES2, false in GLES3).\n[in bool]",
+	},
+	"s.f.COLOR": {
+		"prefix": "_sf.COLOR",
+		"body": "COLOR",
+		"description": "COLOR that comes from vertex function.\n[in vec4]",
+	},
+	"s.f.ALBEDO": {
+		"prefix": "_sf.ALBEDO",
+		"body": "ALBEDO",
+		"description": "Albedo (default white).\n[out vec3]",
+	},
+	"s.f.ALPHA": {
+		"prefix": "_sf.ALPHA",
+		"body": "ALPHA",
+		"description": "Alpha (0..1); if written to, the material will go to the transparent pipeline.\n[out float]",
+	},
+	"s.f.ALPHA_SCISSOR": {
+		"prefix": "_sf.ALPHA_SCISSOR",
+		"body": "ALPHA_SCISSOR",
+		"description": "If written to, values below a certain amount of alpha are discarded.\n[out float]",
+	},
+	"s.f.METALLIC": {
+		"prefix": "_sf.METALLIC",
+		"body": "METALLIC",
+		"description": "Metallic (0..1).\n[out float]",
+	},
+	"s.f.SPECULAR": {
+		"prefix": "_sf.SPECULAR",
+		"body": "SPECULAR",
+		"description": "Specular. Defaults to 0.5, best not to modify unless you want to change IOR.\n[out float]",
+	},
+	"s.f.ROUGHNESS": {
+		"prefix": "_sf.ROUGHNESS",
+		"body": "ROUGHNESS",
+		"description": "Roughness (0..1).\n[out float]",
+	},
+	"s.f.RIM": {
+		"prefix": "_sf.RIM",
+		"body": "RIM",
+		"description": "Rim (0..1). If used, Godot calculates rim lighting.\n[out float]",
+	},
+	"s.f.RIM_TINT": {
+		"prefix": "_sf.RIM_TINT",
+		"body": "RIM_TINT",
+		"description": "Rim Tint, goes from 0 (white) to 1 (albedo). If used, Godot calculates rim lighting.\n[out float]",
+	},
+	"s.f.CLEARCOAT": {
+		"prefix": "_sf.CLEARCOAT",
+		"body": "CLEARCOAT",
+		"description": "Small added specular blob. If used, Godot calculates Clearcoat.\n[out float]",
+	},
+	"s.f.CLEARCOAT_GLOSS": {
+		"prefix": "_sf.CLEARCOAT_GLOSS",
+		"body": "CLEARCOAT_GLOSS",
+		"description": "Gloss of Clearcoat. If used, Godot calculates Clearcoat.\n[out float]",
+	},
+	"s.f.ANISOTROPY": {
+		"prefix": "_sf.ANISOTROPY",
+		"body": "ANISOTROPY",
+		"description": "For distorting the specular blob according to tangent space.\n[out float]",
+	},
+	"s.f.ANISOTROPY_FLOW": {
+		"prefix": "_sf.ANISOTROPY_FLOW",
+		"body": "ANISOTROPY_FLOW",
+		"description": "Distortion direction, use with flowmaps.\n[out vec2]",
+	},
+	"s.f.SSS_STRENGTH": {
+		"prefix": "_sf.SSS_STRENGTH",
+		"body": "SSS_STRENGTH",
+		"description": "Strength of Subsurface Scattering. If used, Subsurface Scattering will be applied to object.\n[out float]",
+	},
+	"s.f.TRANSMISSION": {
+		"prefix": "_sf.TRANSMISSION",
+		"body": "TRANSMISSION",
+		"description": "Transmission mask (default 0,0,0). Allows light to pass through object. Only applied if used.\n[out vec3]",
+	},
+	"s.f.EMISSION": {
+		"prefix": "_sf.EMISSION",
+		"body": "EMISSION",
+		"description": "Emission color (can go over 1,1,1 for HDR).\n[out vec3]",
+	},
+	"s.f.AO": {
+		"prefix": "_sf.AO",
+		"body": "AO",
+		"description": "Strength of Ambient Occlusion. For use with pre-baked AO.\n[out float]",
+	},
+	"s.f.AO_LIGHT_AFFECT": {
+		"prefix": "_sf.AO_LIGHT_AFFECT",
+		"body": "AO_LIGHT_AFFECT",
+		"description": "How much AO affects lights (0..1; default 0).\n[out float]",
+	},
+	"s.f.SCREEN_TEXTURE": {
+		"prefix": "_sf.SCREEN_TEXTURE",
+		"body": "SCREEN_TEXTURE",
+		"description": "Built-in Texture for reading from the screen. Mipmaps contain increasingly blurred copies.\n[in sampler2D]",
+	},
+	"s.f.DEPTH_TEXTURE": {
+		"prefix": "_sf.DEPTH_TEXTURE",
+		"body": "DEPTH_TEXTURE",
+		"description": "Built-in Texture for reading depth from the screen. Must convert to linear using INV_PROJECTION.\n[in sampler2D]",
+	},
+	"s.f.DEPTH": {
+		"prefix": "_sf.DEPTH",
+		"body": "DEPTH",
+		"description": "Custom depth value (0..1).\n[out float]",
+	},
+	"s.f.SCREEN_UV": {
+		"prefix": "_sf.SCREEN_UV",
+		"body": "SCREEN_UV",
+		"description": "Screen UV coordinate for current pixel.\n[in vec2]",
+	},
+	"s.f.POINT_COORD": {
+		"prefix": "_sf.POINT_COORD",
+		"body": "POINT_COORD",
+		"description": "Point Coordinate for drawing points with POINT_SIZE.\n[in vec2]",
+	},
+	
+	// spatial light
+	"s.l.VIEWPORT_SIZE": {
+		"prefix": "_sl.VIEWPORT_SIZE",
+		"body": "VIEWPORT_SIZE",
+		"description": "Size of viewport (in pixels).\n[in vec2]",
+	},
+	"s.l.FRAGCOORD": {
+		"prefix": "_sl.FRAGCOORD",
+		"body": "FRAGCOORD",
+		"description": "Coordinate of pixel center in screen space. xy specifies position in window, z specifies fragment depth if DEPTH is not used. Origin is lower-left.\n[in vec4]",
+	},
+	"s.l.WORLD_MATRIX": {
+		"prefix": "_sl.WORLD_MATRIX",
+		"body": "WORLD_MATRIX",
+		"description": "Model space to world space transform.\n[in mat4]",
+	},
+	"s.l.INV_CAMERA_MATRIX": {
+		"prefix": "_sl.INV_CAMERA_MATRIX",
+		"body": "INV_CAMERA_MATRIX",
+		"description": "World space to view space transform.\n[in mat4]",
+	},
+	"s.l.CAMERA_MATRIX": {
+		"prefix": "_sl.CAMERA_MATRIX",
+		"body": "CAMERA_MATRIX",
+		"description": "View space to world space transform.\n[in mat4]",
+	},
+	"s.l.PROJECTION_MATRIX": {
+		"prefix": "_sl.PROJECTION_MATRIX",
+		"body": "PROJECTION_MATRIX",
+		"description": "View space to clip space transform.\n[in mat4]",
+	},
+	"s.l.INV_PROJECTION_MATRIX": {
+		"prefix": "_sl.INV_PROJECTION_MATRIX",
+		"body": "INV_PROJECTION_MATRIX",
+		"description": "Clip space to view space transform.\n[in mat4]",
+	},
+	"s.l.NORMAL": {
+		"prefix": "_sl.NORMAL",
+		"body": "NORMAL",
+		"description": "Normal vector, in view space.\n[in vec3]",
+	},
+	"s.l.UV": {
+		"prefix": "_sl.UV",
+		"body": "UV",
+		"description": "UV that comes from vertex function.\n[in vec2]",
+	},
+	"s.l.UV2": {
+		"prefix": "_sl.UV2",
+		"body": "UV2",
+		"description": "UV2 that comes from vertex function.\n[in vec2]",
+	},
+	"s.l.VIEW": {
+		"prefix": "_sl.VIEW",
+		"body": "VIEW",
+		"description": "View vector, in view space.\n[in vec3]",
+	},
+	"s.l.LIGHT": {
+		"prefix": "_sl.LIGHT",
+		"body": "LIGHT",
+		"description": "Light Vector, in view space.\n[in vec3]",
+	},
+	"s.l.ATTENUATION": {
+		"prefix": "_sl.ATTENUATION",
+		"body": "ATTENUATION",
+		"description": "Attenuation based on distance or shadow.\n[in vec3]",
+	},
+	"s.l.OUTPUT_IS_SRGB": {
+		"prefix": "_sl.OUTPUT_IS_SRGB",
+		"body": "OUTPUT_IS_SRGB",
+		"description": "true when calculations happen in sRGB color space (true in GLES2, false in GLES3).\n[in bool]",
+	},
+	"s.l.ALBEDO": {
+		"prefix": "_sl.ALBEDO",
+		"body": "ALBEDO",
+		"description": "Base albedo.\n[in vec3]",
+	},
+	"s.l.LIGHT_COLOR": {
+		"prefix": "_sl.LIGHT_COLOR",
+		"body": "LIGHT_COLOR",
+		"description": "Color of light multiplied by energy.\n[in vec3]",
+	},
+	"s.l.ALPHA": {
+		"prefix": "_sl.ALPHA",
+		"body": "ALPHA",
+		"description": "Alpha (0..1); if written to, the material will go to the transparent pipeline.\n[out float]",
+	},
+	"s.l.ROUGHNESS": {
+		"prefix": "_sl.ROUGHNESS",
+		"body": "ROUGHNESS",
+		"description": "Roughness.\n[in float]",
+	},
+	"s.l.TRANSMISSION": {
+		"prefix": "_sl.TRANSMISSION",
+		"body": "TRANSMISSION",
+		"description": "Transmission mask from fragment function.\n[in vec3]",
+	},
+	"s.l.DIFFUSE_LIGHT": {
+		"prefix": "_sl.DIFFUSE_LIGHT",
+		"body": "DIFFUSE_LIGHT",
+		"description": "Diffuse light result.\n[out vec3]",
+	},
+	"s.l.SPECULAR_LIGHT": {
+		"prefix": "_sl.SPECULAR_LIGHT",
+		"body": "SPECULAR_LIGHT",
+		"description": "Specular light result.\n[out vec3]",
+	},
+}
