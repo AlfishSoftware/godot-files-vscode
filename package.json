@@ -44,7 +44,7 @@
   "contributes": {
     "languages": [
       {
-        "id": "gdshader",
+        "id": "godot-shader",
         "aliases": [
           "Godot Shader",
           "Godot Shading Language",
@@ -53,6 +53,9 @@
         "extensions": [
           ".gdshader"
         ],
+        "filenamePatterns": [
+          "*.gdshader"
+        ],
         "icon": {
           "dark": "./lang.gdshader/gdshader.dark.svg",
           "light": "./lang.gdshader/gdshader.light.svg"
@@ -60,7 +63,7 @@
         "mimetypes": [
           "application/x-godot-shader"
         ],
-        "firstLine": "^\\s*shader_type\\s+(spatial|canvas_item|particles)\\s*;\\s*(//.*)?$",
+        "firstLine": "^\\s*shader_type\\s+(spatial|canvas_item|particles|sky|fog)\\s*;\\s*(//.*)?$",
         "configuration": "./lang.gdshader/gdshader.language-configuration.json"
       },
       {
@@ -163,8 +166,8 @@
     ],
     "grammars": [
       {
-        "language": "gdshader",
-        "scopeName": "source.gdshader",
+        "language": "godot-shader",
+        "scopeName": "source.gdshader.a",
         "path": "./lang.gdshader/gdshader.tmLanguage.json"
       },
       {
