@@ -10,6 +10,9 @@
   "bugs": {
     "url": "https://github.com/AlfishSoftware/godot-files-vscode/issues"
   },
+  "sponsor": {
+    "url": "https://alfish.itch.io"
+  },
   "icon": "godot.png",
   "keywords": [
     "godot",
@@ -76,8 +79,8 @@
           "project.godot"
         ],
         "icon": {
-          "dark": "./lang.gdasset/godot.dark.svg",
-          "light": "./lang.gdasset/godot.light.svg"
+          "dark": "./lang.gdasset/godot-project.dark.svg",
+          "light": "./lang.gdasset/godot-project.light.svg"
         },
         "mimetypes": [
           "application/x-godot-project"
@@ -230,10 +233,8 @@
         "path": "./lang.config-definition/config-definition.code-snippets"
       }
     ],
-    "problemMatchers": [
-    ],
-    "commands": [
-    ]
+    "problemMatchers": [],
+    "commands": []
   },
   "dependencies": {},
   "devDependencies": {
