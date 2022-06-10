@@ -1,5 +1,15 @@
 import * as vscode from 'vscode';
-function escapeReplacement(s: string) { return s.replace(/\$/g, '$$$$'); }
+import { rmSync } from 'fs';
+
+function hash(s: string, seed = 0) { // 53-bit hash, see https://stackoverflow.com/a/52171480
+  let a = 0xdeadbeef ^ seed, b = 0x41c6ce57 ^ seed;
+  for (let i = 0, c; i < s.length; i++) {
+    c = s.charCodeAt(i); a = Math.imul(a ^ c, 2654435761); b = Math.imul(b ^ c, 1597334677);
+  }
+  a = Math.imul(a ^ (a >>> 16), 2246822507) ^ Math.imul(b ^ (b >>> 13), 3266489909);
+  b = Math.imul(b ^ (b >>> 16), 2246822507) ^ Math.imul(a ^ (a >>> 13), 3266489909);
+  return 4294967296 * (2097151 & b) + (a >>> 0);
+}
 
 class GDAsset {
   rootNode: string | undefined = undefined;
@@ -359,6 +369,7 @@ async function resPathToUri(resPath: string, document: vscode.TextDocument) {
   }
   return resUri;
 }
+// Perfect pangrams for testing all ASCII letters; also letters which might be confused with numbers.
 const fontTest = `\
 <tspan>JFK GOT MY VHS, PC AND XLR WEB QUIZ</tspan>
 <tspan x="0" y="20">new job: fix mr. gluck's hazy tv pdq!</tspan>
@@ -369,25 +380,50 @@ async function resPathToMarkdown(resPath: string, document: vscode.TextDocument)
   md.supportHtml = true;
   if (!(resUri instanceof vscode.Uri))
     return md.appendMarkdown(`<div title="${resUri}">File not found</div>`);
-  if (/\.(svg|png|gif|jpe?g|bmp)$/.test(resPath))
+  if (/\.(svg|png|gif|jpe?g|bmp)$/i.test(resPath))
     return md.appendMarkdown(`[<img height=128 src="${resUri}"/>](${resUri})`);
-  let match = /\.(ttf|otf|woff)$/.exec(resPath);
+  let match = /\.(ttf|otf|woff)$/i.exec(resPath);
   if (match) {
-    const bytes = await vscode.workspace.fs.readFile(resUri);
-    const dataUrl = `data:font/${match[1]};base64,${Buffer.from(bytes).toString('base64')}`;
-    const t = encodeURIComponent(fontTest).replace("'", "%27");
-    return md.appendMarkdown(`[<img src='data:image/svg+xml,\
-<svg xmlns="http://www.w3.org/2000/svg" width="400" height="80" style="background:white;margin:4px"><style>\
-@font-face{font-family:F;src:url("${dataUrl}")}\
-text{font-family:F;dominant-baseline:text-before-edge}\
-</style><text>${t}</text></svg>'/>](${resUri})`);
+    const resStat = await vscode.workspace.fs.stat(resUri);
+    // separate file is necessary because MarkdownString has a limit on the text size for performance reasons
+    // use hash of path with modified time to index cached font preview image inside tmp folder
+    const imgSrc = vscode.Uri.joinPath(tmpUri, `font-preview-${hash(resPath)}-${resStat.mtime}.svg`);
+    try { // try to stat at that cache path
+      await vscode.workspace.fs.stat(imgSrc); // if it succeeds, preview is already cached in tmp folder
+    } catch { // otherwise, it must be created and written to tmp cache
+      const type = match[1].toLowerCase();
+      const bytes = await vscode.workspace.fs.readFile(resUri);
+      // font must be inlined in data URI, since svg inside markdown won't be allowed to fetch it by URL
+      const dataUrl = `data:font/${type};base64,${Buffer.from(bytes).toString('base64')}`;
+      const imgData = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="80"><style>
+svg{background:white;margin:4px}
+@font-face{font-family:_;src:url("${dataUrl}")}
+text{font-family:_;dominant-baseline:text-before-edge}
+</style><text>
+${fontTest}
+</text></svg>`;
+      await vscode.workspace.fs.writeFile(imgSrc, Buffer.from(imgData));
+    } // preview is at cached path; tmp will be cleaned on deactivate or, if not possible, on next activate
+    md.appendMarkdown(`[<img src="${imgSrc}"/>](${resUri})`);
+    return md;
   }
   return md.appendMarkdown(`[Open file](${resUri})`);
 }
 
-export function activate(ctx: vscode.ExtensionContext) {
+let tmpUri: vscode.Uri;
+export async function activate(ctx: vscode.ExtensionContext) {
+  tmpUri = vscode.Uri.joinPath(ctx.storageUri ?? ctx.globalStorageUri, 'tmp');
+  try { // clean up any existing tmp files, or create tmp folder
+    for (const [filename] of await vscode.workspace.fs.readDirectory(tmpUri))
+      vscode.workspace.fs.delete(vscode.Uri.joinPath(tmpUri, filename), { recursive: true, useTrash: false });
+  } catch { await vscode.workspace.fs.createDirectory(tmpUri); }
   let provider = new GDAssetProvider(), docs = GDAssetProvider.docs;
   ctx.subscriptions.push(vscode.languages.registerDocumentSymbolProvider(docs, provider));
   ctx.subscriptions.push(vscode.languages.registerDefinitionProvider(docs, provider));
   ctx.subscriptions.push(vscode.languages.registerHoverProvider(docs, provider));
+}
+export function deactivate() {
+  // try to delete tmp folder, sync if possible
+  if (tmpUri.scheme == 'file') rmSync(tmpUri.fsPath, { force: true, recursive: true });
+  else vscode.workspace.fs.delete(tmpUri, { recursive: true, useTrash: false }).then(undefined, () => { });
 }
