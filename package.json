@@ -1,8 +1,11 @@
 {
+  "publisher": "alfish",
   "name": "godot-files",
   "version": "0.0.1",
+  "license": "0BSD",
   "displayName": "Godot Files",
   "description": "Provides syntax-highlighting for some files supported by Godot Editor.",
+  "icon": "godot.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/AlfishSoftware/godot-files-vscode"
@@ -10,10 +13,9 @@
   "bugs": {
     "url": "https://github.com/AlfishSoftware/godot-files-vscode/issues"
   },
-  "sponsor": {
-    "url": "https://alfish.itch.io"
-  },
-  "icon": "godot.png",
+  "categories": [
+    "Programming Languages"
+  ],
   "keywords": [
     "godot",
     "gdshader",
@@ -26,14 +28,6 @@
     "ini",
     "freedesktop",
     "xdg"
-  ],
-  "publisher": "alfish",
-  "license": "0BSD",
-  "engines": {
-    "vscode": "^1.66.0"
-  },
-  "categories": [
-    "Programming Languages"
   ],
   "type": "commonjs",
   "main": "./src/extension.js",
@@ -209,7 +203,7 @@
     ],
     "snippets": [
       {
-        "language": "gdshader",
+        "language": "godot-shader",
         "path": "./lang.gdshader/gdshader.code-snippets"
       },
       {
@@ -240,6 +234,9 @@
   "devDependencies": {
     "@types/node": "^17.0.23",
     "@types/vscode": "^1.66.0"
+  },
+  "engines": {
+    "vscode": "^1.66.0"
   },
   "scripts": {
     "compile": "tsc -p ./",
