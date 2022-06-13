@@ -333,11 +333,10 @@ function loadMarkdown(resPath: string, id: string, type: string | null) {
   return new vscode.MarkdownString().appendCodeblock(code, 'gdscript');
 }
 async function projectDir(assetUri: vscode.Uri) {
-  const w = vscode.workspace.getWorkspaceFolder(assetUri)?.uri.path.length ?? -1;
   let uri = assetUri;
   do {
     const parent = vscode.Uri.joinPath(uri, '..'); // remove last path segment
-    if (parent == uri || parent.path.length < w) break; // don't try to go beyond root or workspace path
+    if (parent == uri) break; // don't try to go beyond root
     const projUri = vscode.Uri.joinPath(uri = parent, 'project.godot');
     try {
       await vscode.workspace.fs.stat(projUri);
