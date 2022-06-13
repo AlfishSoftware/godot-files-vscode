@@ -188,7 +188,6 @@ class GDAssetProvider implements
       }
       // Parse values within line
       if (text.startsWith('"')) {
-        //TODO also check negative look-behind for any weird char touching open"
         // String
         let str = "";
         let s = text.substring(1); j++;
@@ -333,38 +332,45 @@ function loadMarkdown(resPath: string, id: string, type: string | null) {
   if (type) code += ` as ${type}`;
   return new vscode.MarkdownString().appendCodeblock(code, 'gdscript');
 }
-async function resPathOfDocument(document: vscode.TextDocument) {
-  //TODO function: use document.uri and go up until project.godot is found
-  const workspace = vscode.workspace.getWorkspaceFolder(document.uri);
-  if (workspace) {
-    const projUri = vscode.Uri.joinPath(workspace.uri, 'project.godot');
+async function projectDir(assetUri: vscode.Uri) {
+  const w = vscode.workspace.getWorkspaceFolder(assetUri)?.uri.path.length ?? -1;
+  let uri = assetUri;
+  do {
+    const parent = vscode.Uri.joinPath(uri, '..'); // remove last path segment
+    if (parent == uri || parent.path.length < w) break; // don't try to go beyond root or workspace path
+    const projUri = vscode.Uri.joinPath(uri = parent, 'project.godot');
     try {
       await vscode.workspace.fs.stat(projUri);
-      return 'res:/' + vscode.Uri.file(vscode.workspace.asRelativePath(document.uri, false)).path;
-    } catch { }
-  }
-  return document.uri.path.replace(/^(?:.*\/)+/, ''); // fallback to document file name (relative path)
+      return parent; // folder containing project.godot
+    } catch { } // project.godot was not found on that folder
+  } while (uri.path);
+  return null;
+}
+async function resPathOfDocument(document: vscode.TextDocument) {
+  const assetUri = document.uri, assetPath = assetUri.path;
+  const projDir = await projectDir(assetUri);
+  if (projDir && assetPath.startsWith(projDir.path))
+    return 'res:/' + assetPath.replace(projDir.path, ''); // remove proj path at the start to make it relative to proj
+  return assetPath.replace(/^(?:.*\/)+/, ''); // fallback to document file name (relative path)
 }
 const uriRegex = /^[a-zA-Z][a-zA-Z0-9.+-]*:\/\/[^\x00-\x1F "<>\\^`{|}\x7F-\x9F]*$/;
+/** Locates a resource by path string referenced in an asset document.
+ * @param resPath Path of resource to locate. Can be relative to the document or to its project's root.
+ * @param document Asset where path is. Its location and project are used as context to resolve the res path.
+ * @returns Uri of the resource if it's found, or that URI as a string if file is not found.
+ */
 async function resPathToUri(resPath: string, document: vscode.TextDocument) {
-  let resUri, resStat;
+  let resUri: vscode.Uri;
   if (resPath.startsWith('res://')) {
-    //TODO function: use document.uri and go up until project.godot is found
-    const workspace = vscode.workspace.getWorkspaceFolder(document.uri);
-    if (!workspace) return resPath;
-    const projStat = vscode.workspace.fs.stat(vscode.Uri.joinPath(workspace.uri, 'project.godot'));
-    resUri = vscode.Uri.joinPath(workspace.uri, resPath.substring(6));
-    resStat = vscode.workspace.fs.stat(resUri);
-    try { await projStat; } catch {
-      return resPath;
-    }
+    const projDir = await projectDir(document.uri);
+    if (!projDir) return resPath; // no project.godot found, res paths cannot be resolved
+    resUri = vscode.Uri.joinPath(projDir, resPath.substring(6)); // 6 == 'res://'.length
   } else {
-    if (uriRegex.test(resPath))
+    if (uriRegex.test(resPath)) // does resPath have a scheme?
       return resPath; // better not to load arbitrary URI schemes like http, etc
     resUri = vscode.Uri.joinPath(document.uri, '..', resPath); // path is relative to folder of document
-    resStat = vscode.workspace.fs.stat(resUri);
   }
-  try { await resStat; } catch {
+  try { await vscode.workspace.fs.stat(resUri); } catch {
     return resUri.toString();
   }
   return resUri;
