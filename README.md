@@ -1,10 +1,12 @@
 # Godot Files
 
-Provides syntax-highlighting for some Godot Editor files. This isn't meant to replace the [godot-tools] extension.
+Provides syntax-highlighting for some Godot Editor files.
+
+This isn't meant to replace the [godot-tools] extension, but it has improvements on its supported files.
 
 ## Features
 
-Includes syntax-highlighting and keyword snippets for these languages:
+Includes syntax-highlighting for these languages:
 - Godot Shader files: `.gdshader`
 - Better (more specific) grammar for the INI-like files supported by Godot (Asset Properties Definition):  
   `.cfg`, `.tres`, `.tscn`, `.escn`, `.godot`, `.gdns`, `.gdnlib`, `.import`
@@ -17,24 +19,23 @@ INI-like files also support:
 INI-like Godot asset files also support:
 - navigate to definition of Ext/Sub Resource references, and to resource paths
 - hover image and font resource paths/references to preview them (only some formats are supported)
-- hover resource references to show gdscript preload code
+- hover resource references to show gdscript (pre)load code
 
 Other features such as full hover documentation, etc., *might* be included eventually, but aren't as of now.
 
 ## Known Limitations
 
-Parsing of INI-like files is very simplistic (line-based; doesn't use a more robust parser library).  
-While it works well enough for the majority of use cases, some edge cases may parse incorrectly.
+Parsing of INI-like files is very simplistic (line-based; doesn't use a robust parser library), but should work well.
 
-Currently, if you have embedded code (like gdscript/gdshader) in asset strings, it may interfere with parsing:
+Embedded code (like gdscript/gdshader) in asset strings is syntax-highlighted, however:
 - VSCode is not recognizing "embeddedLanguages" properly for some reason (bug?), so things like toggling comments,
   snippets, etc. won't consider the embedded language's context
 
-Target is mostly Godot 3 for now (some Godot 4 features may be supported, but not actively tested).
+Target is mostly Godot 3 for now (some Godot 4 features are supported, but not actively tested).
 
 ## Support
 
-❤️ If you think this is useful and want to contribute, check [alfish.itch.io].
+❤️ If you think this is useful, please check [alfish.itch.io].
 
 [godot-tools]: https://github.com/godotengine/godot-vscode-plugin
 [alfish.itch.io]: https://alfish.itch.io/

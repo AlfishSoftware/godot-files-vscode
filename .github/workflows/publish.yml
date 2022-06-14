@@ -1,0 +1,41 @@
+name: Publish VSCode Extension
+on:
+  push:
+    tags: [ "v*.*.*" ]
+  workflow_dispatch:
+jobs:
+  Publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          cache: npm
+      - name: Install npm command line tools for VSCode extensions
+        run: |
+          npm i -g ovsx
+          npm i -g vsce
+      - name: Install clean npm production dependencies for this extension
+        run: npm ci --production
+      - name: Prepare and package this VSCode extension
+        run: vsce package
+      - uses: softprops/action-gh-release@v1
+        with:
+          draft: true
+          files: "*.vsix"
+          fail_on_unmatched_files: true
+          body_path: ./.github/RELEASE-NOTES.md
+      - name: Publish to Open VSX Registry
+        env:
+          OVSX_PAT: ${{ secrets.OPENVSX_TOKEN }}
+        run: ovsx --version && echo ovsx publish *.vsix
+      # - name: Publish to VSCode Extension Marketplace
+      #   env:
+      #     VSCE_PAT: ${{ secrets.VS_MARKETPLACE_TOKEN }}
+      #   run: vsce publish -i *.vsix
+      - uses: actions/upload-artifact@v3
+        with:
+          path: "*.vsix"
+          name: vsix
+          if-no-files-found: error
+      - run: echo "${{ github.workspace }}" && ls "${{ github.workspace }}"
