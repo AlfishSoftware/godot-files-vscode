@@ -7,34 +7,51 @@ jobs:
   Publish:
     runs-on: ubuntu-latest
     steps:
-      - run: echo "${{ github.workspace }}" && ls "${{ github.workspace }}"
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - name: Checkout ${{ github.repository }} ${{ github.ref_type }} ${{ github.ref_name }}
+        uses: actions/checkout@v3
+      - name: Setup node with cache
+        uses: actions/setup-node@v3
         with:
           cache: npm
       - name: Install npm command line tools for VSCode extensions
         run: |
+          echo node $(node --version)
+          echo npm $(npm --version)
           npm i -g ovsx
+          echo ovsx $(ovsx --version)
           npm i -g vsce
-      - name: Install clean npm dependencies for this extension
+          echo vsce $(vsce --version)
+      - name: Install clean npm dependencies
         run: npm ci
-      - name: Prepare and package this VSCode extension
+      - name: Prepare and package vsix
         run: vsce package
-      - uses: softprops/action-gh-release@v1
+      - name: Rename prepending publisher
+        run: |
+          p=$(node -p "require('./package.json').publisher")
+          for f in *.vsix; do mv "$f" "$p.$f"; done
+          v=$(node -p "require('./package.json').version")
+          echo "::set-output name=VERSION::$v"
+        id: PkgFile
+      - name: List packaged files inside vsix
+        run: unzip -l -vqq *.vsix | awk '{print $8}'
+      - name: Draft a GitHub release
+        uses: softprops/action-gh-release@v1
         with:
           draft: true
           files: "*.vsix"
           fail_on_unmatched_files: true
+          tag_name: ${{ steps.PkgFile.outputs.VERSION }}
           body_path: ./.github/RELEASE-NOTES.md
       - name: Publish to Open VSX Registry
         env:
           OVSX_PAT: ${{ secrets.OPENVSX_TOKEN }}
-        run: ovsx --version && echo ovsx publish *.vsix
+        run: echo ovsx publish *.vsix
       # - name: Publish to VSCode Extension Marketplace
       #   env:
       #     VSCE_PAT: ${{ secrets.VS_MARKETPLACE_TOKEN }}
       #   run: vsce publish -i *.vsix
-      - uses: actions/upload-artifact@v3
+      - name: Upload vsix as artifact
+        uses: actions/upload-artifact@v3
         with:
           path: "*.vsix"
           name: vsix
