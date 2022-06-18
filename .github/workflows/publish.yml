@@ -15,8 +15,8 @@ jobs:
         run: |
           npm i -g ovsx
           npm i -g vsce
-      - name: Install clean npm production dependencies for this extension
-        run: npm ci --production
+      - name: Install clean npm dependencies for this extension
+        run: npm ci
       - name: Prepare and package this VSCode extension
         run: vsce package
       - uses: softprops/action-gh-release@v1

@@ -233,7 +233,8 @@
   "dependencies": {},
   "devDependencies": {
     "@types/node": "^17.0.23",
-    "@types/vscode": "^1.66.0"
+    "@types/vscode": "^1.66.0",
+    "typescript": "^4.7.4"
   },
   "engines": {
     "vscode": "^1.66.0"
@@ -241,6 +242,7 @@
   "scripts": {
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "vscode:prepublish": "npm prune --production && npm run compile"
+    "preproduction": "npm prune --omit=dev --no-audit",
+    "vscode:prepublish": "npm run compile && npm run preproduction"
   }
 }
