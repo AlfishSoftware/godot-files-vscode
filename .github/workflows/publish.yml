@@ -1,0 +1,10 @@
+name: Publish VSCode Extension
+on:
+  push:
+    tags: [ "v*.*.*" ]
+  workflow_dispatch:
+jobs:
+  Publish:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "${{ github.workspace }}" && ls "${{ github.workspace }}"
