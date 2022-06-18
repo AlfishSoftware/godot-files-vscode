@@ -25,9 +25,7 @@
     "asset",
     "config",
     "properties",
-    "ini",
-    "freedesktop",
-    "xdg"
+    "ini"
   ],
   "type": "commonjs",
   "main": "./src/extension.js",
