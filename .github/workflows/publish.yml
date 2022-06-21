@@ -25,34 +25,49 @@ jobs:
         run: npm ci
       - name: Prepare and package vsix
         run: vsce package
-      - name: Rename prepending publisher
+      - name: Get package info
+        id: P
         run: |
-          p=$(node -p "require('./package.json').publisher")
-          for f in *.vsix; do mv "$f" "$p.$f"; done
-          v=$(node -p "require('./package.json').version")
-          echo "::set-output name=VERSION::$v"
-        id: PkgFile
+          publisher=$(node -p "require('./package.json').publisher")
+          name=$(node -p "require('./package.json').name")
+          version=$(node -p "require('./package.json').version")
+          echo "::set-output name=publisher::$publisher"
+          echo "::set-output name=name::$name"
+          echo "::set-output name=version::$version"
+          echo "::set-output name=vsix::$publisher.$name-$version.vsix"
+      - name: Rename prepending publisher
+        run: mv *.vsix "${{ steps.P.outputs.vsix }}"
       - name: List packaged files inside vsix
-        run: unzip -l -vqq *.vsix | awk '{print $8}'
+        run: unzip -l -vqq "${{ steps.P.outputs.vsix }}" | awk '{print $8}'
+      - name: Replace package info in release notes draft
+        run: |
+          perl -pe \
+          "s/\\\$\\{publisher\\}/${{ steps.P.outputs.publisher }}/g;"\
+          "s/\\\$\\{name\\}/${{ steps.P.outputs.name }}/g;"\
+          "s/\\\$\\{version\\}/${{ steps.P.outputs.version }}/g;"\
+          "s/\\\$\\{vsix\\}/${{ steps.P.outputs.vsix }}/g;"\
+           .github/RELEASE-NOTES.md > .github/RELEASE-NOTES-v${{ steps.P.outputs.version }}.md
       - name: Draft a GitHub release
         uses: softprops/action-gh-release@v1
         with:
           draft: true
-          files: "*.vsix"
+          files: ${{ steps.P.outputs.vsix }}
           fail_on_unmatched_files: true
-          tag_name: ${{ steps.PkgFile.outputs.VERSION }}
-          body_path: ./.github/RELEASE-NOTES.md
+          tag_name: v${{ steps.P.outputs.version }}
+          body_path: ./.github/RELEASE-NOTES-v${{ steps.P.outputs.version }}.md
       - name: Publish to Open VSX Registry
         env:
           OVSX_PAT: ${{ secrets.OPENVSX_TOKEN }}
-        run: echo ovsx publish *.vsix
-      # - name: Publish to VSCode Extension Marketplace
-      #   env:
-      #     VSCE_PAT: ${{ secrets.VS_MARKETPLACE_TOKEN }}
-      #   run: vsce publish -i *.vsix
+        if: ${{ env.OVSX_PAT != '' }}
+        run: echo ovsx publish "${{ steps.P.outputs.vsix }}"
+      - name: Publish to VSCode Extension Marketplace
+        env:
+          VSCE_PAT: ${{ secrets.VS_MARKETPLACE_TOKEN }}
+        if: ${{ env.VSCE_PAT != '' }}
+        run: echo vsce publish -i "${{ steps.P.outputs.vsix }}"
       - name: Upload vsix as artifact
         uses: actions/upload-artifact@v3
         with:
-          path: "*.vsix"
+          path: ${{ steps.P.outputs.vsix }}
           name: vsix
           if-no-files-found: error
