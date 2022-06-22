@@ -4,4 +4,4 @@
 **/tsconfig.json
 **/*.ts
 **/*.src.svg
-**/._*/
+**/._*
