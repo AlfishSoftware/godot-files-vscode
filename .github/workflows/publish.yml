@@ -1,73 +1,41 @@
 name: Publish VSCode Extension
 on:
-  push:
-    tags: [ "v*.*.*" ]
+  release:
+    types: [ published ]
   workflow_dispatch:
 jobs:
   Publish:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout ${{ github.repository }} ${{ github.ref_type }} ${{ github.ref_name }}
-        uses: actions/checkout@v3
       - name: Setup node with cache
         uses: actions/setup-node@v3
         with:
           cache: npm
-      - name: Install npm command line tools for VSCode extensions
+      - name: Download vsix file from release
+        if: >-
+          github.event.release && !github.event.release.draft && github.event.release.assets[0]
+          && endsWith(github.event.release.assets[0].name, '.vsix')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo node $(node --version)
-          echo npm $(npm --version)
-          npm i -g ovsx
-          echo ovsx $(ovsx --version)
-          npm i -g vsce
-          echo vsce $(vsce --version)
-      - name: Install clean npm dependencies
-        run: npm ci
-      - name: Prepare and package vsix
-        run: vsce package
-      - name: Get package info
-        id: P
-        run: |
-          publisher=$(node -p "require('./package.json').publisher")
-          name=$(node -p "require('./package.json').name")
-          version=$(node -p "require('./package.json').version")
-          echo "::set-output name=publisher::$publisher"
-          echo "::set-output name=name::$name"
-          echo "::set-output name=version::$version"
-          echo "::set-output name=vsix::$publisher.$name-$version.vsix"
-      - name: Rename prepending publisher
-        run: mv *.vsix "${{ steps.P.outputs.vsix }}"
+          echo Downloadable at "${{ github.event.release.assets[0].browser_download_url }}"
+          gh api -H "Accept: application/octet-stream" "${{ github.event.release.assets[0].url }}" \
+          > "${{ github.event.release.assets[0].name }}"
       - name: List packaged files inside vsix
-        run: unzip -l -vqq "${{ steps.P.outputs.vsix }}" | awk '{print $8}'
-      - name: Replace package info in release notes draft
-        run: |
-          perl -pe \
-          "s/\\\$\\{publisher\\}/${{ steps.P.outputs.publisher }}/g;"\
-          "s/\\\$\\{name\\}/${{ steps.P.outputs.name }}/g;"\
-          "s/\\\$\\{version\\}/${{ steps.P.outputs.version }}/g;"\
-          "s/\\\$\\{vsix\\}/${{ steps.P.outputs.vsix }}/g;"\
-           .github/RELEASE-NOTES.md > .github/RELEASE-NOTES-v${{ steps.P.outputs.version }}.md
-      - name: Draft a GitHub release
-        uses: softprops/action-gh-release@v1
-        with:
-          draft: true
-          files: ${{ steps.P.outputs.vsix }}
-          fail_on_unmatched_files: true
-          tag_name: v${{ steps.P.outputs.version }}
-          body_path: ./.github/RELEASE-NOTES-v${{ steps.P.outputs.version }}.md
+        run: unzip -l -vqq "${{ github.event.release.assets[0].name }}" | awk '{print $8}'
       - name: Publish to Open VSX Registry
         env:
           OVSX_PAT: ${{ secrets.OPENVSX_TOKEN }}
         if: ${{ env.OVSX_PAT != '' }}
-        run: echo ovsx publish "${{ steps.P.outputs.vsix }}"
+        run: |
+          npm i -g ovsx
+          echo ovsx $(ovsx --version)
+          echo ovsx publish "${{ github.event.release.assets[0].name }}"
       - name: Publish to VSCode Extension Marketplace
         env:
           VSCE_PAT: ${{ secrets.VS_MARKETPLACE_TOKEN }}
         if: ${{ env.VSCE_PAT != '' }}
-        run: echo vsce publish -i "${{ steps.P.outputs.vsix }}"
-      - name: Upload vsix as artifact
-        uses: actions/upload-artifact@v3
-        with:
-          path: ${{ steps.P.outputs.vsix }}
-          name: vsix
-          if-no-files-found: error
+        run: |
+          npm i -g vsce
+          echo vsce $(vsce --version)
+          echo vsce publish -i "${{ github.event.release.assets[0].name }}"
