@@ -1,0 +1,10 @@
+name: Draft VSCode Extension Release
+on:
+  push:
+    tags: [ "v*.*.*" ]
+  workflow_dispatch:
+jobs:
+  Draft:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
