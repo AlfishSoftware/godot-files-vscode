@@ -1,5 +1,15 @@
 import * as vscode from 'vscode';
-function escapeReplacement(s: string) { return s.replace(/\$/g, '$$$$'); }
+import { rmSync } from 'fs';
+
+function hash(s: string, seed = 0) { // 53-bit hash, see https://stackoverflow.com/a/52171480
+  let a = 0xdeadbeef ^ seed, b = 0x41c6ce57 ^ seed;
+  for (let i = 0, c; i < s.length; i++) {
+    c = s.charCodeAt(i); a = Math.imul(a ^ c, 2654435761); b = Math.imul(b ^ c, 1597334677);
+  }
+  a = Math.imul(a ^ (a >>> 16), 2246822507) ^ Math.imul(b ^ (b >>> 13), 3266489909);
+  b = Math.imul(b ^ (b >>> 16), 2246822507) ^ Math.imul(a ^ (a >>> 13), 3266489909);
+  return 4294967296 * (2097151 & b) + (a >>> 0);
+}
 
 class GDAsset {
   rootNode: string | undefined = undefined;
@@ -178,7 +188,6 @@ class GDAssetProvider implements
       }
       // Parse values within line
       if (text.startsWith('"')) {
-        //TODO also check negative look-behind for any weird char touching open"
         // String
         let str = "";
         let s = text.substring(1); j++;
@@ -323,42 +332,49 @@ function loadMarkdown(resPath: string, id: string, type: string | null) {
   if (type) code += ` as ${type}`;
   return new vscode.MarkdownString().appendCodeblock(code, 'gdscript');
 }
-async function resPathOfDocument(document: vscode.TextDocument) {
-  //TODO function: use document.uri and go up until project.godot is found
-  const workspace = vscode.workspace.getWorkspaceFolder(document.uri);
-  if (workspace) {
-    const projUri = vscode.Uri.joinPath(workspace.uri, 'project.godot');
+async function projectDir(assetUri: vscode.Uri) {
+  let uri = assetUri;
+  do {
+    const parent = vscode.Uri.joinPath(uri, '..'); // remove last path segment
+    if (parent == uri) break; // don't try to go beyond root
+    const projUri = vscode.Uri.joinPath(uri = parent, 'project.godot');
     try {
       await vscode.workspace.fs.stat(projUri);
-      return 'res:/' + vscode.Uri.file(vscode.workspace.asRelativePath(document.uri, false)).path;
-    } catch { }
-  }
-  return document.uri.path.replace(/^(?:.*\/)+/, ''); // fallback to document file name (relative path)
+      return parent; // folder containing project.godot
+    } catch { } // project.godot was not found on that folder
+  } while (uri.path);
+  return null;
+}
+async function resPathOfDocument(document: vscode.TextDocument) {
+  const assetUri = document.uri, assetPath = assetUri.path;
+  const projDir = await projectDir(assetUri);
+  if (projDir && assetPath.startsWith(projDir.path))
+    return 'res:/' + assetPath.replace(projDir.path, ''); // remove proj path at the start to make it relative to proj
+  return assetPath.replace(/^(?:.*\/)+/, ''); // fallback to document file name (relative path)
 }
 const uriRegex = /^[a-zA-Z][a-zA-Z0-9.+-]*:\/\/[^\x00-\x1F "<>\\^`{|}\x7F-\x9F]*$/;
+/** Locates a resource by path string referenced in an asset document.
+ * @param resPath Path of resource to locate. Can be relative to the document or to its project's root.
+ * @param document Asset where path is. Its location and project are used as context to resolve the res path.
+ * @returns Uri of the resource if it's found, or that URI as a string if file is not found.
+ */
 async function resPathToUri(resPath: string, document: vscode.TextDocument) {
-  let resUri, resStat;
+  let resUri: vscode.Uri;
   if (resPath.startsWith('res://')) {
-    //TODO function: use document.uri and go up until project.godot is found
-    const workspace = vscode.workspace.getWorkspaceFolder(document.uri);
-    if (!workspace) return resPath;
-    const projStat = vscode.workspace.fs.stat(vscode.Uri.joinPath(workspace.uri, 'project.godot'));
-    resUri = vscode.Uri.joinPath(workspace.uri, resPath.substring(6));
-    resStat = vscode.workspace.fs.stat(resUri);
-    try { await projStat; } catch {
-      return resPath;
-    }
+    const projDir = await projectDir(document.uri);
+    if (!projDir) return resPath; // no project.godot found, res paths cannot be resolved
+    resUri = vscode.Uri.joinPath(projDir, resPath.substring(6)); // 6 == 'res://'.length
   } else {
-    if (uriRegex.test(resPath))
+    if (uriRegex.test(resPath)) // does resPath have a scheme?
       return resPath; // better not to load arbitrary URI schemes like http, etc
     resUri = vscode.Uri.joinPath(document.uri, '..', resPath); // path is relative to folder of document
-    resStat = vscode.workspace.fs.stat(resUri);
   }
-  try { await resStat; } catch {
+  try { await vscode.workspace.fs.stat(resUri); } catch {
     return resUri.toString();
   }
   return resUri;
 }
+// Perfect pangrams for testing all ASCII letters; also letters which might be confused with numbers.
 const fontTest = `\
 <tspan>JFK GOT MY VHS, PC AND XLR WEB QUIZ</tspan>
 <tspan x="0" y="20">new job: fix mr. gluck's hazy tv pdq!</tspan>
@@ -369,25 +385,50 @@ async function resPathToMarkdown(resPath: string, document: vscode.TextDocument)
   md.supportHtml = true;
   if (!(resUri instanceof vscode.Uri))
     return md.appendMarkdown(`<div title="${resUri}">File not found</div>`);
-  if (/\.(svg|png|gif|jpe?g|bmp)$/.test(resPath))
+  if (/\.(svg|png|gif|jpe?g|bmp)$/i.test(resPath))
     return md.appendMarkdown(`[<img height=128 src="${resUri}"/>](${resUri})`);
-  let match = /\.(ttf|otf|woff)$/.exec(resPath);
+  let match = /\.(ttf|otf|woff)$/i.exec(resPath);
   if (match) {
-    const bytes = await vscode.workspace.fs.readFile(resUri);
-    const dataUrl = `data:font/${match[1]};base64,${Buffer.from(bytes).toString('base64')}`;
-    const t = encodeURIComponent(fontTest).replace("'", "%27");
-    return md.appendMarkdown(`[<img src='data:image/svg+xml,\
-<svg xmlns="http://www.w3.org/2000/svg" width="400" height="80" style="background:white;margin:4px"><style>\
-@font-face{font-family:F;src:url("${dataUrl}")}\
-text{font-family:F;dominant-baseline:text-before-edge}\
-</style><text>${t}</text></svg>'/>](${resUri})`);
+    const resStat = await vscode.workspace.fs.stat(resUri);
+    // separate file is necessary because MarkdownString has a limit on the text size for performance reasons
+    // use hash of path with modified time to index cached font preview image inside tmp folder
+    const imgSrc = vscode.Uri.joinPath(tmpUri, `font-preview-${hash(resPath)}-${resStat.mtime}.svg`);
+    try { // try to stat at that cache path
+      await vscode.workspace.fs.stat(imgSrc); // if it succeeds, preview is already cached in tmp folder
+    } catch { // otherwise, it must be created and written to tmp cache
+      const type = match[1].toLowerCase();
+      const bytes = await vscode.workspace.fs.readFile(resUri);
+      // font must be inlined in data URI, since svg inside markdown won't be allowed to fetch it by URL
+      const dataUrl = `data:font/${type};base64,${Buffer.from(bytes).toString('base64')}`;
+      const imgData = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="80"><style>
+svg{background:white;margin:4px}
+@font-face{font-family:_;src:url("${dataUrl}")}
+text{font-family:_;dominant-baseline:text-before-edge}
+</style><text>
+${fontTest}
+</text></svg>`;
+      await vscode.workspace.fs.writeFile(imgSrc, Buffer.from(imgData));
+    } // preview is at cached path; tmp will be cleaned on deactivate or, if not possible, on next activate
+    md.appendMarkdown(`[<img src="${imgSrc}"/>](${resUri})`);
+    return md;
   }
   return md.appendMarkdown(`[Open file](${resUri})`);
 }
 
-export function activate(ctx: vscode.ExtensionContext) {
+let tmpUri: vscode.Uri;
+export async function activate(ctx: vscode.ExtensionContext) {
+  tmpUri = vscode.Uri.joinPath(ctx.storageUri ?? ctx.globalStorageUri, 'tmp');
+  try { // clean up any existing tmp files, or create tmp folder
+    for (const [filename] of await vscode.workspace.fs.readDirectory(tmpUri))
+      vscode.workspace.fs.delete(vscode.Uri.joinPath(tmpUri, filename), { recursive: true, useTrash: false });
+  } catch { await vscode.workspace.fs.createDirectory(tmpUri); }
   let provider = new GDAssetProvider(), docs = GDAssetProvider.docs;
   ctx.subscriptions.push(vscode.languages.registerDocumentSymbolProvider(docs, provider));
   ctx.subscriptions.push(vscode.languages.registerDefinitionProvider(docs, provider));
   ctx.subscriptions.push(vscode.languages.registerHoverProvider(docs, provider));
+}
+export function deactivate() {
+  // try to delete tmp folder, sync if possible
+  if (tmpUri.scheme == 'file') rmSync(tmpUri.fsPath, { force: true, recursive: true });
+  else vscode.workspace.fs.delete(tmpUri, { recursive: true, useTrash: false }).then(undefined, () => { });
 }

@@ -7,4 +7,69 @@ jobs:
   Draft:
     runs-on: ubuntu-latest
     steps:
-      - run: |
+      - name: Checkout ${{ github.repository }} ${{ github.ref_type }} ${{ github.ref_name }}
+        uses: actions/checkout@v3
+      - name: Setup node with cache
+        uses: actions/setup-node@v3
+        with:
+          cache: npm
+      - name: Install clean npm dependencies
+        run: |
+          echo node $(node --version)
+          echo npm $(npm --version)
+          npm ci
+      - name: Prepare and package vsix
+        run: |
+          npm i -g vsce
+          echo vsce $(vsce --version)
+          vsce package
+      - name: Get package info
+        id: P
+        run: |
+          publisher=$(node -p "require('./package.json').publisher")
+          name=$(node -p "require('./package.json').name")
+          version=$(node -p "require('./package.json').version")
+          echo "::set-output name=publisher::$publisher"
+          echo "::set-output name=name::$name"
+          echo "::set-output name=version::$version"
+          echo "::set-output name=vsix::$publisher.$name-$version.vsix"
+      - name: Rename vsix prepending publisher
+        run: mv *.vsix "${{ steps.P.outputs.vsix }}"
+      - name: List packaged files inside vsix
+        run: unzip -l -vqq "${{ steps.P.outputs.vsix }}" | awk '{print $8}'
+      - name: Save vsix as artifact for backup
+        uses: actions/upload-artifact@v3
+        with:
+          path: ${{ steps.P.outputs.vsix }}
+          name: vsix
+          if-no-files-found: error
+      - name: Replace package info in release notes template
+        run: |
+          perl -pe \
+          "s/\\\$\\{publisher\\}/${{ steps.P.outputs.publisher }}/g;"\
+          "s/\\\$\\{name\\}/${{ steps.P.outputs.name }}/g;"\
+          "s/\\\$\\{version\\}/${{ steps.P.outputs.version }}/g;"\
+          "s/\\\$\\{vsix\\}/${{ steps.P.outputs.vsix }}/g;"\
+           .github/RELEASE-NOTES.md > .github/RELEASE-NOTES-v${{ steps.P.outputs.version }}.md
+      - name: Draft a GitHub release uploading vsix asset
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Create draft release
+          draft=._gh_draft.json
+          gh api -X POST /repos/${{ github.repository }}/releases \
+          -f tag_name='v${{ steps.P.outputs.version }}' \
+          -f name='v${{ steps.P.outputs.version }}' \
+          -F body=@.github/RELEASE-NOTES-v${{ steps.P.outputs.version }}.md \
+          -F draft=true \
+          > $draft || exit
+          echo $(node -p "require('./$draft').html_url")
+          # Upload vsix asset to draft
+          id=$(node -p "require('./$draft').id")
+          asset=._gh_asset.json
+          gh api -X POST https://uploads.github.com/repos/${{ github.repository }}/releases/$id/assets \
+          -f name="${{ steps.P.outputs.vsix }}" \
+          -H "Content-Type: application/octet-stream" \
+          --input "${{ steps.P.outputs.vsix }}" \
+          > $asset || exit
+          echo $(node -p "require('./$asset').browser_download_url")
