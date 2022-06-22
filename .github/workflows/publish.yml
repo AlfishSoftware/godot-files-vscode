@@ -2,9 +2,41 @@ name: Publish VSCode Extension
 on:
   release:
     types: [ published ]
-  workflow_dispatch:
 jobs:
   Publish:
+    if: >-
+      github.event.release && !github.event.release.draft && github.event.release.assets[0]
+      && endsWith(github.event.release.assets[0].name, '.vsix')
     runs-on: ubuntu-latest
     steps:
-      - run: echo "${{ toJSON(github.event.release) }}"
+      - name: Checkout ${{ github.repository }} ${{ github.ref_type }} ${{ github.ref_name }}
+        uses: actions/checkout@v3
+      - name: Setup node with cache
+        uses: actions/setup-node@v3
+        with:
+          cache: npm
+      - name: Download vsix file from release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo Downloadable at "${{ github.event.release.assets[0].browser_download_url }}"
+          gh api -H "Accept: application/octet-stream" "${{ github.event.release.assets[0].url }}" \
+          > "${{ github.event.release.assets[0].name }}"
+      - name: List packaged files inside vsix
+        run: unzip -l -vqq "${{ github.event.release.assets[0].name }}" | awk '{print $8}'
+      - name: Publish to Open VSX Registry
+        env:
+          OVSX_PAT: ${{ secrets.OPENVSX_TOKEN }}
+        if: ${{ env.OVSX_PAT != '' }}
+        run: |
+          npm i -g ovsx
+          echo ovsx $(ovsx --version)
+          ovsx publish "${{ github.event.release.assets[0].name }}"
+      - name: Publish to VSCode Extension Marketplace
+        env:
+          VSCE_PAT: ${{ secrets.VS_MARKETPLACE_TOKEN }}
+        if: ${{ env.VSCE_PAT != '' }}
+        run: |
+          npm i -g vsce
+          echo vsce $(vsce --version)
+          vsce publish -i "${{ github.event.release.assets[0].name }}"
