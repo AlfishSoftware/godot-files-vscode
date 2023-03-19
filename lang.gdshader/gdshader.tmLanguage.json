@@ -10,6 +10,7 @@
       "patterns": [
         { "include": "#comment" },
         { "include": "#string" },
+        { "include": "#preprocessor" },
         { "include": "#enclosed" },
         { "include": "#classifier" },
         { "include": "#definition" },
@@ -61,6 +62,88 @@
     "charEscapeInvalid": {
       "name": "invalid.illegal.unknown-escape.gdshader",
       "match": "\\\\"
+    },
+    
+    "preprocessor": {
+      "name": "meta.preprocessor.gdshader",
+      "begin": "(?<![^ \t/])(?=\\#)",
+      "end": "(?<!\\\\)$",
+      "patterns": [
+        { "include": "#preprocessorSymbol" }
+      ]
+    },
+    "preprocessorSymbol": {
+      "patterns": [
+        { "include": "#comment" },
+        { "include": "#string" },
+        { "include": "#lineContinuation" },
+        { "include": "#directive" },
+        { "include": "#macro" },
+        { "include": "#parenthesisedPreprocessor" },
+        { "include": "#enclosed" },
+        { "include": "#classifier" },
+        { "include": "#definition" },
+        { "include": "#keyword" },
+        { "include": "#element" },
+        { "include": "#separator" },
+        { "include": "#operator" }
+      ]
+    },
+    "lineContinuation": {
+      "name": "constant.character.escape.line-continuation.gdshader",
+      "match": "\\\\$"
+    },
+    "directive": {
+      "patterns": [
+        { "include": "#directiveInclude" },
+        { "include": "#directivePragma" },
+        { "include": "#directiveDefine" },
+        { "include": "#directiveConditional" }
+      ]
+    },
+    "directiveInclude": {
+      "name": "keyword.control.directive.include.gdshader",
+      "match": "(\\#)include\\b",
+      "captures": {
+        "1": { "name": "punctuation.definition.directive.gdshader" }
+      }
+    },
+    "directivePragma": {
+      "name": "keyword.control.directive.pragma.gdshader",
+      "match": "(\\#)pragma(?:\\s+([a-zA-Z_][a-zA-Z0-9_]*))?\\b",
+      "captures": {
+        "1": { "name": "punctuation.definition.directive.gdshader" },
+        "2": { "name": "entity.other.attribute-name.pragma.preprocessor.gdshader" }
+      }
+    },
+    "directiveDefine": {
+      "name": "keyword.control.directive.define.gdshader",
+      "match": "(\\#)(?:define|undef)\\b",
+      "captures": {
+        "1": { "name": "punctuation.definition.directive.gdshader" }
+      }
+    },
+    "directiveConditional": {
+      "name": "keyword.control.directive.conditional.gdshader",
+      "match": "(\\#)(?:if|elif|ifdef|ifndef|else|endif)\\b|\\b(?:defined)\\b",
+      "captures": {
+        "1": { "name": "punctuation.definition.directive.gdshader" }
+      }
+    },
+    "macro": {
+      "name": "entity.name.function.preprocessor.gdshader",
+      "match": "\\b[a-zA-Z_][a-zA-Z0-9_]*\\b"
+    },
+    "parenthesisedPreprocessor": {
+      "name": "meta.parenthesis.gdshader",
+      "begin": "\\(",
+      "end": "\\)",
+      "captures": {
+        "0": { "name": "punctuation.parenthesis.gdshader" }
+      },
+      "patterns": [
+        { "include": "#preprocessorSymbol" }
+      ]
     },
     
     "enclosed": {
