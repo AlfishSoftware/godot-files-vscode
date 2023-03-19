@@ -12,6 +12,7 @@
     "gdns",
     "gdscript",
     "gdshader",
+    "gdshaderinc",
     "GLES",
     "godot",
     "mipmaps",

@@ -9,6 +9,7 @@
     "any": {
       "patterns": [
         { "include": "#comment" },
+        { "include": "#string" },
         { "include": "#enclosed" },
         { "include": "#classifier" },
         { "include": "#definition" },
@@ -36,12 +37,67 @@
       "end": "\\*/"
     },
     
+    "string": {
+      "patterns": [
+        { "include": "#stringDoubleQuoted" }
+      ]
+    },
+    "stringDoubleQuoted": {
+      "name": "string.quoted.double.gdshader",
+      "begin": "\"",
+      "end": "\"",
+      "captures": {
+        "0": { "name": "punctuation.definition.string.gdshader" }
+      },
+      "patterns": [
+        { "include": "#charEscape" },
+        { "include": "#charEscapeInvalid" }
+      ]
+    },
+    "charEscape": {
+      "name": "constant.character.escape.gdshader",
+      "match": "\\\\(?:[\"\\\\]|$)"
+    },
+    "charEscapeInvalid": {
+      "name": "invalid.illegal.unknown-escape.gdshader",
+      "match": "\\\\"
+    },
+    
     "enclosed": {
+      "patterns": [
+        { "include": "#parenthesised" },
+        { "include": "#bracketed" },
+        { "include": "#braced" }
+      ]
+    },
+    "parenthesised": {
       "name": "meta.parenthesis.gdshader",
       "begin": "\\(",
       "end": "\\)",
       "captures": {
         "0": { "name": "punctuation.parenthesis.gdshader" }
+      },
+      "patterns": [
+        { "include": "#any" }
+      ]
+    },
+    "bracketed": {
+      "name": "meta.square-bracket.gdshader",
+      "begin": "\\[",
+      "end": "\\]",
+      "captures": {
+        "0": { "name": "punctuation.square-bracket.gdshader" }
+      },
+      "patterns": [
+        { "include": "#any" }
+      ]
+    },
+    "braced": {
+      "name": "meta.block.gdshader",
+      "begin": "\\{",
+      "end": "\\}",
+      "captures": {
+        "0": { "name": "punctuation.section.block.brace.gdshader" }
       },
       "patterns": [
         { "include": "#any" }
@@ -259,19 +315,14 @@
     "separator": {
       "patterns": [
         { "match": "[.]", "name": "punctuation.accessor.gdshader" },
-        { "include": "#separatorComma" },
-        { "match": "[;]", "name": "punctuation.terminator.statement.gdshader" },
-        { "match": "[:]", "name": "keyword.operator.type.annotation.gdshader" }
+        { "match": "[,]", "name": "punctuation.separator.comma.gdshader" },
+        { "match": "[;]", "name": "punctuation.terminator.statement.gdshader" }
       ]
-    },
-    "separatorComma": {
-      "name": "punctuation.separator.comma.gdshader",
-      "match": "[,]"
     },
     
     "operator": {
       "name": "keyword.operator.gdshader",
-      "match": "\\<\\<\\=?|\\>\\>\\=?|[-+*/&|<>=!]\\=|\\&\\&|[|][|]|[-+~!*/%<>&^|=]"
+      "match": "\\<\\<\\=?|\\>\\>\\=?|[-+*/%&^|<>=!]\\=|[-+&|]{2}|[-+~!*/%<>&^|=?:]"
     }
   }
 }
