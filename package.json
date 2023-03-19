@@ -1,8 +1,8 @@
 {
 	"publisher": "alfish",
 	"name": "godot-files",
-	"version": "0.0.2",
-	"license": "0BSD",
+	"version": "0.0.3",
+	"license": "Unlicense",
 	"displayName": "Godot Files",
 	"description": "Provides syntax-highlighting for some files supported by Godot Editor.",
 	"icon": "godot.png",
