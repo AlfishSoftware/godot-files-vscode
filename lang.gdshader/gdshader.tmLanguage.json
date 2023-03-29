@@ -10,7 +10,13 @@
       "patterns": [
         { "include": "#comment" },
         { "include": "#string" },
+        { "include": "#lineContinuation" },
         { "include": "#preprocessor" },
+        { "include": "#code" }
+      ]
+    },
+    "code": {
+      "patterns": [
         { "include": "#enclosed" },
         { "include": "#classifier" },
         { "include": "#definition" },
@@ -80,13 +86,7 @@
         { "include": "#directive" },
         { "include": "#macro" },
         { "include": "#parenthesisedPreprocessor" },
-        { "include": "#enclosed" },
-        { "include": "#classifier" },
-        { "include": "#definition" },
-        { "include": "#keyword" },
-        { "include": "#element" },
-        { "include": "#separator" },
-        { "include": "#operator" }
+        { "include": "#code" }
       ]
     },
     "lineContinuation": {
@@ -97,6 +97,7 @@
       "patterns": [
         { "include": "#directiveInclude" },
         { "include": "#directivePragma" },
+        { "include": "#directiveDefineMacro" },
         { "include": "#directiveDefine" },
         { "include": "#directiveConditional" }
       ]
@@ -116,6 +117,42 @@
         "2": { "name": "entity.other.attribute-name.pragma.preprocessor.gdshader" }
       }
     },
+    "directiveDefineMacro": {
+      "name": "meta.preprocessor.macro.gdshader",
+      "begin": "((\\#)define)\\s+([a-zA-Z_][a-zA-Z0-9_]*)(?:(\\()(.*?)(\\))|\\b)",
+      "beginCaptures": {
+        "1": { "name": "keyword.control.directive.define.gdshader" },
+        "2": { "name": "punctuation.definition.directive.gdshader" },
+        "3": { "name": "entity.name.function.preprocessor.gdshader" },
+        "4": { "name": "punctuation.definition.parameters.macro.gdshader" },
+        "5": {
+          "name": "meta.preprocessor.macro.parameters.gdshader",
+          "patterns": [
+            { "include": "#comment" },
+            { "include": "#string" },
+            { "include": "#lineContinuation" },
+            { "include": "#macroParameter" },
+            { "match": "[,]", "name": "punctuation.separator.parameters.gdshader" }
+          ]
+        },
+        "6": { "name": "punctuation.definition.parameters.macro.gdshader" }
+      },
+      "end": "(?<!\\\\)$",
+      "patterns": [
+        { "include": "#comment" },
+        { "include": "#string" },
+        { "include": "#lineContinuation" },
+        { "include": "#code" }
+      ]
+    },
+    "macroParameter": {
+      "name": "variable.parameter.preprocessor.gdshader",
+      "match": "\\b[a-zA-Z_][a-zA-Z0-9_]*\\b"
+    },
+    "macro": {
+      "name": "entity.name.function.preprocessor.gdshader",
+      "match": "\\b[a-zA-Z_][a-zA-Z0-9_]*\\b"
+    },
     "directiveDefine": {
       "name": "keyword.control.directive.define.gdshader",
       "match": "(\\#)(?:define|undef)\\b",
@@ -129,10 +166,6 @@
       "captures": {
         "1": { "name": "punctuation.definition.directive.gdshader" }
       }
-    },
-    "macro": {
-      "name": "entity.name.function.preprocessor.gdshader",
-      "match": "\\b[a-zA-Z_][a-zA-Z0-9_]*\\b"
     },
     "parenthesisedPreprocessor": {
       "name": "meta.parenthesis.gdshader",

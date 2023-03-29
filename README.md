@@ -9,8 +9,8 @@ This isn't meant to replace the [godot-tools] extension, but it has improvements
 Includes syntax-highlighting for these languages:
 - Godot Shader files: `.gdshader`, `.gdshaderinc`
 - Better (more specific) grammar for the INI-like files supported by Godot (Asset Properties Definition):  
-  `.cfg`, `.tres`, `.tscn`, `.escn`, `.godot`, `.gdns`, `.gdnlib`, `.import`
-- The same grammar is reused for the INI-like XDG Desktop Entry files: `.desktop`, `.directory`  
+  `.godot`, `.tscn`, `.escn`, `.tres`, `.gdns`, `.gdnlib`, `.import`, etc.
+- The same grammar is reused for `.cfg` and the INI-like XDG Desktop Entry files: `.desktop`, `.directory`  
   You might want to associate this language (Configuration Properties) with other INI-like formats as well.
 
 INI-like files also support:

@@ -124,12 +124,15 @@
 					"Godot Asset",
 					"GDAsset"
 				],
-				"filenames": [
-					"export_presets.cfg"
-				],
 				"extensions": [
 					".import",
 					".gdnlib"
+				],
+				"filenames": [
+					"export_presets.cfg"
+				],
+				"filenamePatterns": [
+					"**/.godot/imported/*.md5"
 				],
 				"icon": {
 					"dark": "./lang.gdasset/godot-asset.dark.svg",
