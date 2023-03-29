@@ -346,8 +346,11 @@
       "match": "\\b(?:void|bool|[biu]?vec[234]|u?int|float|mat[234]|[iu]?sampler(?:3D|2D(?:Array)?)|samplerCube)\\b"
     },
     "hintKeyword": {
-      "name": "support.type.annotation.gdshader",
-      "match": "\\b(?:source_color|hint_(?:color|range|(?:black_)?albedo|normal|(?:default_)?(?:white|black)|aniso|anisotropy|roughness_(?:[rgba]|normal|gray))|filter_(?:nearest|linear)(?:_mipmap(?:_anisotropic)?)?|repeat_(?:en|dis)able)\\b"
+      "match": "(\\:)?\\s*\\b(source_color|hint_(?:color|range|(?:black_)?albedo|normal|(?:default_)?(?:white|black)|aniso|anisotropy|roughness_(?:[rgba]|normal|gray))|filter_(?:nearest|linear)(?:_mipmap(?:_anisotropic)?)?|repeat_(?:en|dis)able)\\b",
+      "captures": {
+        "1": { "name": "keyword.operator.type.annotation.gdshader" },
+        "2": { "name": "support.type.annotation.gdshader" }
+      }
     },
     
     "element": {
@@ -437,8 +440,74 @@
     },
     
     "operator": {
-      "name": "keyword.operator.gdshader",
-      "match": "\\<\\<\\=?|\\>\\>\\=?|[-+*/%&^|<>=!]\\=|[-+&|]{2}|[-+~!*/%<>&^|=?:]"
+      "patterns": [
+        { "include": "#operatorIterative" },
+        { "include": "#operatorCompoundAssignment" },
+        { "include": "#operatorEquality" },
+        { "include": "#operatorShift" },
+        { "include": "#operatorRelational" },
+        { "include": "#operatorLogical" },
+        { "include": "#operatorArithmetic" },
+        { "include": "#operatorBitwise" },
+        { "include": "#operatorTernary" },
+        { "include": "#operatorAssignment" }
+      ]
+    },
+    "operatorIterative": {
+      "match": "(\\+\\+)|(\\-\\-)",
+      "captures": {
+        "1": { "name": "keyword.operator.increment.gdshader" },
+        "2": { "name": "keyword.operator.decrement.gdshader" }
+      }
+    },
+    "operatorArithmetic": {
+      "name": "keyword.operator.arithmetic.gdshader",
+      "match": "[-+*/%]"
+    },
+    "operatorShift": {
+      "name": "keyword.operator.bitwise.shift.gdshader",
+      "match": "\\<\\<|\\>\\>"
+    },
+    "operatorRelational": {
+      "name": "keyword.operator.relational.gdshader",
+      "match": "[<>]\\=?"
+    },
+    "operatorEquality": {
+      "name": "keyword.operator.comparison.gdshader",
+      "match": "[=!]\\="
+    },
+    "operatorBitwise": {
+      "name": "keyword.operator.bitwise.gdshader",
+      "match": "[~&^|]"
+    },
+    "operatorLogical": {
+      "name": "keyword.operator.logical.gdshader",
+      "match": "\\!|\\&\\&|\\|\\|"
+    },
+    "operatorTernary": {
+      "begin": "\\?",
+      "beginCaptures": {
+        "0": { "name": "keyword.operator.ternary.question-mark.gdshader" }
+      },
+      "patterns": [
+        { "include": "#any" }
+      ],
+      "end": "\\:|(?=\\;)",
+      "endCaptures": {
+        "0": { "name": "keyword.operator.ternary.colon.gdshader" }
+      }
+    },
+    "operatorCompoundAssignment": {
+      "match": "([-+*/%]\\=)|(\\<\\<\\=|\\>\\>\\=)|([&^|]\\=)",
+      "captures": {
+        "1": { "name": "keyword.operator.assignment.compound.arithmetic.gdshader" },
+        "2": { "name": "keyword.operator.assignment.compound.bitwise.shift.gdshader" },
+        "3": { "name": "keyword.operator.assignment.compound.bitwise.gdshader" }
+      }
+    },
+    "operatorAssignment": {
+      "name": "keyword.operator.assignment.gdshader",
+      "match": "\\="
     }
   }
 }
