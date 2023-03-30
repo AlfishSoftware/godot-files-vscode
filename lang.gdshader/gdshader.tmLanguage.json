@@ -8,11 +8,17 @@
   "repository": {
     "any": {
       "patterns": [
-        { "include": "#comment" },
-        { "include": "#string" },
+        { "include": "#text" },
         { "include": "#lineContinuation" },
         { "include": "#preprocessor" },
         { "include": "#code" }
+      ]
+    },
+    "text": {
+      "patterns": [
+        { "include": "#commentLine" },
+        { "include": "#commentBlock" },
+        { "include": "#string" }
       ]
     },
     "code": {
@@ -27,12 +33,6 @@
       ]
     },
     
-    "comment": {
-      "patterns": [
-        { "include": "#commentLine" },
-        { "include": "#commentBlock" }
-      ]
-    },
     "commentLine": {
       "name": "comment.line.double-slash.gdshader",
       "begin": "//",
@@ -80,8 +80,7 @@
     },
     "preprocessorSymbol": {
       "patterns": [
-        { "include": "#comment" },
-        { "include": "#string" },
+        { "include": "#text" },
         { "include": "#lineContinuation" },
         { "include": "#directive" },
         { "include": "#macro" },
@@ -128,8 +127,7 @@
         "5": {
           "name": "meta.preprocessor.macro.parameters.gdshader",
           "patterns": [
-            { "include": "#comment" },
-            { "include": "#string" },
+            { "include": "#text" },
             { "include": "#lineContinuation" },
             { "include": "#macroParameter" },
             { "match": "[,]", "name": "punctuation.separator.parameters.gdshader" }
@@ -139,8 +137,7 @@
       },
       "end": "(?<!\\\\)$",
       "patterns": [
-        { "include": "#comment" },
-        { "include": "#string" },
+        { "include": "#text" },
         { "include": "#lineContinuation" },
         { "include": "#code" }
       ]
@@ -224,7 +221,7 @@
       "name": "meta.classifier.gdshader",
       "begin": "(?=\\b(?:shader_type|render_mode)\\b)",
       "patterns": [
-        { "include": "#comment" },
+        { "include": "#text" },
         { "include": "#keyword" },
         { "include": "#identifierClassification" },
         { "include": "#separator" }
@@ -253,7 +250,7 @@
         "0": { "name": "punctuation.bracket.gdshader" }
       },
       "patterns": [
-        { "include": "#comment" },
+        { "include": "#text" },
         { "include": "#keyword" },
         { "include": "#element" },
         { "include": "#separator" }
@@ -262,7 +259,7 @@
     "structDefinition": {
       "begin": "(?=\\b(?:struct)\\b)",
       "patterns": [
-        { "include": "#comment" },
+        { "include": "#text" },
         { "include": "#keyword" },
         { "include": "#structName" },
         { "include": "#structDefinitionBlock" },
@@ -286,7 +283,7 @@
         "0": { "name": "punctuation.definition.block.struct.gdshader" }
       },
       "patterns": [
-        { "include": "#comment" },
+        { "include": "#text" },
         { "include": "#precisionKeyword" },
         { "include": "#fieldDefinition" },
         { "include": "#keyword" },
@@ -305,7 +302,7 @@
         }
       },
       "patterns": [
-        { "include": "#comment" },
+        { "include": "#text" },
         { "include": "#keyword" },
         { "include": "#arraySize" },
         { "include": "#fieldName" },
@@ -326,7 +323,8 @@
         { "include": "#modifierKeyword" },
         { "include": "#precisionKeyword" },
         { "include": "#typeKeyword" },
-        { "include": "#hintKeyword" }
+        { "include": "#hintKeyword" },
+        { "include": "#scopingKeyword" }
       ]
     },
     "controlKeyword": {
@@ -343,14 +341,31 @@
     },
     "typeKeyword": {
       "name": "support.type.gdshader",
-      "match": "\\b(?:void|bool|[biu]?vec[234]|u?int|float|mat[234]|[iu]?sampler(?:3D|2D(?:Array)?)|samplerCube)\\b"
+      "match": "\\b(?:void|bool|[biu]?vec[234]|u?int|float|mat[234]|[iu]?sampler(?:3D|2D(?:Array)?)|samplerCube(?:Array)?)\\b"
     },
     "hintKeyword": {
-      "match": "(\\:)?\\s*\\b(source_color|hint_(?:color|range|(?:black_)?albedo|normal|(?:default_)?(?:white|black)|aniso|anisotropy|roughness_(?:[rgba]|normal|gray))|filter_(?:nearest|linear)(?:_mipmap(?:_anisotropic)?)?|repeat_(?:en|dis)able)\\b",
+      "match": "(\\:)?\\s*\\b(source_color|hint_(?:color|range|(?:black_)?albedo|normal|(?:default_)?(?:white|black)|default_transparent|aniso(?:tropy)?|roughness_(?:[rgba]|normal|gray)|(?:screen|depth|normal_roughness)_texture)|filter_(?:nearest|linear)(?:_mipmap(?:_anisotropic)?)?|repeat_(?:en|dis)able|instance_index)\\b",
       "captures": {
         "1": { "name": "keyword.operator.type.annotation.gdshader" },
         "2": { "name": "support.type.annotation.gdshader" }
       }
+    },
+    "scopingKeyword": {
+      "begin": "\\b(?:group_uniforms)\\b",
+      "beginCaptures": {
+        "0": { "name": "keyword.other.group.gdshader" }
+      },
+      "patterns": [
+        { "include": "#text" },
+        { "include": "#preprocessor" },
+        { "include": "#identifierScope" },
+        { "match": "[.]", "name": "punctuation.separator.namespace.gdshader" }
+      ],
+      "end": "(?=;)"
+    },
+    "identifierScope": {
+      "name": "entity.name.namespace.gdshader",
+      "match": "\\b[a-zA-Z_]\\w*\\b"
     },
     
     "element": {
