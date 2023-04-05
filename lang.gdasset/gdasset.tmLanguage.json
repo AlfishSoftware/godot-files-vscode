@@ -216,7 +216,7 @@
 			}
 		},
 		"resourceShader": {
-			"begin": "^\\s*(\\[)\\s*(sub_resource)\\s+(type)\\s*(=)\\s*(\")((?:Visual)?Shader(?:[A-Z_0-9]\\w*)?)(\")\\s*(.*?)(\\])\\s*(?=(?:[;#].*)?$)",
+			"begin": "^\\s*(\\[)\\s*((?:gd|sub)_resource)\\s+(type)\\s*(=)\\s*(\")((?:Visual)?Shader(?:[A-Z_0-9]\\w*)?)(\")\\s*(.*?)(\\])\\s*(?=(?:[;#].*)?$)",
 			"beginCaptures": {
 				"0": { "name": "meta.section.header.shader.gdasset" },
 				"1": { "name": "punctuation.definition.tag.gdasset" },
@@ -238,10 +238,11 @@
 			"patterns": [
 				{ "include": "#comment" },
 				{ "include": "#codeAssignmentShader" },
+				{ "include": "#section" },
 				{ "include": "#propertyAssignment" },
 				{ "include": "#expression" }
 			],
-			"end": "(?=^\\s*\\[)"
+			"end": "(?=^\\s*\\[(?!\\s*(?:ext_)?resource\\b))"
 		},
 		"codeAssignmentShader": {
 			"begin": "(?<=\\b(?:code|(?:\\b\\w+\\b/)*expression)\\s*=\\s*)\"",
@@ -267,7 +268,39 @@
 					],
 					"end": "(\\\\)?\\*(\\\\)?/|(?=\")"
 				},
+				{
+					"name": "string.quoted.double.gdshader",
+					"captures": {
+						"1": { "name": "comment.block.character.escape.gdasset" },
+						"2": { "name": "punctuation.definition.string.gdshader" }
+					},
+					"begin": "(\\\\)(\")",
+					"patterns": [
+						{ "include": "#characterEscapeShader" },
+						{ "include": "#characterEscape" }
+					],
+					"end": "(\\\\)(\")|(?=\")"
+				},
+				{
+					"name": "constant.character.escape.line-continuation.gdshader",
+					"match": "(\\\\)\\\\$",
+					"captures": {
+						"1": { "name": "comment.block.character.escape.gdasset" }
+					}
+				},
 				{ "include": "#characterEscape" },
+				{
+					"comment": "Break source because it interferes with escaped quote pattern.",
+					"match": "(?<![^ \t/])\\#.*?(?=\\\\)",
+					"captures": {
+						"0": {
+							"patterns": [
+								{ "include": "source.gdshader.a" },
+								{ "include": "source.gdshader" }
+							]
+						}
+					}
+				},
 				{ "include": "source.gdshader.a" },
 				{ "include": "source.gdshader" }
 			],
@@ -276,8 +309,18 @@
 				"0": { "name": "punctuation.definition.string.quoted.double.gdasset" }
 			}
 		},
+		"characterEscapeShader": {
+			"match": "(\\\\)(?:(\\\\(?:(\\\\)[\"\\\\]|$))|(\\\\(\\\\)?[^\"]))",
+			"captures": {
+				"1": { "name": "comment.block.character.escape.gdasset" },
+				"2": { "name": "constant.character.escape.gdshader" },
+				"3": { "name": "comment.block.character.escape.gdasset" },
+				"4": { "name": "invalid.illegal.unknown-escape.gdshader" },
+				"5": { "name": "comment.block.character.escape.gdasset" }
+			}
+		},
 		"resourceGDScript": {
-			"begin": "^\\s*(\\[)\\s*(sub_resource)\\s+(type)\\s*(=)\\s*(\")(GDScript)(\")\\s*(.*?)(\\])\\s*(?=(?:[;#].*)?$)",
+			"begin": "^\\s*(\\[)\\s*((?:gd|sub)_resource)\\s+(type)\\s*(=)\\s*(\")(GDScript)(\")\\s*(.*?)(\\])\\s*(?=(?:[;#].*)?$)",
 			"beginCaptures": {
 				"0": { "name": "meta.section.header.gdscript.gdasset" },
 				"1": { "name": "punctuation.definition.tag.gdasset" },
@@ -299,10 +342,11 @@
 			"patterns": [
 				{ "include": "#comment" },
 				{ "include": "#codeAssignmentGDScript" },
+				{ "include": "#section" },
 				{ "include": "#propertyAssignment" },
 				{ "include": "#expression" }
 			],
-			"end": "(?=^\\s*\\[)"
+			"end": "(?=^\\s*\\[(?!\\s*(?:ext_)?resource\\b))"
 		},
 		"codeAssignmentGDScript": {
 			"begin": "\\b(script)(/)(source)\\s*(=)\\s*(\")",
@@ -349,8 +393,7 @@
 				},
 				{ "include": "#characterEscape" },
 				{
-					"comment": "Overriden because it interferes with escaped quote pattern.",
-					"name": "meta.function.gdscript",
+					"comment": "Break source because it interferes with escaped quote pattern.",
 					"match": "\\s*\\b(?:(?:[a-z]+\\s+)*(?:func|signal)\\s+)?[A-Za-z_]\\w*\\s*[(]",
 					"captures": {
 						"0": {

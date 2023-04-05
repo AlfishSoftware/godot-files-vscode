@@ -159,7 +159,7 @@
     },
     "directiveConditional": {
       "name": "keyword.control.directive.conditional.gdshader",
-      "match": "(\\#)(?:if|elif|ifdef|ifndef|else|endif)\\b|\\b(?:defined)\\b",
+      "match": "(\\#)(?:(?:el|end)?if|ifn?def|else)\\b|\\b(?:defined)\\b",
       "captures": {
         "1": { "name": "punctuation.definition.directive.gdshader" }
       }
