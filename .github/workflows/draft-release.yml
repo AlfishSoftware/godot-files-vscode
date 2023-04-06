@@ -20,7 +20,7 @@ jobs:
           npm ci
       - name: Prepare and package vsix
         run: |
-          npm i -g vsce
+          npm i -g @vscode/vsce
           echo vsce $(vsce --version)
           vsce package
       - name: Get package info

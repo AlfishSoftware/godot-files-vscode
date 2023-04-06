@@ -1,8 +1,9 @@
 # Godot Files
 
-Provides syntax-highlighting for some Godot Editor files.
-
+Provides syntax-highlighting for some Godot Editor files.  
 This isn't meant to replace the [godot-tools] extension, but it has improvements on its supported files.
+
+Compatibility: Godot 3.x, 4.0
 
 ## Features
 
@@ -30,8 +31,6 @@ Parsing of INI-like files is very simplistic (line-based; doesn't use a robust p
 Embedded code (like gdscript/gdshader) in asset strings is syntax-highlighted, however:
 - VSCode is not recognizing "embeddedLanguages" properly for some reason (bug?), so things like toggling comments,
   snippets, etc. won't consider the embedded language's context
-
-Target is mostly Godot 3 for now (some Godot 4 features are supported, but not actively tested).
 
 ## Support
 
