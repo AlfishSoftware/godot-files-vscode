@@ -3,15 +3,15 @@
   "configurations": [
     {
       "args": [
-        "--extensionDevelopmentPath=${workspaceFolder}"
+        "--extensionDevelopmentPath=${workspaceFolder}",
       ],
       "name": "Launch Extension",
+      "preLaunchTask": "npm: compile",
       "outFiles": [
-        "${workspaceFolder}/out/**/*.js"
+        "${workspaceFolder}/src/**/*.js",
       ],
       "request": "launch",
-      "type": "pwa-extensionHost"
+      "type": "extensionHost",
     }
   ],
-  "compounds": []
 }
