@@ -11,6 +11,7 @@
         { "include": "#text" },
         { "include": "#lineContinuation" },
         { "include": "#preprocessor" },
+        { "include": "#enclosed" },
         { "include": "#code" }
       ]
     },
@@ -23,13 +24,13 @@
     },
     "code": {
       "patterns": [
-        { "include": "#enclosed" },
         { "include": "#classifier" },
         { "include": "#definition" },
         { "include": "#keyword" },
         { "include": "#element" },
         { "include": "#separator" },
-        { "include": "#operator" }
+        { "include": "#operator" },
+        { "include": "#encloser" }
       ]
     },
     
@@ -214,6 +215,13 @@
       },
       "patterns": [
         { "include": "#any" }
+      ]
+    },
+    "encloser": {
+      "patterns": [
+        { "match": "[()]", "name": "punctuation.parenthesis.gdshader" },
+        { "match": "\\[|\\]", "name": "punctuation.square-bracket.gdshader" },
+        { "match": "[{}]", "name": "punctuation.section.block.brace.gdshader" }
       ]
     },
     

@@ -132,6 +132,7 @@
 					"export_presets.cfg"
 				],
 				"filenamePatterns": [
+					"**/.godot/**/*.cfg",
 					"**/.godot/imported/*.md5"
 				],
 				"icon": {

@@ -193,11 +193,11 @@
 		},
 		"identifierType": {
 			"name": "entity.name.type.gdasset",
-			"match": "\\b[A-Za-z_]\\w*\\b"
+			"match": "\\b[A-Za-z_]\\w*\\b(?:\\s*\\[(?:[A-Za-z_]\\w*|,|\\s)*\\])?"
 		},
 		"expressionCall": {
 			"name": "meta.function-call.gdasset",
-			"begin": "\\b([A-Za-z_]\\w*)\\s*([(])",
+			"begin": "\\b([A-Za-z_]\\w*(?:\\s*\\[(?:[A-Za-z_]\\w*|,|\\s)*\\])?)\\s*([(])",
 			"beginCaptures": {
 				"1": { "name": "entity.name.type.gdasset" },
 				"2": { "name": "punctuation.parenthesis.gdasset" }
@@ -327,7 +327,7 @@
 				{ "include": "#characterEscape" },
 				{
 					"comment": "Break source because it interferes with escaped quote pattern.",
-					"match": "(?<![^ \t/])\\#.*?(?=\\\\)",
+					"match": "^\\s*\\#define\\s+\\w+\\b|.+?(?:[\\[{(]|(?=\\\\))",
 					"captures": {
 						"0": {
 							"patterns": [
@@ -480,26 +480,17 @@
 				"5": { "name": "comment.block.character.escape.gdasset" }
 			}
 		},
-		"attributeId": {
-			"match": "\\b(id)\\s*(=)\\s*(\\d+|(\")\\w+(\"))",
-			"captures": {
-				"1": { "name": "entity.other.attribute-name.id.gdasset" },
-				"2": { "name": "punctuation.separator.key-value.gdasset" },
-				"3": { "name": "variable.name.gdasset" },
-				"4": { "name": "punctuation.definition.string.quoted.double.gdasset" },
-				"5": { "name": "punctuation.definition.string.quoted.double.gdasset" }
-			}
-		},
 		"section": {
 			"name": "meta.section.header.gdasset",
-			"begin": "^\\s*(\\[)\\s*([^\\[\\]\\s]+)(?=.*?\\]\\s*(?:[;#].*)?$)",
+			"begin": "^\\s*(\\[)\\s*([^\\[\\]\\s]+)",
 			"beginCaptures": {
 				"1": { "name": "punctuation.definition.tag.gdasset" },
 				"2": { "name": "entity.name.section.gdasset entity.name.tag.localname.gdasset" }
 			},
 			"patterns": [
+				{ "include": "#comment" },
 				{
-					"match": "\\b(type)\\s*(=)\\s*(\")(\\w+)(\")",
+					"match": "\\b(type)\\s*(=)\\s*(\")([\\w\\[\\],\\s():<>-]+)(\")",
 					"captures": {
 						"1": { "name": "entity.other.attribute-name.type.gdasset" },
 						"2": { "name": "punctuation.separator.key-value.gdasset" },
@@ -570,15 +561,24 @@
 						"5": { "name": "punctuation.definition.string.quoted.double.gdasset" }
 					}
 				},
-				{ "include": "#attributeId" },
+				{
+					"match": "\\b(id)\\s*(=)\\s*(\\d+|(\")\\w+(\"))",
+					"captures": {
+						"1": { "name": "entity.other.attribute-name.id.gdasset" },
+						"2": { "name": "punctuation.separator.key-value.gdasset" },
+						"3": { "name": "variable.name.gdasset" },
+						"4": { "name": "punctuation.definition.string.quoted.double.gdasset" },
+						"5": { "name": "punctuation.definition.string.quoted.double.gdasset" }
+					}
+				},
 				{ "include": "#attributeAssignment" },
 				{ "include": "#expression" },
 				{
 					"name": "entity.name.section.gdasset entity.name.tag.localname.gdasset",
-					"match": "."
+					"match": "[^\\s;#\\[\\]{}\"]+"
 				}
 			],
-			"end": "\\]",
+			"end": "\\](?=\\s*(?:[;#].*)?$)",
 			"endCaptures": {
 				"0": { "name": "punctuation.definition.tag.gdasset" }
 			}
