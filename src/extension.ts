@@ -429,6 +429,12 @@ ${fontTest}
 
 let tmpUri: vscode.Uri;
 export async function activate(ctx: vscode.ExtensionContext) {
+  if (!vscode.workspace.isTrusted) {
+    ctx.subscriptions.push(vscode.workspace.onDidGrantWorkspaceTrust(() => {
+      activate(ctx);
+    }));
+    return;
+  }
   tmpUri = vscode.Uri.joinPath(ctx.storageUri ?? ctx.globalStorageUri, 'tmp');
   try { // clean up any existing tmp files, or create tmp folder
     for (const [filename] of await vscode.workspace.fs.readDirectory(tmpUri))
@@ -440,6 +446,7 @@ export async function activate(ctx: vscode.ExtensionContext) {
   ctx.subscriptions.push(vscode.languages.registerHoverProvider(docs, provider));
 }
 export function deactivate() {
+  if (!tmpUri) return;
   // try to delete tmp folder, sync if possible
   if (tmpUri.scheme == 'file') rmSync(tmpUri.fsPath, { force: true, recursive: true });
   else vscode.workspace.fs.delete(tmpUri, { recursive: true, useTrash: false }).then(undefined, () => { });

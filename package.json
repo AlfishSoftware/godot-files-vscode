@@ -31,6 +31,13 @@
 	],
 	"type": "commonjs",
 	"main": "./src/extension.js",
+	"capabilities": {
+		"untrustedWorkspaces": {
+			"supported": "limited",
+			"description": "Only declarative features like syntax coloring are enabled on untrusted workspaces.",
+			"restrictedConfigurations": []
+		}
+	},
 	"activationEvents": [],
 	"contributes": {
 		"languages": [
