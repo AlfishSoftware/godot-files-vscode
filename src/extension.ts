@@ -138,7 +138,7 @@ class GDAssetProvider implements
       const text = document.getText(range);
       let match;
       if (j == 0 && (match = text.match(
-        /^(\[\s*([\p{L}\w-]+(?:\s+[\p{L}\w-]+|\s+"[^"\\]*")*(?=\s*\])|[^\[\]\s]+)\s*(.*?)\s*\])\s*([;#].*)?$/u
+        /^\s*(\[\s*([\p{L}\w-]+(?:\s+[\p{L}\w-]+|\s+"[^"\\]*")*(?=\s*\])|[^\[\]\s]+)\s*([^;#]*?)\s*([\]{\[(=]))\s*([;#].*)?$/u
       ))) {
         // Section Header
         if (currentSection && previousEnd)
@@ -153,7 +153,7 @@ class GDAssetProvider implements
         symbols.push(currentSection);
         currentProperty = null;
         previousEnd = range.end;
-        i++;
+        i++; //NOTE ignores comment after header and strings inside rest; ideally should parse properly with ANTLR
         continue;
       } else if (j == 0 && (match = text.match(
         /^\s*(((?:[\p{L}\w-]+[./])*[\p{L}\w-]+)(?:\s*\[([\w\\/.:!@$%+-]+)\])?)\s*=/u
@@ -226,6 +226,7 @@ class GDAssetProvider implements
     return symbols;
   }
   
+  //TODO sub-resPath goes to specific position in document
   async provideDefinition(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken
   ): Promise<vscode.Definition | null> {
     if (document.languageId == 'config-definition') return null;
@@ -370,6 +371,7 @@ const uriRegex = /^[a-zA-Z][a-zA-Z0-9.+-]*:\/\/[^\x00-\x1F "<>\\^`{|}\x7F-\x9F]*
  */
 async function resPathToUri(resPath: string, document: vscode.TextDocument) {
   let resUri: vscode.Uri;
+  resPath = resPath.replace(/::[^:\/\\]*$/, '');
   if (resPath.startsWith('res://')) {
     const projDir = await projectDir(document.uri);
     if (!projDir) return resPath; // no project.godot found, res paths cannot be resolved
