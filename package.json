@@ -30,7 +30,7 @@
 		"ini"
 	],
 	"type": "commonjs",
-	"main": "./src/extension.js",
+	"main": "./dist/extension.js",
 	"capabilities": {
 		"untrustedWorkspaces": {
 			"supported": "limited",

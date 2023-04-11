@@ -14,13 +14,16 @@
     "strict": true,
     // TS
     "rootDir": "src",
+    "outDir": "dist",
     "sourceMap": true,
+    "removeComments": true,
     // JS
     "allowJs": true,
     "checkJs": true,
   },
   "exclude": [
-    "src/**/*.js",
+    "dist",
+    "build",
     "node_modules",
     ".vscode-test",
   ],

@@ -8,7 +8,7 @@
       "name": "Launch Extension",
       "preLaunchTask": "npm: compile",
       "outFiles": [
-        "${workspaceFolder}/src/**/*.js",
+        "${workspaceFolder}/dist/**/*.js",
       ],
       "request": "launch",
       "type": "extensionHost",
