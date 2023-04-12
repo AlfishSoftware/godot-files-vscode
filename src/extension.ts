@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import { rmSync } from 'fs';
 
 function hash(s: string, seed = 0) { // 53-bit hash, see https://stackoverflow.com/a/52171480
   let a = 0xdeadbeef ^ seed, b = 0x41c6ce57 ^ seed;
@@ -9,6 +8,14 @@ function hash(s: string, seed = 0) { // 53-bit hash, see https://stackoverflow.c
   a = Math.imul(a ^ (a >>> 16), 2246822507) ^ Math.imul(b ^ (b >>> 13), 3266489909);
   b = Math.imul(b ^ (b >>> 16), 2246822507) ^ Math.imul(a ^ (a >>> 13), 3266489909);
   return 4294967296 * (2097151 & b) + (a >>> 0);
+}
+async function base64(data: Uint8Array) { // https://stackoverflow.com/q/12710001
+  return typeof Buffer != 'undefined' ? Buffer.from(data).toString('base64')
+  : (await new Promise<string>((ok, fail) => {
+    const reader = new FileReader();
+    reader.onload = function () { this.result ? ok(this.result as string) : fail(); };
+    reader.readAsDataURL(new Blob([data]));
+  })).split(",", 2)[1]; // `data:${mime};base64,${data}`
 }
 
 class GDAsset {
@@ -412,7 +419,7 @@ async function resPathToMarkdown(resPath: string, document: vscode.TextDocument)
       const type = match[1].toLowerCase();
       const bytes = await vscode.workspace.fs.readFile(resUri);
       // font must be inlined in data URI, since svg inside markdown won't be allowed to fetch it by URL
-      const dataUrl = `data:font/${type};base64,${Buffer.from(bytes).toString('base64')}`;
+      const dataUrl = `data:font/${type};base64,${await base64(bytes)}`;
       const imgData = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="80"><style>
 svg{background:white;margin:4px}
 @font-face{font-family:_;src:url("${dataUrl}")}
@@ -420,7 +427,7 @@ text{font-family:_;dominant-baseline:text-before-edge}
 </style><text>
 ${fontTest}
 </text></svg>`;
-      await vscode.workspace.fs.writeFile(imgSrc, Buffer.from(imgData));
+      await vscode.workspace.fs.writeFile(imgSrc, new TextEncoder().encode(imgData));
     } // preview is at cached path; tmp will be cleaned on deactivate or, if not possible, on next activate
     md.appendMarkdown(`[<img src="${imgSrc}"/>](${resUriStr})`);
     return md;
@@ -448,7 +455,6 @@ export async function activate(ctx: vscode.ExtensionContext) {
 }
 export async function deactivate() {
   if (!tmpUri) return;
-  // try to delete tmp folder, sync if possible
-  if (tmpUri.scheme == 'file') rmSync(tmpUri.fsPath, { force: true, recursive: true });
-  else await vscode.workspace.fs.delete(tmpUri, { recursive: true, useTrash: false });
+  // try to delete tmp folder
+  await vscode.workspace.fs.delete(tmpUri, { recursive: true, useTrash: false });
 }

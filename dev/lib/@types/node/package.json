@@ -1,0 +1,10 @@
+{
+	"name": "@types/node",
+	"version": "0.0.0",
+	"description": "Override TypeScript definitions to disallow arbitrary Node.js",
+	"license": "Unlicense",
+	"main": "",
+	"types": "index.d.ts",
+	"scripts": {},
+	"dependencies": {}
+}

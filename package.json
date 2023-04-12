@@ -31,6 +31,7 @@
 	],
 	"type": "commonjs",
 	"main": "./dist/extension.js",
+	"browser": "./dist/extension.js",
 	"capabilities": {
 		"untrustedWorkspaces": {
 			"supported": "limited",
@@ -238,7 +239,7 @@
 		"commands": []
 	},
 	"devDependencies": {
-		"@types/node": "^17.0.45",
+		"@types/node": "file:dev/lib/@types/node",
 		"@types/vscode": "^1.76.0",
 		"typescript": "^5.0.3"
 	},

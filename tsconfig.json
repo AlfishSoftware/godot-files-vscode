@@ -4,6 +4,7 @@
     "module": "CommonJS",
     "lib": [
       "ESNext",
+      "WebWorker",
     ],
     "noFallthroughCasesInSwitch": true,
     "noImplicitAny": true,
@@ -27,11 +28,4 @@
     "node_modules",
     ".vscode-test",
   ],
-  // JS
-  "typeAcquisition": {
-    "enable": true,
-    "include": [
-      "node",
-    ],
-  },
 }
