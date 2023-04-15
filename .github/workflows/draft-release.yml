@@ -3,6 +3,8 @@ on:
   push:
     tags: [ "v*.*.*" ]
   workflow_dispatch:
+env:
+  NODE_ENV: production
 jobs:
   Draft:
     runs-on: ubuntu-latest

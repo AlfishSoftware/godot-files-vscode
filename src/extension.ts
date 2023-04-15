@@ -9,6 +9,7 @@ function hash(s: string, seed = 0) { // 53-bit hash, see https://stackoverflow.c
   b = Math.imul(b ^ (b >>> 16), 2246822507) ^ Math.imul(a ^ (a >>> 13), 3266489909);
   return 4294967296 * (2097151 & b) + (a >>> 0);
 }
+/** Convert bytes to a base64 string, using either nodejs or web API. */
 async function base64(data: Uint8Array) { // https://stackoverflow.com/q/12710001
   return typeof Buffer != 'undefined' ? Buffer.from(data).toString('base64')
   : (await new Promise<string>((ok, fail) => {
@@ -16,6 +17,12 @@ async function base64(data: Uint8Array) { // https://stackoverflow.com/q/1271000
     reader.onload = function () { this.result ? ok(this.result as string) : fail(); };
     reader.readAsDataURL(new Blob([data]));
   })).split(",", 2)[1]; // `data:${mime};base64,${data}`
+}
+/** Encode text that goes after the comma in a `data:` URI. It tries to encode as few characters as possible.
+ * To reduce excessive encoding, prefer using single quotes and collapsing newlines and tabs when possible.
+*/
+function encodeDataURIText(data: string) {
+  return encodeURI(data).replace(/#|%20/g, s => s == '#' ? '%23' : ' ');
 }
 
 class GDAsset {
@@ -396,8 +403,8 @@ async function resPathToUri(resPath: string, document: vscode.TextDocument) {
 // Perfect pangrams for testing all ASCII letters; also letters which might be confused with numbers.
 const fontTest = `\
 <tspan>JFK GOT MY VHS, PC AND XLR WEB QUIZ</tspan>
-<tspan x="0" y="20">new job: fix mr. gluck's hazy tv pdq!</tspan>
-<tspan x="0" y="40">Oo0 Ili1 Zz2 3 A4 S5 G6 T7 B8 g9</tspan>`;
+<tspan x='0' y='20'>new job: fix mr. gluck's hazy tv pdq!</tspan>
+<tspan x='0' y='40'>Oo0 Ili1 Zz2 3 A4 S5 G6 T7 B8 g9</tspan>`;
 async function resPathToMarkdown(resPath: string, document: vscode.TextDocument) {
   const resUri = await resPathToUri(resPath, document);
   const md = new vscode.MarkdownString();
@@ -405,56 +412,94 @@ async function resPathToMarkdown(resPath: string, document: vscode.TextDocument)
   if (!(resUri instanceof vscode.Uri))
     return md.appendMarkdown(`<div title="${resUri}">File not found</div>`);
   const resUriStr = resUri.toString();
-  if (/\.(svg|png|gif|jpe?g|bmp)$/i.test(resPath))
-    return md.appendMarkdown(`[<img height=128 src="${resUriStr}"/>](${resUriStr})`);
+  if (/\.(svg|png|gif|jpe?g|bmp)$/i.test(resPath)) {
+    // link to image, and try to render it if possible
+    if (mdScheme.has(resUri.scheme)) // load image if allowed
+      return md.appendMarkdown(`[<img height=128 src="${resUriStr}"/>](${resUriStr})`);
+    else return md.appendMarkdown(`[Image file](${resUriStr})`); // otherwise, give up and just link to it
+  }
   const match = /\.(ttf|otf|woff)$/i.exec(resPath);
-  if (match) {
-    const resStat = await vscode.workspace.fs.stat(resUri);
-    // separate file is necessary because MarkdownString has a limit on the text size for performance reasons
-    // use hash of path with modified time to index cached font preview image inside tmp folder
-    const imgSrc = vscode.Uri.joinPath(tmpUri, `font-preview-${hash(resUriStr)}-${resStat.mtime}.svg`);
-    try { // try to stat at that cache path
-      await vscode.workspace.fs.stat(imgSrc); // if it succeeds, preview is already cached in tmp folder
-    } catch { // otherwise, it must be created and written to tmp cache
-      const type = match[1].toLowerCase();
-      const bytes = await vscode.workspace.fs.readFile(resUri);
-      // font must be inlined in data URI, since svg inside markdown won't be allowed to fetch it by URL
-      const dataUrl = `data:font/${type};base64,${await base64(bytes)}`;
-      const imgData = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="80"><style>
+  if (!match) {
+    // something we cannot render, just link to file then
+    return md.appendMarkdown(`[Referenced file](${resUriStr})`);
+  }
+  // font file; we should embed it as base64 URI inside a font test SVG
+  const resStat = await vscode.workspace.fs.stat(resUri); //TODO? reuse stat from resPathToUri
+  const type = match[1].toLowerCase();
+  const fontDataUrlSize = 18 + type.length + Math.ceil(resStat.size / 3) * 4;
+  const encodedImgSize = 275 + fontDataUrlSize + encodeDataURIText(fontTest).length;
+  const imgDataUrlSize = 19 + encodedImgSize;
+  const mdSize = 17 + imgDataUrlSize + resUriStr.length;
+  if (mdSize <= 100_000) {
+    const imgData = await svgFontTest(resUri, type);
+    const imgSrc = `data:image/svg+xml,${encodeDataURIText(imgData)}`; // templateLength: 19+
+    return md.appendMarkdown(`[<img src="${imgSrc}"/>](${resUriStr})`); // templateLength: 17+
+  }
+  const tmpUri = ctx.logUri;
+  if (!mdScheme.has(tmpUri.scheme)) {
+    // give up since tmp uri would not be allowed by markdownRenderer
+    return md.appendMarkdown(`[Font file](${resUriStr})`);
+  }
+  // separate file is necessary because MarkdownString has a limit (100_000) on the text size for performance reasons
+  // use hash of path with modified time to index cached font preview image inside tmp folder
+  const imgSrc = vscode.Uri.joinPath(tmpUri, `font-preview-${hash(resUriStr)}-${resStat.mtime}.svg`);
+  try { // try to stat at that cache path
+    await vscode.workspace.fs.stat(imgSrc); // if it succeeds, preview is already cached in tmp folder
+  } catch { // otherwise, it must be created and written to tmp cache
+    const imgData = await svgFontTest(resUri, type);
+    await vscode.workspace.fs.writeFile(imgSrc, new TextEncoder().encode(imgData));
+  } // preview is at cached path; tmp will be cleaned on deactivate or, if not possible, on next activate
+  return md.appendMarkdown(`[<img src="${imgSrc}"/>](${resUriStr})`);
+}
+/** Create an SVG that can test a font using a pangram text. */
+async function svgFontTest(fontUri: vscode.Uri, type: string) {
+  const bytes = await vscode.workspace.fs.readFile(fontUri);
+  // font must be inlined in data URI, since svg inside markdown won't be allowed to fetch it by URL
+  const dataUrl = `data:font/${type};base64,${await base64(bytes)}`; // templateLength: 18+ ; same when encoded
+  return `<svg xmlns='http://www.w3.org/2000/svg' width='400' height='80'><style>
 svg{background:white;margin:4px}
-@font-face{font-family:_;src:url("${dataUrl}")}
+@font-face{font-family:_;src:url('${dataUrl}')}
 text{font-family:_;dominant-baseline:text-before-edge}
 </style><text>
 ${fontTest}
-</text></svg>`;
-      await vscode.workspace.fs.writeFile(imgSrc, new TextEncoder().encode(imgData));
-    } // preview is at cached path; tmp will be cleaned on deactivate or, if not possible, on next activate
-    md.appendMarkdown(`[<img src="${imgSrc}"/>](${resUriStr})`);
-    return md;
-  }
-  return md.appendMarkdown(`[Open file](${resUriStr})`);
+</text></svg>`; // templateLength: 227+ ; encodedTemplateLength: 275+
+}
+/** URL schemes that markdownRenderer allows loading from */
+const mdScheme = new Set(['data', 'file', 'https', 'vscode-file', 'vscode-remote', 'vscode-remote-resource', 'mailto']);
+
+const deleteRecursive = { recursive: true, useTrash: false };
+/** Permanently delete a file or an entire folder. */
+async function del(uri: vscode.Uri) {
+  try { await vscode.workspace.fs.delete(uri, deleteRecursive); } catch { /* didn't exist */ }
 }
 
-let tmpUri: vscode.Uri;
-export async function activate(ctx: vscode.ExtensionContext) {
+let ctx: vscode.ExtensionContext;
+/** The extension entry point, which runs when the extension is enabled for the IDE window. */
+export async function activate(context: vscode.ExtensionContext) {
   if (!vscode.workspace.isTrusted) {
-    ctx.subscriptions.push(vscode.workspace.onDidGrantWorkspaceTrust(() => {
-      activate(ctx);
-    }));
+    context.subscriptions.push(vscode.workspace.onDidGrantWorkspaceTrust(() => { activate(context); }));
     return;
   }
-  tmpUri = vscode.Uri.joinPath(ctx.storageUri ?? ctx.globalStorageUri, 'tmp');
-  try { // clean up any existing tmp files, or create tmp folder
-    for (const [filename] of await vscode.workspace.fs.readDirectory(tmpUri))
-      vscode.workspace.fs.delete(vscode.Uri.joinPath(tmpUri, filename), { recursive: true, useTrash: false });
-  } catch { await vscode.workspace.fs.createDirectory(tmpUri); }
+  ctx = context;
+  // cleanup garbage from older versions; no need to await
+  if (ctx.storageUri) del(ctx.storageUri);
+  del(ctx.globalStorageUri);
+  // register all providers
   const provider = new GDAssetProvider(), docs = GDAssetProvider.docs;
   ctx.subscriptions.push(vscode.languages.registerDocumentSymbolProvider(docs, provider));
   ctx.subscriptions.push(vscode.languages.registerDefinitionProvider(docs, provider));
   ctx.subscriptions.push(vscode.languages.registerHoverProvider(docs, provider));
 }
-export async function deactivate() {
+
+/** Runs to cleanup resources when extension is disabled. May not run in browser, and is limited to 5s.
+ * VSCode APIs can be unusable here; it may run after renderer process is gone (closing IDE window).
+ * Context subscriptions are disposed after this.
+ */
+export function deactivate() {
+  const tmpUri = ctx?.logUri;
   if (!tmpUri) return;
   // try to delete tmp folder
-  await vscode.workspace.fs.delete(tmpUri, { recursive: true, useTrash: false });
+  if (tmpUri.scheme == 'file') try {
+    require('fs').rmSync(tmpUri.fsPath, { force: true, recursive: true });
+  } catch { /* ignore, logs should be auto-deleted eventually anyway */ }
 }

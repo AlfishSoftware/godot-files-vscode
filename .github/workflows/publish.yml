@@ -2,6 +2,8 @@ name: Publish VSCode Extension
 on:
   release:
     types: [ published ]
+env:
+  NODE_ENV: production
 jobs:
   Publish:
     if: >-
