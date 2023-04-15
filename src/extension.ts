@@ -251,8 +251,9 @@ class GDAssetProvider implements
     const wordIsResPath = isResPath(word, wordRange, document);
     let match;
     if (wordIsResPath) {
-      const resUri = await resPathToUri(word, document);
-      if (resUri instanceof vscode.Uri) return new vscode.Location(resUri, new vscode.Position(0, 0));
+      const resLoc = await locateResPath(word, document);
+      if (typeof resLoc != 'string')
+        return new vscode.Location(resLoc.uri, new vscode.Position(0, 0));
     } else if ((match = word.match(/^((?:Ext|Sub)Resource)\s*\(\s*(?:(\d+)|"([^"\\]*)")\s*\)$/))) {
       const keyword = match[1] as 'ExtResource' | 'SubResource';
       const id = match[2] ?? GDAssetProvider.unescapeString(match[3]);
@@ -383,7 +384,7 @@ const uriRegex = /^[a-zA-Z][a-zA-Z0-9.+-]*:\/\/[^\x00-\x1F "<>\\^`{|}\x7F-\x9F]*
  * @param document Asset where path is. Its location and project are used as context to resolve the res path.
  * @returns Uri of the resource if it's found, or that URI as a string if file is not found.
  */
-async function resPathToUri(resPath: string, document: vscode.TextDocument) {
+async function locateResPath(resPath: string, document: vscode.TextDocument) {
   let resUri: vscode.Uri;
   resPath = resPath.replace(/::[^:/\\]*$/, '');
   if (resPath.startsWith('res://')) {
@@ -395,10 +396,12 @@ async function resPathToUri(resPath: string, document: vscode.TextDocument) {
       return resPath; // better not to load arbitrary URI schemes like http, etc
     resUri = vscode.Uri.joinPath(document.uri, '..', resPath); // path is relative to folder of document
   }
-  try { await vscode.workspace.fs.stat(resUri); } catch {
+  try {
+    const resStat = await vscode.workspace.fs.stat(resUri);
+    return { uri: resUri, stat: resStat };
+  } catch {
     return resUri.toString();
   }
-  return resUri;
 }
 // Perfect pangrams for testing all ASCII letters; also letters which might be confused with numbers.
 const fontTest = `\
@@ -406,12 +409,17 @@ const fontTest = `\
 <tspan x='0' y='20'>new job: fix mr. gluck's hazy tv pdq!</tspan>
 <tspan x='0' y='40'>Oo0 Ili1 Zz2 3 A4 S5 G6 T7 B8 g9</tspan>`;
 async function resPathToMarkdown(resPath: string, document: vscode.TextDocument) {
-  const resUri = await resPathToUri(resPath, document);
+  const resLoc = await locateResPath(resPath, document);
   const md = new vscode.MarkdownString();
   md.supportHtml = true;
-  if (!(resUri instanceof vscode.Uri))
-    return md.appendMarkdown(`<div title="${resUri}">File not found</div>`);
+  if (typeof resLoc == 'string')
+    return md.appendMarkdown(`<div title="${resLoc}">Location not found</div>`);
+  const { uri: resUri, stat: resStat } = resLoc;
   const resUriStr = resUri.toString();
+  if (!(resStat.type & vscode.FileType.File)) // File bit is false
+    return resStat.type & vscode.FileType.Directory // Check directory bit
+      ? md.appendMarkdown(`<div title="${resUriStr}">Directory</div>`)
+      : md.appendMarkdown(`<div title="${resUriStr}">Unkown</div>`);
   if (/\.(svg|png|gif|jpe?g|bmp)$/i.test(resPath)) {
     // link to image, and try to render it if possible
     if (mdScheme.has(resUri.scheme)) // load image if allowed
@@ -421,10 +429,9 @@ async function resPathToMarkdown(resPath: string, document: vscode.TextDocument)
   const match = /\.(ttf|otf|woff)$/i.exec(resPath);
   if (!match) {
     // something we cannot render, just link to file then
-    return md.appendMarkdown(`[Referenced file](${resUriStr})`);
+    return md.appendMarkdown(`[File](${resUriStr})`);
   }
   // font file; we should embed it as base64 URI inside a font test SVG
-  const resStat = await vscode.workspace.fs.stat(resUri); //TODO? reuse stat from resPathToUri
   const type = match[1].toLowerCase();
   const fontDataUrlSize = 18 + type.length + Math.ceil(resStat.size / 3) * 4;
   const encodedImgSize = 275 + fontDataUrlSize + encodeDataURIText(fontTest).length;
@@ -435,6 +442,7 @@ async function resPathToMarkdown(resPath: string, document: vscode.TextDocument)
     const imgSrc = `data:image/svg+xml,${encodeDataURIText(imgData)}`; // templateLength: 19+
     return md.appendMarkdown(`[<img src="${imgSrc}"/>](${resUriStr})`); // templateLength: 17+
   }
+  // fontSize > ~74kB, md would be too big to render SVG as data URI; only option is to load SVG from a temp file
   const tmpUri = ctx.logUri;
   if (!mdScheme.has(tmpUri.scheme)) {
     // give up since tmp uri would not be allowed by markdownRenderer
@@ -446,9 +454,14 @@ async function resPathToMarkdown(resPath: string, document: vscode.TextDocument)
   try { // try to stat at that cache path
     await vscode.workspace.fs.stat(imgSrc); // if it succeeds, preview is already cached in tmp folder
   } catch { // otherwise, it must be created and written to tmp cache
-    const imgData = await svgFontTest(resUri, type);
-    await vscode.workspace.fs.writeFile(imgSrc, new TextEncoder().encode(imgData));
-  } // preview is at cached path; tmp will be cleaned on deactivate or, if not possible, on next activate
+    try {
+      const imgData = await svgFontTest(resUri, type);
+      await vscode.workspace.fs.writeFile(imgSrc, new TextEncoder().encode(imgData)); // will auto create dirs
+    } catch (err) { // some fs error? give up and just link
+      console.error(err);
+      return md.appendMarkdown(`[Font file](${resUriStr})`);
+    }
+  } // font preview SVG file is at cached path (logs folder); will be cleaned on deactivate if possible, or eventually
   return md.appendMarkdown(`[<img src="${imgSrc}"/>](${resUriStr})`);
 }
 /** Create an SVG that can test a font using a pangram text. */
