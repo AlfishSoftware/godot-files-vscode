@@ -3,6 +3,7 @@
 	"version": "0.0.0",
 	"description": "Override TypeScript definitions to disallow arbitrary Node.js",
 	"license": "Unlicense",
+	"private": true,
 	"main": "",
 	"types": "index.d.ts",
 	"scripts": {},

@@ -399,8 +399,10 @@ async function locateResPath(resPath: string, document: vscode.TextDocument) {
   try {
     const resStat = await vscode.workspace.fs.stat(resUri);
     return { uri: resUri, stat: resStat };
-  } catch {
-    return resUri.toString();
+  } catch (err) {
+    if ((err as vscode.FileSystemError)?.code == 'FileNotFound')
+      return resUri.toString();
+    throw err;
   }
 }
 // Perfect pangrams for testing all ASCII letters; also letters which might be confused with numbers.
@@ -409,24 +411,49 @@ const fontTest = `\
 <tspan x='0' y='20'>new job: fix mr. gluck's hazy tv pdq!</tspan>
 <tspan x='0' y='40'>Oo0 Ili1 Zz2 3 A4 S5 G6 T7 B8 g9</tspan>`;
 async function resPathToMarkdown(resPath: string, document: vscode.TextDocument) {
-  const resLoc = await locateResPath(resPath, document);
   const md = new vscode.MarkdownString();
   md.supportHtml = true;
+  let resLoc;
+  try {
+    resLoc = await locateResPath(resPath, document);
+  } catch (err) {
+    const errName = (err as Error)?.name ?? 'Error';
+    const errMsg = (err as Error)?.message ?? '';
+    return md.appendMarkdown(`<div title="${errMsg}">${errName}!</div>`);
+  }
   if (typeof resLoc == 'string')
-    return md.appendMarkdown(`<div title="${resLoc}">Location not found</div>`);
+    return md.appendMarkdown(`<div title="${resLoc}">Not found in local system</div>`);
   const { uri: resUri, stat: resStat } = resLoc;
   const resUriStr = resUri.toString();
   if (!(resStat.type & vscode.FileType.File)) // File bit is false
     return resStat.type & vscode.FileType.Directory // Check directory bit
       ? md.appendMarkdown(`<div title="${resUriStr}">Directory</div>`)
       : md.appendMarkdown(`<div title="${resUriStr}">Unkown</div>`);
-  if (/\.(svg|png|gif|jpe?g|bmp)$/i.test(resPath)) {
+  // res is a file and exists
+  let match = /\.(svg|png|webp|jpe?g|bmp|gif)$/i.exec(resPath);
+  if (match) {
     // link to image, and try to render it if possible
+    const ext = match[1].toLowerCase();
+    const type = ext == 'svg' ? 'svg+xml' : ext == 'jpg' ? 'jpeg' : ext;
+    const encodedBytesSize = Math.ceil(resStat.size / 3) * 4;
+    const imgDataUrlSize = 19 + type.length + encodedBytesSize;
+    const mdSize = 28 + imgDataUrlSize + resUriStr.length;
+    if (mdSize <= 100_000) {
+      // image bytes fit in md text as data URI; prefer this, which works in browser and to avoid cache
+      md.baseUri = resUri; // because we may be embedding an SVG with relative links
+      const bytes = await vscode.workspace.fs.readFile(resUri);
+      const imgData = await base64(bytes);
+      const imgSrc = `data:image/${type};base64,${imgData}`; // templateLength: 19+
+      return md.appendMarkdown(`[<img height=128 src="${imgSrc}"/>](${resUriStr})`); // templateLength: 28+
+    }
     if (mdScheme.has(resUri.scheme)) // load image if allowed
       return md.appendMarkdown(`[<img height=128 src="${resUriStr}"/>](${resUriStr})`);
     else return md.appendMarkdown(`[Image file](${resUriStr})`); // otherwise, give up and just link to it
   }
-  const match = /\.(ttf|otf|woff)$/i.exec(resPath);
+  //TODO? extract svgz
+  if (/\.(?:svgz|tga|dds|exr|hdr)$/i.test(resPath))
+    return md.appendMarkdown(`[Image file](${resUriStr})`); // supported by Godot, but not by md preview
+  match = /\.(ttf|otf|woff)$/i.exec(resPath);
   if (!match) {
     // something we cannot render, just link to file then
     return md.appendMarkdown(`[File](${resUriStr})`);
