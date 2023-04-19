@@ -10,13 +10,9 @@ function hash(s: string, seed = 0) { // 53-bit hash, see https://stackoverflow.c
   return 4294967296 * (2097151 & b) + (a >>> 0);
 }
 /** Convert bytes to a base64 string, using either nodejs or web API. */
-async function base64(data: Uint8Array) { // https://stackoverflow.com/q/12710001
+function base64(data: Uint8Array) { // https://stackoverflow.com/q/12710001
   return typeof Buffer != 'undefined' ? Buffer.from(data).toString('base64')
-  : (await new Promise<string>((ok, fail) => {
-    const reader = new FileReader();
-    reader.onload = function () { this.result ? ok(this.result as string) : fail(); };
-    reader.readAsDataURL(new Blob([data]));
-  })).split(",", 2)[1]; // `data:${mime};base64,${data}`
+  : new FileReaderSync().readAsDataURL(new Blob([data])).split(",", 2)[1]; // `data:${mime};base64,${data}`
 }
 /** Encode text that goes after the comma in a `data:` URI. It tries to encode as few characters as possible.
  * To reduce excessive encoding, prefer using single quotes and collapsing newlines and tabs when possible.
@@ -442,7 +438,7 @@ async function resPathToMarkdown(resPath: string, document: vscode.TextDocument)
       // image bytes fit in md text as data URI; prefer this, which works in browser and to avoid cache
       md.baseUri = resUri; // because we may be embedding an SVG with relative links
       const bytes = await vscode.workspace.fs.readFile(resUri);
-      const imgData = await base64(bytes);
+      const imgData = base64(bytes);
       const imgSrc = `data:image/${type};base64,${imgData}`; // templateLength: 19+
       return md.appendMarkdown(`[<img height=128 src="${imgSrc}"/>](${resUriStr})`); // templateLength: 28+
     }
@@ -495,7 +491,7 @@ async function resPathToMarkdown(resPath: string, document: vscode.TextDocument)
 async function svgFontTest(fontUri: vscode.Uri, type: string) {
   const bytes = await vscode.workspace.fs.readFile(fontUri);
   // font must be inlined in data URI, since svg inside markdown won't be allowed to fetch it by URL
-  const dataUrl = `data:font/${type};base64,${await base64(bytes)}`; // templateLength: 18+ ; same when encoded
+  const dataUrl = `data:font/${type};base64,${base64(bytes)}`; // templateLength: 18+ ; same when encoded
   return `<svg xmlns='http://www.w3.org/2000/svg' width='400' height='80'><style>
 svg{background:white;margin:4px}
 @font-face{font-family:_;src:url('${dataUrl}')}
