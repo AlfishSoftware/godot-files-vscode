@@ -3,6 +3,7 @@
 	"scopeName": "source.gdasset",
 	"patterns": [
 		{ "include": "#comment" },
+		{ "include": "#impliedGDScript" },
 		{ "include": "#codeResource" },
 		{ "include": "#section" },
 		{ "include": "#propertyAssignment" },
@@ -581,6 +582,30 @@
 			"end": "\\](?=\\s*(?:[;#].*)?$)",
 			"endCaptures": {
 				"0": { "name": "punctuation.definition.tag.gdasset" }
+			}
+		},
+		"impliedGDScript": {
+			"comment": "Used in hover code.",
+			"name": "meta.embedded.implied.gdscript source.gdscript",
+			"match": "^(?:(preload)|(load))\\s*[(](\".*?\")[)]\\s*(?:(as)\\s+([\\w\\s\\[\\],]*))?$",
+			"captures": {
+				"1": { "name": "keyword.language.gdscript" },
+				"2": { "name": "support.function.builtin.gdscript" },
+				"3": {
+					"name": "string.quoted.double.gdscript",
+					"patterns": [
+						{ "include": "#impliedGDScriptCharacterEscape" }
+					]
+				},
+				"4": { "name": "keyword.language.gdscript" },
+				"5": { "name": "support.class.library.gdscript" }
+			}
+		},
+		"impliedGDScriptCharacterEscape": {
+			"match": "(\\\\(?:[abfnrtv']|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{6}|[\"'\\\\]|$))|(\\\\[^\"])",
+			"captures": {
+				"1": { "name": "constant.character.escape.gdscript" },
+				"2": { "name": "invalid.illegal.unknown-escape.gdscript" }
 			}
 		}
 	}

@@ -300,47 +300,46 @@ class GDAssetProvider implements
         [resPath, id] = [match[1], match[2]];
         if (!s && resPath == await resPathOfDocument(document)) {
           s = gdasset.symbols.SubResource[id];
-          return new vscode.Hover(loadMarkdown(resPath, id, s?.detail), wordRange);
+          return new vscode.Hover(gdCodeLoad(resPath, id, s?.detail, document.languageId), wordRange);
         }
       } else if (!s && resPath == await resPathOfDocument(document)) {
         s = gdasset.symbols.fileType;
-        return new vscode.Hover(loadMarkdown(resPath, id, s?.detail), wordRange);
+        return new vscode.Hover(gdCodeLoad(resPath, id, s?.detail, document.languageId), wordRange);
       }
-      hover.push(loadMarkdown(resPath, id, s?.detail));
+      hover.push(gdCodeLoad(resPath, id, s?.detail, document.languageId));
     } else if (word == 'sub_resource') {
       const line = document.lineAt(position).text;
       match = /^\[\s*sub_resource\s+type\s*=\s*"([^"\\]*)"\s*id\s*=\s*(?:(\d+)\b|"([^"\\]*)")/.exec(line);
       if (!match) return null;
       const [, type, idN, idS] = match, id = idN ?? GDAssetProvider.unescapeString(idS);
       resPath = await resPathOfDocument(document);
-      return new vscode.Hover(loadMarkdown(resPath, id, type), wordRange);
+      return new vscode.Hover(gdCodeLoad(resPath, id, type, document.languageId), wordRange);
     } else if (word == 'gd_resource') {
       const line = document.lineAt(position).text;
       match = /^\[\s*gd_resource\s+type\s*=\s*"([^"\\]*)"/.exec(line);
       if (!match) return null;
-      return new vscode.Hover(loadMarkdown(await resPathOfDocument(document), null, match[1]), wordRange);
+      resPath = await resPathOfDocument(document);
+      return new vscode.Hover(gdCodeLoad(resPath, null, match[1], document.languageId), wordRange);
     } else if (word == 'gd_scene') {
       const line = document.lineAt(position).text;
       match = /^\[\s*gd_scene\b/.exec(line);
       if (!match) return null;
-      return new vscode.Hover(loadMarkdown(await resPathOfDocument(document), null, 'PackedScene'), wordRange);
+      resPath = await resPathOfDocument(document);
+      return new vscode.Hover(gdCodeLoad(resPath, null, 'PackedScene', document.languageId), wordRange);
     } else if ((match = word.match(/^((?:Ext|Sub)Resource)\s*\(\s*(?:(\d+)|"([^"\\]*)")\s*\)$/))) {
       const keyword = match[1] as 'ExtResource' | 'SubResource';
       const id = match[2] ?? GDAssetProvider.unescapeString(match[3]);
       const s = gdasset.symbols[keyword][id];
       if (!s) return null;
-      const md = new vscode.MarkdownString();
       if (keyword == 'SubResource') {
         resPath = await resPathOfDocument(document);
-        md.appendCodeblock(`load("${resPath}::${id}") as ${s.detail}`, 'gdscript');
-        return new vscode.Hover(md, wordRange);
+        return new vscode.Hover(gdCodeLoad(resPath, id, s.detail, document.languageId), wordRange);
       }
       resPath = s.name;
-      md.appendCodeblock(`preload("${resPath}") as ${s.detail}`, 'gdscript');
-      hover.push(md);
+      hover.push(gdCodeLoad(resPath, null, s.detail, document.languageId));
     } else return null;
     // show link to res:// path if available
-    hover.push(await resPathToMarkdown(resPath, document));
+    hover.push(await resPathPreview(resPath, document));
     return new vscode.Hover(hover, wordRange);
   }
 }
@@ -350,10 +349,10 @@ function isResPath(word: string, wordRange: vscode.Range, document: vscode.TextD
   const r = new vscode.Range(wordRange.start.line, 0, wordRange.end.line, wordRange.end.character + 1);
   return /(?<=^\[\s*ext_resource\s+path\s*=\s*")[^"\\]*(?="$)/.test(document.getText(r));
 }
-function loadMarkdown(resPath: string, id: string | null, type: string | undefined) {
+function gdCodeLoad(resPath: string, id: string | null, type: string | undefined, language: string) {
   let code = id != null ? `load("${resPath}::${id}")` : `preload("${resPath}")`;
   if (type) code += ` as ${type}`;
-  return new vscode.MarkdownString().appendCodeblock(code, 'gdscript');
+  return new vscode.MarkdownString().appendCodeblock(code, language);
 }
 async function projectDir(assetUri: vscode.Uri) {
   let uri = assetUri;
@@ -407,7 +406,7 @@ const fontTest = `\
 <tspan>JFK GOT MY VHS, PC AND XLR WEB QUIZ</tspan>
 <tspan x='0' y='20'>new job: fix mr. gluck's hazy tv pdq!</tspan>
 <tspan x='0' y='40'>Oo0 Ili1 Zz2 3 A4 S5 G6 T7 B8 g9</tspan>`;
-async function resPathToMarkdown(resPath: string, document: vscode.TextDocument) {
+async function resPathPreview(resPath: string, document: vscode.TextDocument) {
   const md = new vscode.MarkdownString();
   md.supportHtml = true;
   let resLoc;
