@@ -1,18 +1,19 @@
 import * as vscode from 'vscode';
 
 function hash(s: string, seed = 0) { // 53-bit hash, see https://stackoverflow.com/a/52171480
-  let a = 0xdeadbeef ^ seed, b = 0x41c6ce57 ^ seed;
+  let a = 0xDEADBEEF ^ seed, b = 0x41C6CE57 ^ seed;
   for (let i = 0, c; i < s.length; i++) {
     c = s.charCodeAt(i); a = Math.imul(a ^ c, 2654435761); b = Math.imul(b ^ c, 1597334677);
   }
   a = Math.imul(a ^ (a >>> 16), 2246822507) ^ Math.imul(b ^ (b >>> 13), 3266489909);
   b = Math.imul(b ^ (b >>> 16), 2246822507) ^ Math.imul(a ^ (a >>> 13), 3266489909);
-  return 4294967296 * (2097151 & b) + (a >>> 0);
+  return 0x100000000 * (0x1FFFFF & b) + (a >>> 0);
 }
 /** Convert bytes to a base64 string, using either nodejs or web API. */
-function base64(data: Uint8Array) { // https://stackoverflow.com/q/12710001
-  return typeof Buffer != 'undefined' ? Buffer.from(data).toString('base64')
-  : new FileReaderSync().readAsDataURL(new Blob([data])).split(",", 2)[1]; // `data:${mime};base64,${data}`
+function base64(data: Uint8Array) {
+  if (typeof Buffer != 'undefined') return Buffer.from(data).toString('base64');
+  const url = new FileReaderSync().readAsDataURL(new Blob([data]));
+  return url.substring(url.indexOf(',', 12) + 1); // `data:${mime};base64,${data}`
 }
 /** Encode text that goes after the comma in a `data:` URI. It tries to encode as few characters as possible.
  * To reduce excessive encoding, prefer using single quotes and collapsing newlines and tabs when possible.
@@ -107,13 +108,15 @@ class GDAssetProvider implements
   vscode.DefinitionProvider,
   vscode.HoverProvider
 {
-  static docs: vscode.DocumentSelector = [
-    'godot-project',
-    'godot-resource',
-    'godot-scene',
-    'godot-asset',
-    'config-definition',
+  static godotDocs: vscode.DocumentFilter[] = [
+    { language: 'godot-project' },
+    { language: 'godot-resource' },
+    { language: 'godot-scene' },
+    { language: 'godot-asset' },
   ];
+  static docs = GDAssetProvider.godotDocs.concat(
+    { language: 'config-definition' },
+  );
   
   public static unescapeString(partInsideQuotes: string) {
     let s = '';
@@ -238,7 +241,6 @@ class GDAssetProvider implements
   //TODO sub-resPath goes to specific position in document
   async provideDefinition(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken
   ): Promise<vscode.Definition | null> {
-    if (document.languageId == 'config-definition') return null;
     const gdasset = this.defs[document.uri.toString(true)];
     if (!gdasset || gdasset.commentContaining(position)) return null;
     const wordRange = document.getWordRangeAtPosition(position);
@@ -268,7 +270,6 @@ class GDAssetProvider implements
   
   async provideHover(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken
   ): Promise<vscode.Hover | null> {
-    if (document.languageId == 'config-definition') return null;
     const gdasset = this.defs[document.uri.toString(true)];
     if (!gdasset || gdasset.commentContaining(position)) return null;
     const wordRange = document.getWordRangeAtPosition(position);
@@ -521,10 +522,10 @@ export async function activate(context: vscode.ExtensionContext) {
   if (ctx.storageUri) del(ctx.storageUri);
   del(ctx.globalStorageUri);
   // register all providers
-  const provider = new GDAssetProvider(), docs = GDAssetProvider.docs;
-  ctx.subscriptions.push(vscode.languages.registerDocumentSymbolProvider(docs, provider));
-  ctx.subscriptions.push(vscode.languages.registerDefinitionProvider(docs, provider));
-  ctx.subscriptions.push(vscode.languages.registerHoverProvider(docs, provider));
+  const provider = new GDAssetProvider();
+  ctx.subscriptions.push(vscode.languages.registerDocumentSymbolProvider(GDAssetProvider.docs, provider));
+  ctx.subscriptions.push(vscode.languages.registerDefinitionProvider(GDAssetProvider.godotDocs, provider));
+  ctx.subscriptions.push(vscode.languages.registerHoverProvider(GDAssetProvider.godotDocs, provider));
 }
 
 /** Runs to cleanup resources when extension is disabled. May not run in browser, and is limited to 5s.

@@ -232,3 +232,6 @@ $RECYCLE.BIN/
 
 # Windows shortcuts
 *.lnk
+
+### ===== OVERRIDE ===== ###
+!dist
