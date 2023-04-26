@@ -24,6 +24,7 @@
   },
   "exclude": [
     "build",
+    "**/dev",
     "**/dist",
     "**/node_modules",
     ".vscode-test*",

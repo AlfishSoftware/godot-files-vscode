@@ -4,9 +4,11 @@
 ## [0.0.3] - 2023-04-07
 ### Changed
 - Using The Unlicense, which more explicitly says this is public domain.
+
 ### Added
 - GDShader: Support Godot 4.0 syntax (preprocessor syntax, new hints, new keywords) and gdshaderinc files.
 - GDAsset: Recognize GDScript and GDShader syntax in inline strings in any asset (even in code-as-tres files).
+
 ### Fixed
 - GDShader: Add missing operators and make operator syntax more specific.
 - GDAsset: Fix syntax for generic types like `Array[Dictionary]` and multiline sections

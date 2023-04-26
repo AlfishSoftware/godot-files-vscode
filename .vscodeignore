@@ -9,3 +9,4 @@ build/
 **/.eslintrc.*
 **/*.src.svg
 **/._*
+**/._*/
