@@ -1,6 +1,7 @@
 .github/
 .vscode/
 build/
+out/
 **/dev/
 **/.gitignore
 **/*.vsix

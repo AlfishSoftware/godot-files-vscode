@@ -1,7 +1,7 @@
 # Godot Files
 
 Provides syntax-highlighting for some Godot Editor files.  
-This isn't meant to replace the [godot-tools] extension, but it has improvements on its supported files.
+This is **not** meant to replace the [godot-tools] extension, but to improve on its supported files. This plugin can work alongside godot-tools, but it's independent and does not require it or Godot Editor to provide any functionality.
 
 [godot-tools]: https://github.com/godotengine/godot-vscode-plugin
 
@@ -23,7 +23,7 @@ INI-like files also support:
 
 - outline and breadcrumb items
 
-INI-like Godot asset files also support:
+INI-like Godot Asset files also support:
 
 - navigate to definition of Ext/Sub Resource references, and to resource paths
 - hover image and font resource paths/references to preview them (only some formats are supported)
