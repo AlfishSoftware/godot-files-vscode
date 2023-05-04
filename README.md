@@ -29,7 +29,7 @@ INI-like Godot Asset files also support:
 - hover image and font resource paths/references to preview them (only some formats are supported)
 - hover resource references to show gdscript (pre)load code
 
-Other features such as full hover documentation, etc., *might* be included eventually, but aren't as of now.
+If you want **more features**, check the [section](#potential-future-development) below.
 
 ## Known Limitations
 
@@ -57,3 +57,48 @@ This software is free and in the [public domain].
 [Bitbucket]: https://bitbucket.org/alfish/workspace/repositories
 [Reddit]: https://www.reddit.com/user/AlfishSoftware/
 [YouTube]: https://www.youtube.com/channel/UCMaO6Qb1IcyEBo7AcMlQ78g
+
+---
+
+## Potential Future Development
+
+You might have commercial interest in funding development of this extension or of a **specific feature** that you want. Or maybe you're a kind soul with the means to contribute for the benefit of the community.
+
+In any case, [donating here] allows you the right to optionally **vote on a feature** and also send a special message. If there's enough funding from the community, development will start/progress, prioritizing the most voted/funded feature. Any amount helps a lot!
+
+[donating here]: https://alfish.itch.io/godot-files-vscode
+
+Each $ below means a week (~40 man-hours) of work needed to implement the feature. Note, however, that these guesses are very rough estimates, and this list may change too.
+
+### Godot Asset
+
+Id | Weeks | Possible Feature
+-|-|-
+aHoverSvgz | $ | Hover to Preview .svgz Images
+aColor | $ | Inline Color Decorators
+aGotoDocs | $$$ | Go to Online Docs of GDScript built-in types
+
+### Godot Shader
+
+Id | Depends on | Weeks | Possible Feature
+-|-|-|-
+sParser | | $$$$$$$$ | Preprocessor + Parser, independent of Godot Editor
+sSyntaxErr | sParser | $ | Report Syntactical Errors
+sOutline | sParser | $ | Outline / Breadcrumbs + Go to Workspace Symbol
+sGotoDef | sParser | $ | Go to Definition in User Code
+sHighlight | sGotoDef | $ | Highlight Occurrences
+sSemantic | sParser | $ | Semantic Coloring
+sLangCompl | sParser | $ | Basic Completions (Keywords, Snippets)
+sUserDocs | sParser | $$ | User API Documentation
+sUserCompl | sParser | $$ | User API Completions
+sUserSign | sParser | $$ | User API Signature Help
+sCoreApi | | $$$ | Structured Built-in API + Docs (fetch online)
+sGotoDocs | sCoreApi, sParser | $ | Go to Online Documentation
+sFindRef | sCoreApi, sHighlight | $ | Find References
+sRename | sCoreApi, sFindRef | $ | Rename Refactoring
+sCoreDocs | sCoreApi, sParser | $$$ | Built-in API Documentation
+sCoreCompl | sCoreApi, sParser | $$$ | Built-in API Completions
+sCoreSign | sCoreApi, sParser | $$$ | Built-in API Signature Help
+sSemErr | sCoreApi, sSyntaxErr | $$$$ | Report Some Semantic Errors
+
+<!-- No plans for: sFixErr, sCodeLens, sColor, sFormatFile, sFormatSel, sFormatAuto -->

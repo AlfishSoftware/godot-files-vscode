@@ -8,10 +8,12 @@ code --install-extension ${vsix}
 [Changelog](https://github.com/AlfishSoftware/godot-files-vscode/blob/v${version}/CHANGELOG.md)
 
 This software is free and in the [public domain].  
+To fund development, [donate here] and then **vote on a feature** you want.  
 👍 If you think this is useful, please star this repo and rate the extension.  
 ❤️ [Itch Store] | [ArtStation] | [Unity Assets]
 
 [public domain]: https://unlicense.org/
+[donate here]: https://alfish.itch.io/godot-files-vscode
 [Itch Store]: https://alfish.itch.io/
 [ArtStation]: https://www.artstation.com/a/26333626
 [Unity Assets]: https://assetstore.unity.com/publishers/30331
