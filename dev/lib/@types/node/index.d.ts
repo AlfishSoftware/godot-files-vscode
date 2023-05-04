@@ -1,6 +1,7 @@
 // Override TypeScript definitions to disallow arbitrary Node.js
 declare class Buffer {
-  static from(data: Uint8Array): Buffer;
+  static from(data: Uint8Array | ReadonlyArray<number> | string): Buffer;
+  static from(str: string, encoding?: BufferEncoding): Buffer;
   toString(encoding?: BufferEncoding): string;
 }
 declare type BufferEncoding = 'utf8' | 'utf16le' | 'latin1' | 'base64' | 'base64url' | 'hex';

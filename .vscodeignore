@@ -1,5 +1,6 @@
 .github/
 .vscode/
+.vscode-test-web/
 build/
 out/
 **/dev/

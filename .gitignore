@@ -1,8 +1,3 @@
-*.js
-*.js.map
-/.github/RELEASE-NOTES-v*.md
-/.vscode-test-web/
-
 ### ===== GENERATED ===== ###
 # windows,linux,macos,visualstudiocode,node
 
@@ -233,5 +228,9 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
-### ===== OVERRIDE ===== ###
+### ===== PROJECT ===== ###
 !dist
+*.js
+*.js.map
+/.github/RELEASE-NOTES-v*.md
+.vscode-test-web

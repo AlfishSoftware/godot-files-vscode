@@ -6,6 +6,8 @@ on:
 jobs:
   Draft:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout ${{ github.repository }} ${{ github.ref_type }} ${{ github.ref_name }}
         uses: actions/checkout@v3
@@ -16,7 +18,7 @@ jobs:
       - name: Install clean npm dependencies
         run: |
           echo node $(node --version)
-          echo npm $(npm --version)
+          echo npm $(npm --version) $(npm config get registry)
           npm ci
       - name: Prepare and package vsix
         run: |
@@ -29,10 +31,10 @@ jobs:
           publisher=$(node -p "require('./package.json').publisher")
           name=$(node -p "require('./package.json').name")
           version=$(node -p "require('./package.json').version")
-          echo "::set-output name=publisher::$publisher"
-          echo "::set-output name=name::$name"
-          echo "::set-output name=version::$version"
-          echo "::set-output name=vsix::$publisher.$name-$version.vsix"
+          echo "publisher=$publisher" >> $GITHUB_OUTPUT
+          echo "name=$name" >> $GITHUB_OUTPUT
+          echo "version=$version" >> $GITHUB_OUTPUT
+          echo "vsix=$publisher.$name-$version.vsix" >> $GITHUB_OUTPUT
       - name: Rename vsix prepending publisher
         run: mv *.vsix "${{ steps.P.outputs.vsix }}"
       - name: List packaged files inside vsix
@@ -46,6 +48,7 @@ jobs:
       - name: Replace package info in release notes template
         run: |
           perl -pe \
+          "s|\\\$\\{ghRepo\\}|${{ github.repository }}|g;"\
           "s/\\\$\\{publisher\\}/${{ steps.P.outputs.publisher }}/g;"\
           "s/\\\$\\{name\\}/${{ steps.P.outputs.name }}/g;"\
           "s/\\\$\\{version\\}/${{ steps.P.outputs.version }}/g;"\

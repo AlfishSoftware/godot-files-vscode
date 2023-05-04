@@ -5,7 +5,7 @@
 	"license": "Unlicense",
 	"displayName": "Godot Files",
 	"description": "Provides syntax-highlighting for some files supported by Godot Editor.",
-	"icon": "godot.png",
+	"icon": "icon.webp",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/AlfishSoftware/godot-files-vscode"
