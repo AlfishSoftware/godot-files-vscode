@@ -242,15 +242,14 @@
 		"commands": []
 	},
 	"devDependencies": {
-		"@types/node": "file:dev/lib/@types/node",
-		"@types/vscode": "^1.76.0",
-		"typescript": "^5.0.3"
+		"@types/vscode": "^1.78.0",
+		"typescript": "^5.0.4"
 	},
 	"engines": {
-		"vscode": "^1.76.0"
+		"vscode": "^1.78.0"
 	},
 	"scripts": {
-    "open-in-browser": "npm run compile && vscode-test-web --quality=stable --browser=none --extensionDevelopmentPath=. .",
+		"open-in-browser": "npm run compile && vscode-test-web --quality=stable --browser=none --extensionDevelopmentPath=. .",
 		"compile": "tsc -p ./",
 		"watch": "tsc -watch -p ./",
 		"preproduction": "npm prune --omit=dev --no-audit",

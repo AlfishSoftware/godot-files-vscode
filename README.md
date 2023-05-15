@@ -1,7 +1,7 @@
 # Godot Files
 
 Provides syntax-highlighting for some Godot Editor files.  
-This is **not** meant to replace the [godot-tools] extension, but to improve on its supported files. This plugin can work alongside godot-tools, but it's independent and does not require it or Godot Editor to provide any functionality.
+This is *not* meant to replace the [godot-tools] extension, but to improve on its supported files. This plugin can work alongside godot-tools, but it's independent and does not require it or Godot Editor to provide any functionality.
 
 [godot-tools]: https://github.com/godotengine/godot-vscode-plugin
 
