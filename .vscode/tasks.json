@@ -1,5 +1,18 @@
 {
 	"version": "2.0.0",
 	"tasks": [
-	]
+		{
+			"label": "npm: compile",
+			"type": "npm",
+			"script": "compile",
+			"group": "build",
+			"problemMatcher": [
+				"$tsc",
+			],
+			"detail": "tsc -p ./",
+			"presentation": {
+				"reveal": "silent",
+			},
+		},
+	],
 }

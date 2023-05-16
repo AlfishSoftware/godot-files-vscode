@@ -1,6 +1,19 @@
-Codium, etc.: Available on [Open-VSX](https://open-vsx.org/extension/${publisher}/${name}).  
-VSCode: File can be manually installed.
+**Codium, etc.:** Available on [Open-VSX](https://open-vsx.org/extension/${publisher}/${name}/${version}). Just search for "godot files" on the IDE's extension view.
+
+**VSCode:** Download the [extension file](https://github.com/${ghRepo}/releases/download/v${version}/${vsix}). This method won't give you automatic updates, so it's highly recommended that you follow this repo by clicking **Watch > Custom > Releases** to get notified on new releases. The downloaded file can be manually installed via command line:
 ```sh
 code --install-extension ${vsix}
 ```
-v${version} [Changelog](/CHANGELOG.md)
+
+[Changelog](https://github.com/${ghRepo}/blob/v${version}/CHANGELOG.md)
+
+This software is free and in the [public domain].  
+To fund development, [donate here] and then **vote on a feature** you want.  
+👍 If you think this is useful, please star this repo and rate the extension.  
+❤️ [Itch Store] | [ArtStation] | [Unity Assets]
+
+[public domain]: https://unlicense.org/
+[donate here]: https://alfish.itch.io/godot-files-vscode
+[Itch Store]: https://alfish.itch.io/
+[ArtStation]: https://www.artstation.com/a/26333626
+[Unity Assets]: https://assetstore.unity.com/publishers/30331

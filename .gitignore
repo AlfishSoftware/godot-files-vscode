@@ -1,7 +1,3 @@
-*.js
-*.js.map
-/.github/RELEASE-NOTES-v*.md
-
 ### ===== GENERATED ===== ###
 # windows,linux,macos,visualstudiocode,node
 
@@ -231,3 +227,10 @@ $RECYCLE.BIN/
 
 # Windows shortcuts
 *.lnk
+
+### ===== PROJECT ===== ###
+!dist
+*.js
+*.js.map
+/.github/RELEASE-NOTES-v*.md
+.vscode-test-web

@@ -1,14 +1,25 @@
 import * as vscode from 'vscode';
-import { rmSync } from 'fs';
 
 function hash(s: string, seed = 0) { // 53-bit hash, see https://stackoverflow.com/a/52171480
-  let a = 0xdeadbeef ^ seed, b = 0x41c6ce57 ^ seed;
+  let a = 0xDEADBEEF ^ seed, b = 0x41C6CE57 ^ seed;
   for (let i = 0, c; i < s.length; i++) {
     c = s.charCodeAt(i); a = Math.imul(a ^ c, 2654435761); b = Math.imul(b ^ c, 1597334677);
   }
   a = Math.imul(a ^ (a >>> 16), 2246822507) ^ Math.imul(b ^ (b >>> 13), 3266489909);
   b = Math.imul(b ^ (b >>> 16), 2246822507) ^ Math.imul(a ^ (a >>> 13), 3266489909);
-  return 4294967296 * (2097151 & b) + (a >>> 0);
+  return 0x100000000 * (0x1FFFFF & b) + (a >>> 0);
+}
+/** Convert bytes to a base64 string, using either nodejs or web API. */
+function base64(data: Uint8Array) {
+  if (typeof Buffer != 'undefined') return Buffer.from(data).toString('base64');
+  const url = new FileReaderSync().readAsDataURL(new Blob([data]));
+  return url.substring(url.indexOf(',', 12) + 1); // `data:${mime};base64,${data}`
+}
+/** Encode text that goes after the comma in a `data:` URI. It tries to encode as few characters as possible.
+ * To reduce excessive encoding, prefer using single quotes and collapsing newlines and tabs when possible.
+*/
+function encodeDataURIText(data: string) {
+  return encodeURI(data).replace(/#|%20/g, s => s == '#' ? '%23' : ' ');
 }
 
 class GDAsset {
@@ -17,7 +28,8 @@ class GDAsset {
     if (!this.rootNode || !n) return n;
     return n == '.' ? this.rootNode : `${this.rootNode}/${n}`;
   }
-  ids = {
+  symbols = {
+    fileType: undefined as vscode.DocumentSymbol | undefined,
     ExtResource: {} as { [id: string]: vscode.DocumentSymbol | undefined },
     SubResource: {} as { [id: string]: vscode.DocumentSymbol | undefined },
   };
@@ -35,52 +47,50 @@ class GDAsset {
   }
 }
 
-function makeSectionSymbol(
-  document: vscode.TextDocument,
-  match: RegExpMatchArray,
-  range: vscode.Range,
-  gdasset: GDAsset,
-) {
-  const [, header, tag, rest] = match;
+function sectionSymbol(document: vscode.TextDocument, match: RegExpMatchArray, range: vscode.Range, gdasset: GDAsset) {
+  const [, /* header */, tag, rest] = match;
   const attributes: { [field: string]: string | undefined; } = {};
   let id: string | undefined;
   for (const assignment of rest.matchAll(/\b([\w-]+)\b\s*=\s*(?:(\d+)|"([^"\\]*)")/g)) {
-    let value = assignment[2] ?? GDAssetProvider.unescapeString(assignment[3]);
+    const value = assignment[2] ?? GDAssetProvider.unescapeString(assignment[3]);
     attributes[assignment[1]] = value;
     if (assignment[1] == 'id') id = value;
   }
-  let s = new vscode.DocumentSymbol(tag, rest, vscode.SymbolKind.Object, range, range);
+  const s = new vscode.DocumentSymbol(tag, rest, vscode.SymbolKind.Namespace, range, range);
   switch (tag) {
     case 'gd_scene':
       s.name = document.uri.path.replace(/^\/(?:.*\/)*(.*?)(?:\.[^.]*)?$/, '$1');
       s.detail = 'PackedScene';
       s.kind = vscode.SymbolKind.File;
+      gdasset.symbols.fileType = s;
       break;
     case 'gd_resource':
       s.name = document.uri.path.replace(/^\/(.*\/)*/, '');
       s.detail = attributes.type ?? '';
       s.kind = vscode.SymbolKind.File;
+      gdasset.symbols.fileType = s;
       break;
     case 'ext_resource':
       if (id)
-        gdasset.ids.ExtResource[id] = s;
+        gdasset.symbols.ExtResource[id] = s;
       s.name = attributes.path ?? tag;
       s.detail = attributes.type ?? '';
       s.kind = vscode.SymbolKind.Variable;
       break;
     case 'sub_resource':
       if (id) {
-        gdasset.ids.SubResource[id] = s;
+        gdasset.symbols.SubResource[id] = s;
         s.name = '::' + id;
       }
       s.detail = attributes.type ?? '';
-      s.kind = vscode.SymbolKind.File;
+      s.kind = vscode.SymbolKind.Object;
       break;
     case 'node':
       if (attributes.parent == undefined)
         s.name = (gdasset.rootNode = attributes.name) ?? tag;
       else s.name = gdasset.nodePath(attributes.parent) + '/' + attributes.name;
       s.detail = attributes.type ?? '';
+      s.kind = vscode.SymbolKind.Object;
       break;
     case 'connection':
       if (attributes.from && attributes.to && attributes.method)
@@ -98,13 +108,15 @@ class GDAssetProvider implements
   vscode.DefinitionProvider,
   vscode.HoverProvider
 {
-  static docs: vscode.DocumentSelector = [
-    'godot-project',
-    'godot-resource',
-    'godot-scene',
-    'godot-asset',
-    'config-definition',
+  static godotDocs: vscode.DocumentFilter[] = [
+    { language: 'godot-project' },
+    { language: 'godot-resource' },
+    { language: 'godot-scene' },
+    { language: 'godot-asset' },
   ];
+  static docs = GDAssetProvider.godotDocs.concat(
+    { language: 'config-definition' },
+  );
   
   public static unescapeString(partInsideQuotes: string) {
     let s = '';
@@ -139,21 +151,22 @@ class GDAssetProvider implements
       const text = document.getText(range);
       let match;
       if (j == 0 && (match = text.match(
-        /^(\[\s*([\p{L}\w-]+(?:\s+[\p{L}\w-]+|\s+"[^"\\]*")*(?=\s*\])|[^\[\]\s]+)\s*(.*?)\s*\])\s*([;#].*)?$/u
+        /^\s*(\[\s*([\p{L}\w-]+(?:\s+[\p{L}\w-]+|\s+"[^"\\]*")*(?=\s*\])|[^[\]\s]+)\s*([^;#]*?)\s*([\]{[(=]))\s*([;#].*)?$/u
       ))) {
         // Section Header
         if (currentSection && previousEnd)
           currentSection.range = new vscode.Range(currentSection.range.start, previousEnd);
         if (gdasset)
-          currentSection = makeSectionSymbol(document, match, range, gdasset);
+          currentSection = sectionSymbol(document, match, range, gdasset);
         else {
-          const [, header, tag, rest] = match;
-          currentSection = new vscode.DocumentSymbol(tag, rest, vscode.SymbolKind.Object, range, range);
+          const [, /* header */, tag, rest] = match;
+          const kind = rest ? vscode.SymbolKind.Object : vscode.SymbolKind.Namespace;
+          currentSection = new vscode.DocumentSymbol(tag, rest, kind, range, range);
         }
         symbols.push(currentSection);
         currentProperty = null;
         previousEnd = range.end;
-        i++;
+        i++; //NOTE ignores comment after header and strings inside rest; ideally should parse properly with ANTLR
         continue;
       } else if (j == 0 && (match = text.match(
         /^\s*(((?:[\p{L}\w-]+[./])*[\p{L}\w-]+)(?:\s*\[([\w\\/.:!@$%+-]+)\])?)\s*=/u
@@ -176,7 +189,7 @@ class GDAssetProvider implements
         j = match[0].length;
         previousEnd = new vscode.Position(i, j);
         continue;
-      } else if (match = text.match(/^(\s*)([;#].*)?$/)) {
+      } else if ((match = text.match(/^(\s*)([;#].*)?$/))) {
         // No more non-ignored tokens until end of line; only Line Comment or Whitespace
         if (gdasset && match[2]) {
           j += match[1].length;
@@ -205,14 +218,13 @@ class GDAssetProvider implements
         if (i >= n) break;
         if (gdasset)
           gdasset.strings.push({ range: new vscode.Range(range.start.line, range.start.character, i, j), value: str });
-      } else if (match = text.match(/^\s+/)) {
+      } else if ((match = text.match(/^\s+/))) {
         // Whitespace
         j += match[0].length;
-      } else {
+      } else if ((match = text.match(/^[^"\s]+/))) {
         // Any other token
-        match = text.match(/^[^"\s]+/);
-        j += match![0].length;
-      }
+        j += match[0].length;
+      } else throw Error(); // should never happen
       if (currentProperty) {
         // Still in value of previous property
         const start = currentProperty.range.start;
@@ -226,9 +238,9 @@ class GDAssetProvider implements
     return symbols;
   }
   
+  //TODO sub-resPath goes to specific position in document
   async provideDefinition(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken
   ): Promise<vscode.Definition | null> {
-    if (document.languageId == 'config-definition') return null;
     const gdasset = this.defs[document.uri.toString(true)];
     if (!gdasset || gdasset.commentContaining(position)) return null;
     const wordRange = document.getWordRangeAtPosition(position);
@@ -237,12 +249,13 @@ class GDAssetProvider implements
     const wordIsResPath = isResPath(word, wordRange, document);
     let match;
     if (wordIsResPath) {
-      let resUri = await resPathToUri(word, document);
-      if (resUri instanceof vscode.Uri) return new vscode.Location(resUri, new vscode.Position(0, 0));
-    } else if (match = word.match(/^((?:Ext|Sub)Resource)\s*\(\s*(?:(\d+)|"([^"\\]*)")\s*\)$/)) {
+      const resLoc = await locateResPath(word, document);
+      if (typeof resLoc != 'string')
+        return new vscode.Location(resLoc.uri, new vscode.Position(0, 0));
+    } else if ((match = word.match(/^((?:Ext|Sub)Resource)\s*\(\s*(?:(\d+)|"([^"\\]*)")\s*\)$/))) {
       const keyword = match[1] as 'ExtResource' | 'SubResource';
       const id = match[2] ?? GDAssetProvider.unescapeString(match[3]);
-      const s = gdasset.ids[keyword][id];
+      const s = gdasset.symbols[keyword][id];
       if (!s) return null;
       if (gdasset.stringContaining(position)) return null;
       if (keyword == 'ExtResource') {
@@ -257,7 +270,6 @@ class GDAssetProvider implements
   
   async provideHover(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken
   ): Promise<vscode.Hover | null> {
-    if (document.languageId == 'config-definition') return null;
     const gdasset = this.defs[document.uri.toString(true)];
     if (!gdasset || gdasset.commentContaining(position)) return null;
     const wordRange = document.getWordRangeAtPosition(position);
@@ -265,59 +277,69 @@ class GDAssetProvider implements
     const word = document.getText(wordRange);
     const wordIsResPath = isResPath(word, wordRange, document);
     if (!wordIsResPath && gdasset.stringContaining(position)) return null;
-    let hover = [], resPath, match;
+    const hover = [];
+    let resPath, match;
     if (word == 'ext_resource' || wordIsResPath) {
-      const line = document.lineAt(position).text;
-      match = /^\[\s*ext_resource\s+.*?\bid\s*=\s*(?:(\d+)\b|"([^"\\]*)")/.exec(line);
       let s;
       if (word == 'ext_resource') {
+        const line = document.lineAt(position).text;
+        match = /^\[\s*ext_resource\s+.*?\bid\s*=\s*(?:(\d+)\b|"([^"\\]*)")/.exec(line);
         if (!match) return null;
-        s = gdasset.ids.ExtResource[match[1] ?? GDAssetProvider.unescapeString(match[2])];
+        s = gdasset.symbols.ExtResource[match[1] ?? GDAssetProvider.unescapeString(match[2])];
         resPath = s?.name ?? '';
       } else {
         resPath = word;
-        let extIds = gdasset.ids.ExtResource;
-        for (const id in extIds) {
-          if (extIds[id]?.name != word) continue;
-          s = extIds[id];
-          break;
+        const extResSymbols = gdasset.symbols.ExtResource;
+        for (const id in extResSymbols) {
+          if (extResSymbols[id]?.name == resPath) { s = extResSymbols[id]; break; }
         }
       }
-      hover.push(loadMarkdown(resPath, '', s?.detail ?? null));
+      let id = null;
+      match = /^(.*?)::([^\\/:]*)$/.exec(resPath);
+      if (match) {
+        [resPath, id] = [match[1], match[2]];
+        if (!s && resPath == await resPathOfDocument(document)) {
+          s = gdasset.symbols.SubResource[id];
+          return new vscode.Hover(gdCodeLoad(resPath, id, s?.detail, document.languageId), wordRange);
+        }
+      } else if (!s && resPath == await resPathOfDocument(document)) {
+        s = gdasset.symbols.fileType;
+        return new vscode.Hover(gdCodeLoad(resPath, id, s?.detail, document.languageId), wordRange);
+      }
+      hover.push(gdCodeLoad(resPath, id, s?.detail, document.languageId));
     } else if (word == 'sub_resource') {
       const line = document.lineAt(position).text;
       match = /^\[\s*sub_resource\s+type\s*=\s*"([^"\\]*)"\s*id\s*=\s*(?:(\d+)\b|"([^"\\]*)")/.exec(line);
       if (!match) return null;
       const [, type, idN, idS] = match, id = idN ?? GDAssetProvider.unescapeString(idS);
       resPath = await resPathOfDocument(document);
-      return new vscode.Hover(loadMarkdown(resPath, id, type), wordRange);
+      return new vscode.Hover(gdCodeLoad(resPath, id, type, document.languageId), wordRange);
     } else if (word == 'gd_resource') {
       const line = document.lineAt(position).text;
       match = /^\[\s*gd_resource\s+type\s*=\s*"([^"\\]*)"/.exec(line);
       if (!match) return null;
-      return new vscode.Hover(loadMarkdown(await resPathOfDocument(document), '', match[1]), wordRange);
+      resPath = await resPathOfDocument(document);
+      return new vscode.Hover(gdCodeLoad(resPath, null, match[1], document.languageId), wordRange);
     } else if (word == 'gd_scene') {
       const line = document.lineAt(position).text;
       match = /^\[\s*gd_scene\b/.exec(line);
       if (!match) return null;
-      return new vscode.Hover(loadMarkdown(await resPathOfDocument(document), '', 'PackedScene'), wordRange);
-    } else if (match = word.match(/^((?:Ext|Sub)Resource)\s*\(\s*(?:(\d+)|"([^"\\]*)")\s*\)$/)) {
+      resPath = await resPathOfDocument(document);
+      return new vscode.Hover(gdCodeLoad(resPath, null, 'PackedScene', document.languageId), wordRange);
+    } else if ((match = word.match(/^((?:Ext|Sub)Resource)\s*\(\s*(?:(\d+)|"([^"\\]*)")\s*\)$/))) {
       const keyword = match[1] as 'ExtResource' | 'SubResource';
       const id = match[2] ?? GDAssetProvider.unescapeString(match[3]);
-      const s = gdasset.ids[keyword][id];
+      const s = gdasset.symbols[keyword][id];
       if (!s) return null;
-      const md = new vscode.MarkdownString();
       if (keyword == 'SubResource') {
         resPath = await resPathOfDocument(document);
-        md.appendCodeblock(`load("${resPath}::${id}") as ${s.detail}`, 'gdscript');
-        return new vscode.Hover(md, wordRange);
+        return new vscode.Hover(gdCodeLoad(resPath, id, s.detail, document.languageId), wordRange);
       }
       resPath = s.name;
-      md.appendCodeblock(`preload("${resPath}") as ${s.detail}`, 'gdscript');
-      hover.push(md);
+      hover.push(gdCodeLoad(resPath, null, s.detail, document.languageId));
     } else return null;
     // show link to res:// path if available
-    hover.push(await resPathToMarkdown(resPath, document));
+    hover.push(await resPathPreview(resPath, document));
     return new vscode.Hover(hover, wordRange);
   }
 }
@@ -327,10 +349,10 @@ function isResPath(word: string, wordRange: vscode.Range, document: vscode.TextD
   const r = new vscode.Range(wordRange.start.line, 0, wordRange.end.line, wordRange.end.character + 1);
   return /(?<=^\[\s*ext_resource\s+path\s*=\s*")[^"\\]*(?="$)/.test(document.getText(r));
 }
-function loadMarkdown(resPath: string, id: string, type: string | null) {
-  let code = id ? `load("${resPath}::${id}")` : `preload("${resPath}")`;
+function gdCodeLoad(resPath: string, id: string | null, type: string | undefined, language: string) {
+  let code = id != null ? `load("${resPath}::${id}")` : `preload("${resPath}")`;
   if (type) code += ` as ${type}`;
-  return new vscode.MarkdownString().appendCodeblock(code, 'gdscript');
+  return new vscode.MarkdownString().appendCodeblock(code, language);
 }
 async function projectDir(assetUri: vscode.Uri) {
   let uri = assetUri;
@@ -341,7 +363,7 @@ async function projectDir(assetUri: vscode.Uri) {
     try {
       await vscode.workspace.fs.stat(projUri);
       return parent; // folder containing project.godot
-    } catch { } // project.godot was not found on that folder
+    } catch { /* project.godot was not found on that folder */ }
   } while (uri.path);
   return null;
 }
@@ -358,8 +380,9 @@ const uriRegex = /^[a-zA-Z][a-zA-Z0-9.+-]*:\/\/[^\x00-\x1F "<>\\^`{|}\x7F-\x9F]*
  * @param document Asset where path is. Its location and project are used as context to resolve the res path.
  * @returns Uri of the resource if it's found, or that URI as a string if file is not found.
  */
-async function resPathToUri(resPath: string, document: vscode.TextDocument) {
+async function locateResPath(resPath: string, document: vscode.TextDocument) {
   let resUri: vscode.Uri;
+  resPath = resPath.replace(/::[^:/\\]*$/, '');
   if (resPath.startsWith('res://')) {
     const projDir = await projectDir(document.uri);
     if (!projDir) return resPath; // no project.godot found, res paths cannot be resolved
@@ -369,66 +392,150 @@ async function resPathToUri(resPath: string, document: vscode.TextDocument) {
       return resPath; // better not to load arbitrary URI schemes like http, etc
     resUri = vscode.Uri.joinPath(document.uri, '..', resPath); // path is relative to folder of document
   }
-  try { await vscode.workspace.fs.stat(resUri); } catch {
-    return resUri.toString();
+  try {
+    const resStat = await vscode.workspace.fs.stat(resUri);
+    return { uri: resUri, stat: resStat };
+  } catch (err) {
+    if ((err as vscode.FileSystemError)?.code == 'FileNotFound')
+      return resUri.toString();
+    throw err;
   }
-  return resUri;
 }
 // Perfect pangrams for testing all ASCII letters; also letters which might be confused with numbers.
 const fontTest = `\
 <tspan>JFK GOT MY VHS, PC AND XLR WEB QUIZ</tspan>
-<tspan x="0" y="20">new job: fix mr. gluck's hazy tv pdq!</tspan>
-<tspan x="0" y="40">Oo0 Ili1 Zz2 3 A4 S5 G6 T7 B8 g9</tspan>`;
-async function resPathToMarkdown(resPath: string, document: vscode.TextDocument) {
-  const resUri = await resPathToUri(resPath, document);
+<tspan x='0' y='20'>new job: fix mr. gluck's hazy tv pdq!</tspan>
+<tspan x='0' y='40'>Oo0 Ili1 Zz2 3 A4 S5 G6 T7 B8 g9</tspan>`;
+async function resPathPreview(resPath: string, document: vscode.TextDocument) {
   const md = new vscode.MarkdownString();
   md.supportHtml = true;
-  if (!(resUri instanceof vscode.Uri))
-    return md.appendMarkdown(`<div title="${resUri}">File not found</div>`);
-  if (/\.(svg|png|gif|jpe?g|bmp)$/i.test(resPath))
-    return md.appendMarkdown(`[<img height=128 src="${resUri}"/>](${resUri})`);
-  let match = /\.(ttf|otf|woff)$/i.exec(resPath);
+  let resLoc;
+  try {
+    resLoc = await locateResPath(resPath, document);
+  } catch (err) {
+    const errName = (err as Error)?.name ?? 'Error';
+    const errMsg = (err as Error)?.message ?? '';
+    return md.appendMarkdown(`<div title="${errMsg}">${errName}!</div>`);
+  }
+  if (typeof resLoc == 'string')
+    return md.appendMarkdown(`<div title="${resLoc}">Not found in local system</div>`);
+  const { uri: resUri, stat: resStat } = resLoc;
+  const resUriStr = resUri.toString();
+  if (!(resStat.type & vscode.FileType.File)) // File bit is false
+    return resStat.type & vscode.FileType.Directory // Check directory bit
+      ? md.appendMarkdown(`<div title="${resUriStr}">Directory</div>`)
+      : md.appendMarkdown(`<div title="${resUriStr}">Unkown</div>`);
+  // res is a file and exists
+  let match = /\.(svg|png|webp|jpe?g|bmp|gif)$/i.exec(resPath);
   if (match) {
-    const resStat = await vscode.workspace.fs.stat(resUri);
-    // separate file is necessary because MarkdownString has a limit on the text size for performance reasons
-    // use hash of path with modified time to index cached font preview image inside tmp folder
-    const imgSrc = vscode.Uri.joinPath(tmpUri, `font-preview-${hash(resPath)}-${resStat.mtime}.svg`);
-    try { // try to stat at that cache path
-      await vscode.workspace.fs.stat(imgSrc); // if it succeeds, preview is already cached in tmp folder
-    } catch { // otherwise, it must be created and written to tmp cache
-      const type = match[1].toLowerCase();
+    // link to image, and try to render it if possible
+    const ext = match[1].toLowerCase();
+    const type = ext == 'svg' ? 'svg+xml' : ext == 'jpg' ? 'jpeg' : ext;
+    const encodedBytesSize = Math.ceil(resStat.size / 3) * 4;
+    const imgDataUrlSize = 19 + type.length + encodedBytesSize;
+    const mdSize = 28 + imgDataUrlSize + resUriStr.length;
+    if (mdSize <= 100_000) {
+      // image bytes fit in md text as data URI; prefer this, which works in browser and to avoid cache
+      md.baseUri = resUri; // because we may be embedding an SVG with relative links
       const bytes = await vscode.workspace.fs.readFile(resUri);
-      // font must be inlined in data URI, since svg inside markdown won't be allowed to fetch it by URL
-      const dataUrl = `data:font/${type};base64,${Buffer.from(bytes).toString('base64')}`;
-      const imgData = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="80"><style>
+      const imgData = base64(bytes);
+      const imgSrc = `data:image/${type};base64,${imgData}`; // templateLength: 19+
+      return md.appendMarkdown(`[<img height=128 src="${imgSrc}"/>](${resUriStr})`); // templateLength: 28+
+    }
+    if (mdScheme.has(resUri.scheme)) // load image if allowed
+      return md.appendMarkdown(`[<img height=128 src="${resUriStr}"/>](${resUriStr})`);
+    else return md.appendMarkdown(`[Image file](${resUriStr})`); // otherwise, give up and just link to it
+  }
+  //TODO? extract svgz
+  if (/\.(?:svgz|tga|dds|exr|hdr)$/i.test(resPath))
+    return md.appendMarkdown(`[Image file](${resUriStr})`); // supported by Godot, but not by md preview
+  match = /\.(ttf|otf|woff)$/i.exec(resPath);
+  if (!match) {
+    // something we cannot render, just link to file then
+    return md.appendMarkdown(`[File](${resUriStr})`);
+  }
+  // font file; we should embed it as base64 URI inside a font test SVG
+  const type = match[1].toLowerCase();
+  const fontDataUrlSize = 18 + type.length + Math.ceil(resStat.size / 3) * 4;
+  const encodedImgSize = 275 + fontDataUrlSize + encodeDataURIText(fontTest).length;
+  const imgDataUrlSize = 19 + encodedImgSize;
+  const mdSize = 17 + imgDataUrlSize + resUriStr.length;
+  if (mdSize <= 100_000) {
+    const imgData = await svgFontTest(resUri, type);
+    const imgSrc = `data:image/svg+xml,${encodeDataURIText(imgData)}`; // templateLength: 19+
+    return md.appendMarkdown(`[<img src="${imgSrc}"/>](${resUriStr})`); // templateLength: 17+
+  }
+  // fontSize > ~74kB, md would be too big to render SVG as data URI; only option is to load SVG from a temp file
+  const tmpUri = ctx.logUri;
+  if (!mdScheme.has(tmpUri.scheme)) {
+    // give up since tmp uri would not be allowed by markdownRenderer
+    return md.appendMarkdown(`[Font file](${resUriStr})`);
+  }
+  // separate file is necessary because MarkdownString has a limit (100_000) on the text size for performance reasons
+  // use hash of path with modified time to index cached font preview image inside tmp folder
+  const imgSrc = vscode.Uri.joinPath(tmpUri, `font-preview-${hash(resUriStr)}-${resStat.mtime}.svg`);
+  try { // try to stat at that cache path
+    await vscode.workspace.fs.stat(imgSrc); // if it succeeds, preview is already cached in tmp folder
+  } catch { // otherwise, it must be created and written to tmp cache
+    try {
+      const imgData = await svgFontTest(resUri, type);
+      await vscode.workspace.fs.writeFile(imgSrc, new TextEncoder().encode(imgData)); // will auto create dirs
+    } catch (err) { // some fs error? give up and just link
+      console.error(err);
+      return md.appendMarkdown(`[Font file](${resUriStr})`);
+    }
+  } // font preview SVG file is at cached path (logs folder); will be cleaned on deactivate if possible, or eventually
+  return md.appendMarkdown(`[<img src="${imgSrc}"/>](${resUriStr})`);
+}
+/** Create an SVG that can test a font using a pangram text. */
+async function svgFontTest(fontUri: vscode.Uri, type: string) {
+  const bytes = await vscode.workspace.fs.readFile(fontUri);
+  // font must be inlined in data URI, since svg inside markdown won't be allowed to fetch it by URL
+  const dataUrl = `data:font/${type};base64,${base64(bytes)}`; // templateLength: 18+ ; same when encoded
+  return `<svg xmlns='http://www.w3.org/2000/svg' width='400' height='80'><style>
 svg{background:white;margin:4px}
-@font-face{font-family:_;src:url("${dataUrl}")}
+@font-face{font-family:_;src:url('${dataUrl}')}
 text{font-family:_;dominant-baseline:text-before-edge}
 </style><text>
 ${fontTest}
-</text></svg>`;
-      await vscode.workspace.fs.writeFile(imgSrc, Buffer.from(imgData));
-    } // preview is at cached path; tmp will be cleaned on deactivate or, if not possible, on next activate
-    md.appendMarkdown(`[<img src="${imgSrc}"/>](${resUri})`);
-    return md;
-  }
-  return md.appendMarkdown(`[Open file](${resUri})`);
+</text></svg>`; // templateLength: 227+ ; encodedTemplateLength: 275+
+}
+/** URL schemes that markdownRenderer allows loading from */
+const mdScheme = new Set(['data', 'file', 'https', 'vscode-file', 'vscode-remote', 'vscode-remote-resource', 'mailto']);
+
+const deleteRecursive = { recursive: true, useTrash: false };
+/** Permanently delete a file or an entire folder. */
+async function del(uri: vscode.Uri) {
+  try { await vscode.workspace.fs.delete(uri, deleteRecursive); } catch { /* didn't exist */ }
 }
 
-let tmpUri: vscode.Uri;
-export async function activate(ctx: vscode.ExtensionContext) {
-  tmpUri = vscode.Uri.joinPath(ctx.storageUri ?? ctx.globalStorageUri, 'tmp');
-  try { // clean up any existing tmp files, or create tmp folder
-    for (const [filename] of await vscode.workspace.fs.readDirectory(tmpUri))
-      vscode.workspace.fs.delete(vscode.Uri.joinPath(tmpUri, filename), { recursive: true, useTrash: false });
-  } catch { await vscode.workspace.fs.createDirectory(tmpUri); }
-  let provider = new GDAssetProvider(), docs = GDAssetProvider.docs;
-  ctx.subscriptions.push(vscode.languages.registerDocumentSymbolProvider(docs, provider));
-  ctx.subscriptions.push(vscode.languages.registerDefinitionProvider(docs, provider));
-  ctx.subscriptions.push(vscode.languages.registerHoverProvider(docs, provider));
+let ctx: vscode.ExtensionContext;
+/** The extension entry point, which runs when the extension is enabled for the IDE window. */
+export async function activate(context: vscode.ExtensionContext) {
+  if (!vscode.workspace.isTrusted) {
+    context.subscriptions.push(vscode.workspace.onDidGrantWorkspaceTrust(() => { activate(context); }));
+    return;
+  }
+  ctx = context;
+  // cleanup garbage from older versions; no need to await
+  if (ctx.storageUri) del(ctx.storageUri);
+  del(ctx.globalStorageUri);
+  // register all providers
+  const provider = new GDAssetProvider();
+  ctx.subscriptions.push(vscode.languages.registerDocumentSymbolProvider(GDAssetProvider.docs, provider));
+  ctx.subscriptions.push(vscode.languages.registerDefinitionProvider(GDAssetProvider.godotDocs, provider));
+  ctx.subscriptions.push(vscode.languages.registerHoverProvider(GDAssetProvider.godotDocs, provider));
 }
+
+/** Runs to cleanup resources when extension is disabled. May not run in browser, and is limited to 5s.
+ * VSCode APIs can be unusable here; it may run after renderer process is gone (closing IDE window).
+ * Context subscriptions are disposed after this.
+ */
 export function deactivate() {
-  // try to delete tmp folder, sync if possible
-  if (tmpUri.scheme == 'file') rmSync(tmpUri.fsPath, { force: true, recursive: true });
-  else vscode.workspace.fs.delete(tmpUri, { recursive: true, useTrash: false }).then(undefined, () => { });
+  const tmpUri = ctx?.logUri;
+  if (!tmpUri) return;
+  // try to delete tmp folder
+  if (tmpUri.scheme == 'file') try {
+    require('fs').rmSync(tmpUri.fsPath, { force: true, recursive: true });
+  } catch { /* ignore, logs should be auto-deleted eventually anyway */ }
 }

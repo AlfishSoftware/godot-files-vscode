@@ -4,7 +4,6 @@
     "module": "CommonJS",
     "lib": [
       "ESNext",
-      "WebWorker",
     ],
     "noFallthroughCasesInSwitch": true,
     "noImplicitAny": true,
@@ -13,20 +12,6 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "strict": true,
-    // TS
-    "rootDir": "src",
-    "outDir": "dist",
-    "sourceMap": true,
-    "removeComments": true,
-    // JS
-    "allowJs": true,
-    "checkJs": true,
+    "types": [],
   },
-  "exclude": [
-    "build",
-    "out",
-    "**/dist",
-    "**/node_modules",
-    ".vscode-test*",
-  ],
 }

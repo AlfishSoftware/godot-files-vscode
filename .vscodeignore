@@ -1,7 +1,14 @@
 .github/
 .vscode/
+.vscode-test-web/
+build/
+out/
+**/dev/
 **/.gitignore
+**/*.vsix
 **/tsconfig.json
 **/*.ts
+**/.eslintrc.*
 **/*.src.svg
 **/._*
+**/._*/

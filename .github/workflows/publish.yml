@@ -2,6 +2,8 @@ name: Publish VSCode Extension
 on:
   release:
     types: [ published ]
+env:
+  NODE_ENV: production
 jobs:
   Publish:
     if: >-
@@ -37,6 +39,6 @@ jobs:
           VSCE_PAT: ${{ secrets.VS_MARKETPLACE_TOKEN }}
         if: ${{ env.VSCE_PAT != '' }}
         run: |
-          npm i -g vsce
+          npm i -g @vscode/vsce
           echo vsce $(vsce --version)
           vsce publish -i "${{ github.event.release.assets[0].name }}"
