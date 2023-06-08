@@ -587,18 +587,22 @@
 		"impliedGDScript": {
 			"comment": "Used in hover code.",
 			"name": "meta.embedded.implied.gdscript source.gdscript",
-			"match": "^(?:(preload)|(load))\\s*[(](\".*?\")[)]\\s*(?:(as)\\s+([\\w\\s\\[\\],]*))?$",
+			"match": "^(?:(preload)|(load)|(FileAccess)\\s*[.]\\s*(open))\\s*[(]\\s*(\".*?\")\\s*(?:[,]\\s*(FileAccess)\\s*[.]\\s*(READ)\\s*)?[)]\\s*(?:(as)\\s+([\\w\\s\\[\\],]*))?$",
 			"captures": {
 				"1": { "name": "keyword.language.gdscript" },
 				"2": { "name": "support.function.builtin.gdscript" },
-				"3": {
+				"3": { "name": "support.class.library.gdscript" },
+				"4": { "name": "support.function.any-method.gdscript" },
+				"5": {
 					"name": "string.quoted.double.gdscript",
 					"patterns": [
 						{ "include": "#impliedGDScriptCharacterEscape" }
 					]
 				},
-				"4": { "name": "keyword.language.gdscript" },
-				"5": { "name": "support.class.library.gdscript" }
+				"6": { "name": "support.class.library.gdscript" },
+				"7": { "name": "constant.language.gdscript" },
+				"8": { "name": "keyword.language.gdscript" },
+				"9": { "name": "support.class.library.gdscript" }
 			}
 		},
 		"impliedGDScriptCharacterEscape": {

@@ -282,7 +282,7 @@ class GDAssetProvider implements
     const word = document.getText(wordRange);
     const wordIsResPath = isResPath(word, wordRange, document);
     if (!wordIsResPath && gdasset.stringContaining(position)) return null;
-    const hover = [];
+    const hover: vscode.MarkdownString[] = [];
     let resPath, match;
     if (word == 'ext_resource' || wordIsResPath) {
       let s;
@@ -309,7 +309,7 @@ class GDAssetProvider implements
         }
       } else if (!s && resPath == await resPathOfDocument(document)) {
         s = gdasset.symbols.fileType;
-        return new vscode.Hover(gdCodeLoad(resPath, id, s?.detail, document.languageId), wordRange);
+        hover.push(gdCodeLoad(resPath, null, s?.detail, document.languageId));
       }
       hover.push(gdCodeLoad(resPath, id, s?.detail, document.languageId));
     } else if (word == 'sub_resource') {
@@ -324,13 +324,13 @@ class GDAssetProvider implements
       match = /^\[\s*gd_resource\s+type\s*=\s*"([^"\\]*)"/.exec(line);
       if (!match) return null;
       resPath = await resPathOfDocument(document);
-      return new vscode.Hover(gdCodeLoad(resPath, null, match[1], document.languageId), wordRange);
+      hover.push(gdCodeLoad(resPath, null, match[1], document.languageId));
     } else if (word == 'gd_scene') {
       const line = document.lineAt(position).text;
       match = /^\[\s*gd_scene\b/.exec(line);
       if (!match) return null;
       resPath = await resPathOfDocument(document);
-      return new vscode.Hover(gdCodeLoad(resPath, null, 'PackedScene', document.languageId), wordRange);
+      hover.push(gdCodeLoad(resPath, null, 'PackedScene', document.languageId));
     } else if ((match = word.match(/^((?:Ext|Sub)Resource)\s*\(\s*(?:(\d+)|"([^"\\]*)")\s*\)$/))) {
       const keyword = match[1] as 'ExtResource' | 'SubResource';
       const id = match[2] ?? GDAssetProvider.unescapeString(match[3]);
@@ -354,9 +354,16 @@ function isResPath(word: string, wordRange: vscode.Range, document: vscode.TextD
   const r = new vscode.Range(wordRange.start.line, 0, wordRange.end.line, wordRange.end.character + 1);
   return /(?<=^\[\s*ext_resource\s+path\s*=\s*")[^"\\]*(?="$)/.test(document.getText(r));
 }
+function escCode(s: string) { return s.replace(/("|\\)/g, '\\$1'); }
 function gdCodeLoad(resPath: string, id: string | null, type: string | undefined, language: string) {
-  let code = id != null ? `load("${resPath}::${id}")` : `preload("${resPath}")`;
-  if (type) code += ` as ${type}`;
+  let code;
+  if (type || id != null || resPath.startsWith('res://')) {
+    code = id != null ? `load("${resPath}::${id}")` : `preload("${resPath}")`;
+    if (type) code += ` as ${type}`;
+  } else {
+    if (resPath.startsWith('file://')) resPath = vscode.Uri.parse(resPath).fsPath;
+    code = `FileAccess.open("${escCode(resPath)}", FileAccess.READ)`;
+  }
   return new vscode.MarkdownString().appendCodeblock(code, language);
 }
 async function projectDir(assetUri: vscode.Uri) {
@@ -392,6 +399,10 @@ async function locateResPath(resPath: string, document: vscode.TextDocument) {
     const projDir = await projectDir(document.uri);
     if (!projDir) return resPath; // no project.godot found, res paths cannot be resolved
     resUri = vscode.Uri.joinPath(projDir, resPath.substring(6)); // 6 == 'res://'.length
+  } else if (resPath.startsWith('file://')) {
+    resUri = vscode.Uri.parse(resPath, true); // absolute file URI
+  } else if (/^\/|^[A-Z]:/.test(resPath)) {
+    resUri = vscode.Uri.file(resPath); // absolute file path
   } else {
     if (uriRegex.test(resPath)) // does resPath have a scheme?
       return resPath; // better not to load arbitrary URI schemes like http, etc
@@ -507,6 +518,18 @@ ${fontTest}
 }
 /** URL schemes that markdownRenderer allows loading from */
 const mdScheme = new Set(['data', 'file', 'https', 'vscode-file', 'vscode-remote', 'vscode-remote-resource', 'mailto']);
+function fileSize(numBytes: number) {
+  if (numBytes == 1) return '1 byte';
+  if (numBytes < 1024) return numBytes + ' bytes';
+  const k = numBytes / 1024;
+  if (k < 1024) return k.toFixed(1) + ' KiB';
+  const m = k / 1024;
+  if (m < 1024) return m.toFixed(1) + ' MiB';
+  const g = m / 1024;
+  if (g < 1024) return g.toFixed(1) + ' GiB';
+  const t = g / 1024;
+  return t.toFixed(1) + ' TiB';
+}
 
 const deleteRecursive = { recursive: true, useTrash: false };
 /** Permanently delete a file or an entire folder. */
