@@ -1,6 +1,11 @@
+const nodejs = typeof process != 'undefined' ? process : undefined;
+const createHash = nodejs && require('crypto').createHash;
 import * as vscode from 'vscode';
 
-function hash(s: string, seed = 0) { // 53-bit hash, see https://stackoverflow.com/a/52171480
+function md5(s: string) {
+  return createHash?.('md5').update(s).digest('hex');
+}
+function jsHash(s: string, seed = 0) { // 53-bit hash, see https://stackoverflow.com/a/52171480
   let a = 0xDEADBEEF ^ seed, b = 0x41C6CE57 ^ seed;
   for (let i = 0, c; i < s.length; i++) {
     c = s.charCodeAt(i); a = Math.imul(a ^ c, 2654435761); b = Math.imul(b ^ c, 1597334677);
@@ -11,7 +16,7 @@ function hash(s: string, seed = 0) { // 53-bit hash, see https://stackoverflow.c
 }
 /** Convert bytes to a base64 string, using either nodejs or web API. */
 function base64(data: Uint8Array) {
-  if (typeof Buffer != 'undefined') return Buffer.from(data).toString('base64');
+  if (nodejs) return Buffer.from(data).toString('base64');
   const url = new FileReaderSync().readAsDataURL(new Blob([data]));
   return url.substring(url.indexOf(',', 12) + 1); // `data:${mime};base64,${data}`
 }
@@ -473,7 +478,7 @@ async function resPathPreview(resPath: string, document: vscode.TextDocument) {
   }
   // separate file is necessary because MarkdownString has a limit (100_000) on the text size for performance reasons
   // use hash of path with modified time to index cached font preview image inside tmp folder
-  const imgSrc = vscode.Uri.joinPath(tmpUri, `font-preview-${hash(resUriStr)}-${resStat.mtime}.svg`);
+  const imgSrc = vscode.Uri.joinPath(tmpUri, `font-preview-${jsHash(resUriStr)}-${resStat.mtime}.svg`);
   try { // try to stat at that cache path
     await vscode.workspace.fs.stat(imgSrc); // if it succeeds, preview is already cached in tmp folder
   } catch { // otherwise, it must be created and written to tmp cache
@@ -536,6 +541,6 @@ export function deactivate() {
   if (!tmpUri) return;
   // try to delete tmp folder
   if (tmpUri.scheme == 'file') try {
-    require('fs').rmSync(tmpUri.fsPath, { force: true, recursive: true });
+    nodejs && require('fs').rmSync(tmpUri.fsPath, { force: true, recursive: true });
   } catch { /* ignore, logs should be auto-deleted eventually anyway */ }
 }

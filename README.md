@@ -15,7 +15,7 @@ Includes syntax-highlighting for these languages:
 
 - Godot Shader files: `.gdshader`, `.gdshaderinc`
 - Better (more specific) grammar for the INI-like files supported by Godot (Asset Properties Definition):  
-  `.godot`, `.tscn`, `.escn`, `.tres`, `.gdns`, `.gdnlib`, `.import`, etc.
+  `.godot`, `.tscn`, `.escn`, `.tres`, `.gdns`, `.gdnlib`, `.import`, `.remap`, etc.
 - The same grammar is reused for `.cfg` and the INI-like XDG Desktop Entry files: `.desktop`, `.directory`  
   You might want to associate this language (Configuration Properties) with other INI-like formats as well.
 

@@ -137,7 +137,8 @@
 				],
 				"extensions": [
 					".import",
-					".gdnlib"
+					".gdnlib",
+					".remap"
 				],
 				"filenames": [
 					"export_presets.cfg"
