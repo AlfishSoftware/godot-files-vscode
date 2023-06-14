@@ -240,14 +240,66 @@
 			}
 		],
 		"problemMatchers": [],
-		"commands": []
+		"commands": [
+			{
+				"command": "godotFiles.unlockEarlyAccess",
+				"title": "Godot Files: Unlock features in early access",
+				"enablement": "isWorkspaceTrusted && !isWeb"
+			}
+		],
+		"menus": {
+			"extension/context": [
+				{
+					"command": "godotFiles.unlockEarlyAccess",
+					"when": "extension == alfish.godot-files && isWorkspaceTrusted && !isWeb"
+				}
+			]
+		},
+		"configuration": {
+			"title": "Godot Files",
+			"properties": {
+				"godotFiles.hover.previewResource": {
+					"scope": "language-overridable",
+					"type": "boolean",
+					"default": true,
+					"description": "Disable if you don't want tooltips to show an image preview of the resource or a link to it."
+				},
+				"godotFiles.godotCachePath": {
+					"scope": "machine",
+					"type": "object",
+					"default": {
+						"win32": [
+							"%LOCALAPPDATA%/Godot/",
+							"~/AppData/Local/Godot/",
+							"%TEMP%/Godot/"
+						],
+						"darwin": [
+							"~/Library/Caches/Godot/"
+						],
+						"linux": [
+							"~/.cache/godot/",
+							"~/.var/app/org.godotengine.Godot/cache/godot/"
+						]
+					},
+					"additionalProperties": {
+						"type": "array",
+						"description": "Array of paths to Godot cache files for this platform id (as returned by NodeJS).",
+						"items": {
+							"type": "string",
+							"description": "A path to Godot cache files in this platform."
+						}
+					},
+					"markdownDescription": "Paths to Godot cache files in each platform. The defaults should work in most cases. Add a path when using a Godot installation in self-contained mode.\n\nThe keys are platform ids as returned by NodeJS: `win32` (Windows), `darwin` (macOS), `linux`.\n\nEach key maps to an array of path strings. A starting `~/` in the path means the user's home directory. Environment variables are replaced using the syntax `%VARIABLE%` in Windows and `${VARIABLE}` in other platforms. Glob patterns are *not* allowed."
+				}
+			}
+		}
 	},
 	"devDependencies": {
-		"@types/vscode": "^1.78.0",
-		"typescript": "^5.0.4"
+		"@types/vscode": "^1.79.0",
+		"typescript": "^5.1.3"
 	},
 	"engines": {
-		"vscode": "^1.78.0"
+		"vscode": "^1.79.0"
 	},
 	"scripts": {
 		"open-in-browser": "npm run compile && vscode-test-web --quality=stable --browser=none --extensionDevelopmentPath=. .",

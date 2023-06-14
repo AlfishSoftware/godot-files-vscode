@@ -1,9 +1,13 @@
 const nodejs = typeof process != 'undefined' ? process : undefined;
 const createHash = nodejs && require('crypto').createHash;
+const homedir = nodejs && require('os').homedir();
 import * as vscode from 'vscode';
 
 function md5(s: string) {
   return createHash?.('md5').update(s).digest('hex');
+}
+function sha512(s: string) {
+  return createHash?.('sha512').update(s).digest('hex');
 }
 function jsHash(s: string, seed = 0) { // 53-bit hash, see https://stackoverflow.com/a/52171480
   let a = 0xDEADBEEF ^ seed, b = 0x41C6CE57 ^ seed;
@@ -292,6 +296,7 @@ class GDAssetProvider implements
         if (!match) return null;
         s = gdasset.symbols.ExtResource[match[1] ?? GDAssetProvider.unescapeString(match[2])];
         resPath = s?.name ?? '';
+        if (!resPath) return null;
       } else {
         resPath = word;
         const extResSymbols = gdasset.symbols.ExtResource;
@@ -343,8 +348,10 @@ class GDAssetProvider implements
       resPath = s.name;
       hover.push(gdCodeLoad(resPath, null, s.detail, document.languageId));
     } else return null;
-    // show link to res:// path if available
-    hover.push(await resPathPreview(resPath, document));
+    if (vscode.workspace.getConfiguration('godotFiles', document).get<boolean>('hover.previewResource')!) {
+      // show link to res:// path if available
+      hover.push(await resPathPreview(resPath, document));
+    }
     return new vscode.Hover(hover, wordRange);
   }
 }
@@ -460,15 +467,23 @@ async function resPathPreview(resPath: string, document: vscode.TextDocument) {
     }
     if (mdScheme.has(resUri.scheme)) // load image if allowed
       return md.appendMarkdown(`[<img height=128 src="${resUriStr}"/>](${resUriStr})`);
-    else return md.appendMarkdown(`[Image file](${resUriStr})`); // otherwise, give up and just link to it
+    const thumbSrc = await resThumb(resUri); // try the small thumbnail image from Godot cache
+    if (thumbSrc) return md.appendMarkdown(`[<img src="${thumbSrc}"/>](${resUriStr})`);
+    else return md.appendMarkdown(`[Image file](${resUriStr})`); // otherwise, give up and just link to file
   }
   //TODO? extract svgz
-  if (/\.(?:svgz|tga|dds|exr|hdr)$/i.test(resPath))
-    return md.appendMarkdown(`[Image file](${resUriStr})`); // supported by Godot, but not by md preview
+  if (/\.(?:svgz|tga|dds|exr|hdr)$/i.test(resPath)) {
+    // supported by Godot, but not by MarkdownString preview directly
+    const thumbSrc = await resThumb(resUri); // try the small thumbnail image from Godot cache
+    if (thumbSrc) return md.appendMarkdown(`[<img src="${thumbSrc}"/>](${resUriStr})`);
+    return md.appendMarkdown(`[Image file](${resUriStr})`); // otherwise, give up and just link to file
+  }
   match = /\.(ttf|otf|woff)$/i.exec(resPath);
   if (!match) {
-    // something we cannot render, just link to file then
-    return md.appendMarkdown(`[File](${resUriStr})`);
+    // unknown file type that we cannot render directly; but maybe Godot can preview it
+    const thumbSrc = await resThumb(resUri); // try the small thumbnail image from Godot cache
+    if (thumbSrc) return md.appendMarkdown(`[<img src="${thumbSrc}"/>](${resUriStr})`);
+    return md.appendMarkdown(`[File](${resUriStr}) (${fileSize(resStat.size)})`); // otherwise, give up and just link to file
   }
   // font file; we should embed it as base64 URI inside a font test SVG
   const type = match[1].toLowerCase();
@@ -503,6 +518,35 @@ async function resPathPreview(resPath: string, document: vscode.TextDocument) {
   } // font preview SVG file is at cached path (logs folder); will be cleaned on deactivate if possible, or eventually
   return md.appendMarkdown(`[<img src="${imgSrc}"/>](${resUriStr})`);
 }
+/** Data URI for the PNG thumbnail of the resource from Godot cache; or null if not found. */
+async function resThumb(resUri: vscode.Uri) {
+  if (!supported || !process) return null;
+  // Thumbnail max is 64x64 px = ~16KiB max, far less than the ~74kB MarkdownString base64 limit; ok to embed
+  const resPathHash = md5(resUri.fsPath
+    .replace(/^[a-z]:/, g0 => g0.toUpperCase()).replaceAll('\\', '/'));
+  if (!resPathHash) return null; // in browser, would not be able to access Godot cache files anyway
+  const platform = process.platform;
+  const cachePaths = vscode.workspace.getConfiguration('godotFiles')
+    .get<{ [platform: string]: string[]; }>('godotCachePath')![platform] ?? [];
+  let lastThumbUri = null, lastModifiedTime = -Infinity;
+  for (const cachePathString of cachePaths) {
+    const cachePath = cachePathString.replace(/^~(?=\/)/, g0 => homedir ?? g0)
+      .replace(platform == 'win32' ? /%(\w+)%/g : /\$\{(\w+)\}/g,
+        (g0, g1) => process!.env[g1] ?? g0);
+    const thumbUri = vscode.Uri.joinPath(vscode.Uri.file(cachePath), `resthumb-${resPathHash}.png`);
+    try {
+      const stat = await vscode.workspace.fs.stat(thumbUri), mtime = stat.mtime;
+      if (lastModifiedTime >= mtime || stat.size > 74000) continue;
+      lastModifiedTime = mtime;
+      lastThumbUri = thumbUri;
+    } catch { continue; } // not found here, ignore
+  }
+  if (lastThumbUri == null) return null; // no cache img found
+  try {
+    const bytes = await vscode.workspace.fs.readFile(lastThumbUri);
+    return 'data:image/png;base64,' + base64(bytes);
+  } catch { return null; } // some fs error, ignore cache then
+}
 /** Create an SVG that can test a font using a pangram text. */
 async function svgFontTest(fontUri: vscode.Uri, type: string) {
   const bytes = await vscode.workspace.fs.readFile(fontUri);
@@ -531,6 +575,33 @@ function fileSize(numBytes: number) {
   return t.toFixed(1) + ' TiB';
 }
 
+async function unlockEarlyAccess() {
+  if (supported) {
+    if (await vscode.window.showInformationMessage('Early access is already enabled.', 'OK', 'Disable') == 'Disable') {
+      supported = false;
+      ctx.globalState.update('supportKey', undefined);
+    }
+    return;
+  }
+  const password = await vscode.window.showInputBox({
+    title: 'Password to unlock early access:',
+    placeHolder: 'A password is received when making a donation.',
+    password: true,
+    prompt: 'Check the README page for more info.'
+  });
+  if (!password) return;
+  const hash = sha512(password);
+  if (hash != checksum) {
+    vscode.window.showErrorMessage(
+      'Incorrect password. Paste it exactly like you received when donating.');
+    return;
+  }
+  supported = true;
+  ctx.globalState.update('supportKey', hash);
+  vscode.window.showInformationMessage(
+    'Thank you for the support! ❤️\nEarly access is now unlocked, just for you. 😊');
+}
+
 const deleteRecursive = { recursive: true, useTrash: false };
 /** Permanently delete a file or an entire folder. */
 async function del(uri: vscode.Uri) {
@@ -538,6 +609,7 @@ async function del(uri: vscode.Uri) {
 }
 
 let ctx: vscode.ExtensionContext;
+let supported = false;
 /** The extension entry point, which runs when the extension is enabled for the IDE window. */
 export async function activate(context: vscode.ExtensionContext) {
   if (!vscode.workspace.isTrusted) {
@@ -548,6 +620,12 @@ export async function activate(context: vscode.ExtensionContext) {
   // cleanup garbage from older versions; no need to await
   if (ctx.storageUri) del(ctx.storageUri);
   del(ctx.globalStorageUri);
+  // check if supporting
+  ctx.globalState.setKeysForSync([]);
+  if (nodejs) {
+    if (ctx.globalState.get('supportKey') == checksum) supported = true;
+    ctx.subscriptions.push(vscode.commands.registerCommand('godotFiles.unlockEarlyAccess', unlockEarlyAccess));
+  }
   // register all providers
   const provider = new GDAssetProvider();
   ctx.subscriptions.push(vscode.languages.registerDocumentSymbolProvider(GDAssetProvider.docs, provider));
@@ -567,3 +645,5 @@ export function deactivate() {
     nodejs && require('fs').rmSync(tmpUri.fsPath, { force: true, recursive: true });
   } catch { /* ignore, logs should be auto-deleted eventually anyway */ }
 }
+
+const checksum = '1ee835486c75add4e298d9120c62801254ecb9f69309f1f67af4d3495bdf7ba14e288b73298311f5ef7839ec34bfc12211a035911d3ad19a60e822a9f44d4d5c';
