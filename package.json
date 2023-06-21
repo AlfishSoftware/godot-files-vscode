@@ -4,7 +4,7 @@
 	"version": "0.0.4",
 	"license": "Unlicense",
 	"displayName": "Godot Files",
-	"description": "Provides syntax-highlighting for some files supported by Godot Editor.",
+	"description": "Provides syntax-coloring for some files supported by Godot Editor.",
 	"icon": "icon.webp",
 	"repository": {
 		"type": "git",

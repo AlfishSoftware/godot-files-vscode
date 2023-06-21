@@ -521,7 +521,7 @@
 					}
 				},
 				{
-					"match": "(?<=\\[ext_resource\\s+)\\b(path)\\s*(=)\\s*(\")(.+?)(\")",
+					"match": "(?<=^\\s*\\[ext_resource\\s+[^\\n;#]*?)\\b(path)\\s*(=)\\s*(\")(.+?)(\")",
 					"captures": {
 						"1": { "name": "entity.other.attribute-name.path.link.gdasset" },
 						"2": { "name": "punctuation.separator.key-value.gdasset" },

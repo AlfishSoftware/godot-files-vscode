@@ -255,9 +255,8 @@ class GDAssetProvider implements
     const wordRange = document.getWordRangeAtPosition(position);
     if (!wordRange) return null;
     const word = document.getText(wordRange);
-    const wordIsResPath = isResPath(word, wordRange, document);
     let match;
-    if (wordIsResPath) {
+    if (isPathWord(word, wordRange, document)) {
       const resLoc = await locateResPath(word, document);
       if (typeof resLoc != 'string')
         return new vscode.Location(resLoc.uri, new vscode.Position(0, 0));
@@ -284,11 +283,11 @@ class GDAssetProvider implements
     const wordRange = document.getWordRangeAtPosition(position);
     if (!wordRange) return null;
     const word = document.getText(wordRange);
-    const wordIsResPath = isResPath(word, wordRange, document);
-    if (!wordIsResPath && gdasset.stringContaining(position)) return null;
+    const wordIsPath = isPathWord(word, wordRange, document);
+    if (!wordIsPath && gdasset.stringContaining(wordRange)) return null; // ignore strings (except resPaths)
     const hover: vscode.MarkdownString[] = [];
     let resPath, match;
-    if (word == 'ext_resource' || wordIsResPath) {
+    if (word == 'ext_resource' || wordIsPath) {
       let s;
       if (word == 'ext_resource') {
         const line = document.lineAt(position).text;
@@ -350,24 +349,28 @@ class GDAssetProvider implements
     } else return null;
     if (vscode.workspace.getConfiguration('godotFiles', document).get<boolean>('hover.previewResource')!) {
       // show link to res:// path if available
-      hover.push(await resPathPreview(resPath, document));
+      if (!/^(?:user|uid):\/\//.test(resPath)) // Locating user:// or uid:// paths is not supported yet
+        hover.push(await resPathPreview(resPath, document));
     }
     return new vscode.Hover(hover, wordRange);
   }
 }
 
-function isResPath(word: string, wordRange: vscode.Range, document: vscode.TextDocument) {
-  if (/^res:\/\/[^"\\]*$/.test(word)) return true;
+function isPathWord(word: string, wordRange: vscode.Range, document: vscode.TextDocument) {
+  // check absolute path with scheme
+  if (/^(?:res|user|uid|file):\/\/[^"\\]*$/.test(word)) return true;
+  // get line text up to the word and check if word is the path of a ext_resource (for relative paths)
   const r = new vscode.Range(wordRange.start.line, 0, wordRange.end.line, wordRange.end.character + 1);
-  return /(?<=^\[\s*ext_resource\s+path\s*=\s*")[^"\\]*(?="$)/.test(document.getText(r));
+  const preWord = document.getText(r);
+  return /^\s*\[\s*ext_resource\s+[^\n;#]*?\bpath\s*=\s*"(?:[^"\\]*)"$/.test(preWord);
 }
 function escCode(s: string) { return s.replace(/("|\\)/g, '\\$1'); }
 function gdCodeLoad(resPath: string, id: string | null, type: string | undefined, language: string) {
   let code;
-  if (type || id != null || resPath.startsWith('res://')) {
+  if (type || id != null || /^(?:res|uid):\/\//.test(resPath)) {
     code = id != null ? `load("${resPath}::${id}")` : `preload("${resPath}")`;
     if (type) code += ` as ${type}`;
-  } else {
+  } else { // typeless user:// and file:// schemes, and relative paths
     if (resPath.startsWith('file://')) resPath = vscode.Uri.parse(resPath).fsPath;
     code = `FileAccess.open("${escCode(resPath)}", FileAccess.READ)`;
   }
@@ -535,8 +538,9 @@ async function resThumb(resUri: vscode.Uri) {
         (g0, g1) => process!.env[g1] ?? g0);
     const thumbUri = vscode.Uri.joinPath(vscode.Uri.file(cachePath), `resthumb-${resPathHash}.png`);
     try {
-      const stat = await vscode.workspace.fs.stat(thumbUri), mtime = stat.mtime;
-      if (lastModifiedTime >= mtime || stat.size > 74000) continue;
+      const stat = await vscode.workspace.fs.stat(thumbUri);
+      const mtime = stat.mtime, size = stat.size;
+      if (lastModifiedTime >= mtime || size <= 90 || size > 74000) continue;
       lastModifiedTime = mtime;
       lastThumbUri = thumbUri;
     } catch { continue; } // not found here, ignore
