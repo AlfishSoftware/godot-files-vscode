@@ -57,14 +57,15 @@ VSCode is not recognizing "embeddedLanguages" as expected for some reason, so, i
 
 ## Support
 
-This software is free and in the [public domain].  
-👍 If you think this is useful, please star the [GitHub repo] and give it a rating on [Open-VSX].  
+This software is free and in the [public domain]. It respects your privacy by not collecting any data.  
+👍 If you think this is useful, please star the [GitHub repo] and give it a rating on [VS Marketplace] or [Open-VSX].  
 ❤️ [Itch Store] | [ArtStation] | [Unity Assets]  
 🌐 [GitHub] | [Bitbucket] | [Reddit] | [YouTube]
 
 [donate]: https://alfish.itch.io/godot-files-vscode
 [public domain]: https://unlicense.org/
 [GitHub repo]: https://github.com/AlfishSoftware/godot-files-vscode
+[VS Marketplace]: https://marketplace.visualstudio.com/items?itemName=alfish.godot-files
 [Open-VSX]: https://open-vsx.org/extension/alfish/godot-files
 [Itch Store]: https://alfish.itch.io/
 [ArtStation]: https://www.artstation.com/a/26333626
