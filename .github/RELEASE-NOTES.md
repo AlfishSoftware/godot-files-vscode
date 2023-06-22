@@ -8,7 +8,7 @@ code --install-extension ${vsix}
 [Changelog](https://github.com/${ghRepo}/blob/v${version}/CHANGELOG.md)
 
 This software is free and in the [public domain].  
-To fund development, [donate here] and then **vote on a feature** you want.  
+To unlock features in early access, [donate here]. You can then also **vote on a feature** you want.  
 👍 If you think this is useful, please star this repo and rate the extension.  
 ❤️ [Itch Store] | [ArtStation] | [Unity Assets]
 

@@ -1,6 +1,15 @@
+const nodejs = typeof process != 'undefined' ? process : undefined;
+const createHash = nodejs && require('crypto').createHash;
+const homedir = nodejs && require('os').homedir();
 import * as vscode from 'vscode';
 
-function hash(s: string, seed = 0) { // 53-bit hash, see https://stackoverflow.com/a/52171480
+function md5(s: string) {
+  return createHash?.('md5').update(s).digest('hex');
+}
+function sha512(s: string) {
+  return createHash?.('sha512').update(s).digest('hex');
+}
+function jsHash(s: string, seed = 0) { // 53-bit hash, see https://stackoverflow.com/a/52171480
   let a = 0xDEADBEEF ^ seed, b = 0x41C6CE57 ^ seed;
   for (let i = 0, c; i < s.length; i++) {
     c = s.charCodeAt(i); a = Math.imul(a ^ c, 2654435761); b = Math.imul(b ^ c, 1597334677);
@@ -11,7 +20,7 @@ function hash(s: string, seed = 0) { // 53-bit hash, see https://stackoverflow.c
 }
 /** Convert bytes to a base64 string, using either nodejs or web API. */
 function base64(data: Uint8Array) {
-  if (typeof Buffer != 'undefined') return Buffer.from(data).toString('base64');
+  if (nodejs) return Buffer.from(data).toString('base64');
   const url = new FileReaderSync().readAsDataURL(new Blob([data]));
   return url.substring(url.indexOf(',', 12) + 1); // `data:${mime};base64,${data}`
 }
@@ -246,9 +255,8 @@ class GDAssetProvider implements
     const wordRange = document.getWordRangeAtPosition(position);
     if (!wordRange) return null;
     const word = document.getText(wordRange);
-    const wordIsResPath = isResPath(word, wordRange, document);
     let match;
-    if (wordIsResPath) {
+    if (isPathWord(word, wordRange, document)) {
       const resLoc = await locateResPath(word, document);
       if (typeof resLoc != 'string')
         return new vscode.Location(resLoc.uri, new vscode.Position(0, 0));
@@ -275,11 +283,11 @@ class GDAssetProvider implements
     const wordRange = document.getWordRangeAtPosition(position);
     if (!wordRange) return null;
     const word = document.getText(wordRange);
-    const wordIsResPath = isResPath(word, wordRange, document);
-    if (!wordIsResPath && gdasset.stringContaining(position)) return null;
-    const hover = [];
+    const wordIsPath = isPathWord(word, wordRange, document);
+    if (!wordIsPath && gdasset.stringContaining(wordRange)) return null; // ignore strings (except resPaths)
+    const hover: vscode.MarkdownString[] = [];
     let resPath, match;
-    if (word == 'ext_resource' || wordIsResPath) {
+    if (word == 'ext_resource' || wordIsPath) {
       let s;
       if (word == 'ext_resource') {
         const line = document.lineAt(position).text;
@@ -287,6 +295,7 @@ class GDAssetProvider implements
         if (!match) return null;
         s = gdasset.symbols.ExtResource[match[1] ?? GDAssetProvider.unescapeString(match[2])];
         resPath = s?.name ?? '';
+        if (!resPath) return null;
       } else {
         resPath = word;
         const extResSymbols = gdasset.symbols.ExtResource;
@@ -304,7 +313,7 @@ class GDAssetProvider implements
         }
       } else if (!s && resPath == await resPathOfDocument(document)) {
         s = gdasset.symbols.fileType;
-        return new vscode.Hover(gdCodeLoad(resPath, id, s?.detail, document.languageId), wordRange);
+        hover.push(gdCodeLoad(resPath, null, s?.detail, document.languageId));
       }
       hover.push(gdCodeLoad(resPath, id, s?.detail, document.languageId));
     } else if (word == 'sub_resource') {
@@ -319,13 +328,13 @@ class GDAssetProvider implements
       match = /^\[\s*gd_resource\s+type\s*=\s*"([^"\\]*)"/.exec(line);
       if (!match) return null;
       resPath = await resPathOfDocument(document);
-      return new vscode.Hover(gdCodeLoad(resPath, null, match[1], document.languageId), wordRange);
+      hover.push(gdCodeLoad(resPath, null, match[1], document.languageId));
     } else if (word == 'gd_scene') {
       const line = document.lineAt(position).text;
       match = /^\[\s*gd_scene\b/.exec(line);
       if (!match) return null;
       resPath = await resPathOfDocument(document);
-      return new vscode.Hover(gdCodeLoad(resPath, null, 'PackedScene', document.languageId), wordRange);
+      hover.push(gdCodeLoad(resPath, null, 'PackedScene', document.languageId));
     } else if ((match = word.match(/^((?:Ext|Sub)Resource)\s*\(\s*(?:(\d+)|"([^"\\]*)")\s*\)$/))) {
       const keyword = match[1] as 'ExtResource' | 'SubResource';
       const id = match[2] ?? GDAssetProvider.unescapeString(match[3]);
@@ -338,20 +347,33 @@ class GDAssetProvider implements
       resPath = s.name;
       hover.push(gdCodeLoad(resPath, null, s.detail, document.languageId));
     } else return null;
-    // show link to res:// path if available
-    hover.push(await resPathPreview(resPath, document));
+    if (vscode.workspace.getConfiguration('godotFiles', document).get<boolean>('hover.previewResource')!) {
+      // show link to res:// path if available
+      if (!/^(?:user|uid):\/\//.test(resPath)) // Locating user:// or uid:// paths is not supported yet
+        hover.push(await resPathPreview(resPath, document));
+    }
     return new vscode.Hover(hover, wordRange);
   }
 }
 
-function isResPath(word: string, wordRange: vscode.Range, document: vscode.TextDocument) {
-  if (/^res:\/\/[^"\\]*$/.test(word)) return true;
+function isPathWord(word: string, wordRange: vscode.Range, document: vscode.TextDocument) {
+  // check absolute path with scheme
+  if (/^(?:res|user|uid|file):\/\/[^"\\]*$/.test(word)) return true;
+  // get line text up to the word and check if word is the path of a ext_resource (for relative paths)
   const r = new vscode.Range(wordRange.start.line, 0, wordRange.end.line, wordRange.end.character + 1);
-  return /(?<=^\[\s*ext_resource\s+path\s*=\s*")[^"\\]*(?="$)/.test(document.getText(r));
+  const preWord = document.getText(r);
+  return /^\s*\[\s*ext_resource\s+[^\n;#]*?\bpath\s*=\s*"(?:[^"\\]*)"$/.test(preWord);
 }
+function escCode(s: string) { return s.replace(/("|\\)/g, '\\$1'); }
 function gdCodeLoad(resPath: string, id: string | null, type: string | undefined, language: string) {
-  let code = id != null ? `load("${resPath}::${id}")` : `preload("${resPath}")`;
-  if (type) code += ` as ${type}`;
+  let code;
+  if (type || id != null || /^(?:res|uid):\/\//.test(resPath)) {
+    code = id != null ? `load("${resPath}::${id}")` : `preload("${resPath}")`;
+    if (type) code += ` as ${type}`;
+  } else { // typeless user:// and file:// schemes, and relative paths
+    if (resPath.startsWith('file://')) resPath = vscode.Uri.parse(resPath).fsPath;
+    code = `FileAccess.open("${escCode(resPath)}", FileAccess.READ)`;
+  }
   return new vscode.MarkdownString().appendCodeblock(code, language);
 }
 async function projectDir(assetUri: vscode.Uri) {
@@ -387,6 +409,10 @@ async function locateResPath(resPath: string, document: vscode.TextDocument) {
     const projDir = await projectDir(document.uri);
     if (!projDir) return resPath; // no project.godot found, res paths cannot be resolved
     resUri = vscode.Uri.joinPath(projDir, resPath.substring(6)); // 6 == 'res://'.length
+  } else if (resPath.startsWith('file://')) {
+    resUri = vscode.Uri.parse(resPath, true); // absolute file URI
+  } else if (/^\/|^[A-Z]:/.test(resPath)) {
+    resUri = vscode.Uri.file(resPath); // absolute file path
   } else {
     if (uriRegex.test(resPath)) // does resPath have a scheme?
       return resPath; // better not to load arbitrary URI schemes like http, etc
@@ -444,15 +470,23 @@ async function resPathPreview(resPath: string, document: vscode.TextDocument) {
     }
     if (mdScheme.has(resUri.scheme)) // load image if allowed
       return md.appendMarkdown(`[<img height=128 src="${resUriStr}"/>](${resUriStr})`);
-    else return md.appendMarkdown(`[Image file](${resUriStr})`); // otherwise, give up and just link to it
+    const thumbSrc = await resThumb(resUri); // try the small thumbnail image from Godot cache
+    if (thumbSrc) return md.appendMarkdown(`[<img src="${thumbSrc}"/>](${resUriStr})`);
+    else return md.appendMarkdown(`[Image file](${resUriStr})`); // otherwise, give up and just link to file
   }
   //TODO? extract svgz
-  if (/\.(?:svgz|tga|dds|exr|hdr)$/i.test(resPath))
-    return md.appendMarkdown(`[Image file](${resUriStr})`); // supported by Godot, but not by md preview
+  if (/\.(?:svgz|tga|dds|exr|hdr)$/i.test(resPath)) {
+    // supported by Godot, but not by MarkdownString preview directly
+    const thumbSrc = await resThumb(resUri); // try the small thumbnail image from Godot cache
+    if (thumbSrc) return md.appendMarkdown(`[<img src="${thumbSrc}"/>](${resUriStr})`);
+    return md.appendMarkdown(`[Image file](${resUriStr})`); // otherwise, give up and just link to file
+  }
   match = /\.(ttf|otf|woff)$/i.exec(resPath);
   if (!match) {
-    // something we cannot render, just link to file then
-    return md.appendMarkdown(`[File](${resUriStr})`);
+    // unknown file type that we cannot render directly; but maybe Godot can preview it
+    const thumbSrc = await resThumb(resUri); // try the small thumbnail image from Godot cache
+    if (thumbSrc) return md.appendMarkdown(`[<img src="${thumbSrc}"/>](${resUriStr})`);
+    return md.appendMarkdown(`[File](${resUriStr}) (${fileSize(resStat.size)})`); // otherwise, give up and just link to file
   }
   // font file; we should embed it as base64 URI inside a font test SVG
   const type = match[1].toLowerCase();
@@ -473,7 +507,7 @@ async function resPathPreview(resPath: string, document: vscode.TextDocument) {
   }
   // separate file is necessary because MarkdownString has a limit (100_000) on the text size for performance reasons
   // use hash of path with modified time to index cached font preview image inside tmp folder
-  const imgSrc = vscode.Uri.joinPath(tmpUri, `font-preview-${hash(resUriStr)}-${resStat.mtime}.svg`);
+  const imgSrc = vscode.Uri.joinPath(tmpUri, `font-preview-${jsHash(resUriStr)}-${resStat.mtime}.svg`);
   try { // try to stat at that cache path
     await vscode.workspace.fs.stat(imgSrc); // if it succeeds, preview is already cached in tmp folder
   } catch { // otherwise, it must be created and written to tmp cache
@@ -486,6 +520,36 @@ async function resPathPreview(resPath: string, document: vscode.TextDocument) {
     }
   } // font preview SVG file is at cached path (logs folder); will be cleaned on deactivate if possible, or eventually
   return md.appendMarkdown(`[<img src="${imgSrc}"/>](${resUriStr})`);
+}
+/** Data URI for the PNG thumbnail of the resource from Godot cache; or null if not found. */
+async function resThumb(resUri: vscode.Uri) {
+  if (!supported || !process) return null;
+  // Thumbnail max is 64x64 px = ~16KiB max, far less than the ~74kB MarkdownString base64 limit; ok to embed
+  const resPathHash = md5(resUri.fsPath
+    .replace(/^[a-z]:/, g0 => g0.toUpperCase()).replaceAll('\\', '/'));
+  if (!resPathHash) return null; // in browser, would not be able to access Godot cache files anyway
+  const platform = process.platform;
+  const cachePaths = vscode.workspace.getConfiguration('godotFiles')
+    .get<{ [platform: string]: string[]; }>('godotCachePath')![platform] ?? [];
+  let lastThumbUri = null, lastModifiedTime = -Infinity;
+  for (const cachePathString of cachePaths) {
+    const cachePath = cachePathString.replace(/^~(?=\/)/, g0 => homedir ?? g0)
+      .replace(platform == 'win32' ? /%(\w+)%/g : /\$\{(\w+)\}/g,
+        (g0, g1) => process!.env[g1] ?? g0);
+    const thumbUri = vscode.Uri.joinPath(vscode.Uri.file(cachePath), `resthumb-${resPathHash}.png`);
+    try {
+      const stat = await vscode.workspace.fs.stat(thumbUri);
+      const mtime = stat.mtime, size = stat.size;
+      if (lastModifiedTime >= mtime || size <= 90 || size > 74000) continue;
+      lastModifiedTime = mtime;
+      lastThumbUri = thumbUri;
+    } catch { continue; } // not found here, ignore
+  }
+  if (lastThumbUri == null) return null; // no cache img found
+  try {
+    const bytes = await vscode.workspace.fs.readFile(lastThumbUri);
+    return 'data:image/png;base64,' + base64(bytes);
+  } catch { return null; } // some fs error, ignore cache then
 }
 /** Create an SVG that can test a font using a pangram text. */
 async function svgFontTest(fontUri: vscode.Uri, type: string) {
@@ -502,6 +566,45 @@ ${fontTest}
 }
 /** URL schemes that markdownRenderer allows loading from */
 const mdScheme = new Set(['data', 'file', 'https', 'vscode-file', 'vscode-remote', 'vscode-remote-resource', 'mailto']);
+function fileSize(numBytes: number) {
+  if (numBytes == 1) return '1 byte';
+  if (numBytes < 1024) return numBytes + ' bytes';
+  const k = numBytes / 1024;
+  if (k < 1024) return k.toFixed(1) + ' KiB';
+  const m = k / 1024;
+  if (m < 1024) return m.toFixed(1) + ' MiB';
+  const g = m / 1024;
+  if (g < 1024) return g.toFixed(1) + ' GiB';
+  const t = g / 1024;
+  return t.toFixed(1) + ' TiB';
+}
+
+async function unlockEarlyAccess() {
+  if (supported) {
+    if (await vscode.window.showInformationMessage('Early access is already enabled.', 'OK', 'Disable') == 'Disable') {
+      supported = false;
+      ctx.globalState.update('supportKey', undefined);
+    }
+    return;
+  }
+  const password = await vscode.window.showInputBox({
+    title: 'Password to unlock early access:',
+    placeHolder: 'A password is received when making a donation.',
+    password: true,
+    prompt: 'Check the README page for more info.'
+  });
+  if (!password) return;
+  const hash = sha512(password);
+  if (hash != checksum) {
+    vscode.window.showErrorMessage(
+      'Incorrect password. Paste it exactly like you received when donating.');
+    return;
+  }
+  supported = true;
+  ctx.globalState.update('supportKey', hash);
+  vscode.window.showInformationMessage(
+    'Thank you for the support! ❤️\nEarly access is now unlocked, just for you. 😊');
+}
 
 const deleteRecursive = { recursive: true, useTrash: false };
 /** Permanently delete a file or an entire folder. */
@@ -510,6 +613,7 @@ async function del(uri: vscode.Uri) {
 }
 
 let ctx: vscode.ExtensionContext;
+let supported = false;
 /** The extension entry point, which runs when the extension is enabled for the IDE window. */
 export async function activate(context: vscode.ExtensionContext) {
   if (!vscode.workspace.isTrusted) {
@@ -520,6 +624,12 @@ export async function activate(context: vscode.ExtensionContext) {
   // cleanup garbage from older versions; no need to await
   if (ctx.storageUri) del(ctx.storageUri);
   del(ctx.globalStorageUri);
+  // check if supporting
+  ctx.globalState.setKeysForSync([]);
+  if (nodejs) {
+    if (ctx.globalState.get('supportKey') == checksum) supported = true;
+    ctx.subscriptions.push(vscode.commands.registerCommand('godotFiles.unlockEarlyAccess', unlockEarlyAccess));
+  }
   // register all providers
   const provider = new GDAssetProvider();
   ctx.subscriptions.push(vscode.languages.registerDocumentSymbolProvider(GDAssetProvider.docs, provider));
@@ -536,6 +646,8 @@ export function deactivate() {
   if (!tmpUri) return;
   // try to delete tmp folder
   if (tmpUri.scheme == 'file') try {
-    require('fs').rmSync(tmpUri.fsPath, { force: true, recursive: true });
+    nodejs && require('fs').rmSync(tmpUri.fsPath, { force: true, recursive: true });
   } catch { /* ignore, logs should be auto-deleted eventually anyway */ }
 }
+
+const checksum = '1ee835486c75add4e298d9120c62801254ecb9f69309f1f67af4d3495bdf7ba14e288b73298311f5ef7839ec34bfc12211a035911d3ad19a60e822a9f44d4d5c';
