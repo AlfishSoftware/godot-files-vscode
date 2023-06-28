@@ -265,7 +265,7 @@ class GDAssetProvider implements
       const id = match[2] ?? GDAssetProvider.unescapeString(match[3]);
       const s = gdasset.symbols[keyword][id];
       if (!s) return null;
-      if (gdasset.stringContaining(position)) return null;
+      if (gdasset.stringContaining(wordRange)) return null;
       if (keyword == 'ExtResource') {
         let d = document.getText(s.selectionRange).indexOf(' path="');
         d = d < 0 ? 0 : d + 7;
