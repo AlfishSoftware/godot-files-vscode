@@ -402,7 +402,7 @@
     },
     "literalInt": {
       "name": "constant.numeric.integer.gdshader",
-      "match": "\\b(?:0[xX][0-9A-Fa-f]+|\\d+[uU]?)\\b"
+      "match": "\\b(?:0[xX][0-9A-Fa-f]+|\\d+)[uU]?\\b"
     },
     "literalBool": {
       "name": "constant.language.boolean.gdshader",
