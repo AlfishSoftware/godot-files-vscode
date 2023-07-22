@@ -138,6 +138,7 @@
 				"extensions": [
 					".import",
 					".gdnlib",
+					".tet",
 					".remap"
 				],
 				"filenames": [
