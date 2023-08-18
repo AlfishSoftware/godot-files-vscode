@@ -382,6 +382,8 @@ async function projectDir(assetUri: vscode.Uri) {
   do {
     const parent = vscode.Uri.joinPath(uri, '..'); // remove last path segment
     if (parent == uri) break; // don't try to go beyond root
+    const parentPath = parent.path;
+    if (parentPath == '..' || parentPath.endsWith('/..')) break; // avoid infinite loop
     const projUri = vscode.Uri.joinPath(uri = parent, 'project.godot');
     try {
       await vscode.workspace.fs.stat(projUri);

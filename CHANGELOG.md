@@ -9,6 +9,7 @@ Features in early access are ready for use, but **restricted to supporters** unt
 - GDShader: Preprocessor token concatenation symbol (colored like a comment).
 - GDAsset: Recognize `.tet` (Godot Text Editor Theme) filetype as `godot-asset`.
 ### Fixed
+- GDAsset: Fix hover/goto-def infinite loop on untitled files (stuck on "loading...").
 - GDAsset: Fix goto definition when cursor is on string argument of Ext/Sub Resource("id").
 - GDAsset: Fix partial `ext_resource` path hover at end of string being incorrectly accepted.
 - GDAsset: Tolerate `*` before resource path (for `[autoload]`).
