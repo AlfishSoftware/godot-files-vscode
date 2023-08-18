@@ -10,6 +10,7 @@
       "patterns": [
         { "include": "#text" },
         { "include": "#lineContinuation" },
+        { "include": "#tokenConcatenation" },
         { "include": "#preprocessor" },
         { "include": "#enclosed" },
         { "include": "#code" }
@@ -93,6 +94,10 @@
       "name": "constant.character.escape.line-continuation.gdshader",
       "match": "\\\\$"
     },
+    "tokenConcatenation": {
+      "name": "comment.block.token-concatenation.preprocessor.gdshader",
+      "match": "(?<!\\#)\\#\\#(?!\\#)"
+    },
     "directive": {
       "patterns": [
         { "include": "#directiveInclude" },
@@ -140,6 +145,7 @@
       "patterns": [
         { "include": "#text" },
         { "include": "#lineContinuation" },
+        { "include": "#tokenConcatenation" },
         { "include": "#code" }
       ]
     },
