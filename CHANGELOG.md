@@ -3,6 +3,16 @@
 
 Features in early access are ready for use, but **restricted to supporters** until the next new feature takes its place in a future version.
 
+## [Unreleased]
+### Added
+- GDShader: Allow uint suffix on hex literals.
+- GDShader: Preprocessor token concatenation symbol (colored like a comment).
+- GDAsset: Recognize `.tet` (Godot Text Editor Theme) filetype as `godot-asset`.
+### Fixed
+- GDAsset: Fix goto definition when cursor is on string argument of Ext/Sub Resource("id").
+- GDAsset: Fix partial `ext_resource` path hover at end of string being incorrectly accepted.
+- GDAsset: Tolerate `*` before resource path (for `[autoload]`).
+
 ## [0.0.4] - 2023-06-22
 ### Added
 - Command to unlock features in early access. Running it again shows "disable" option.
@@ -11,23 +21,20 @@ Features in early access are ready for use, but **restricted to supporters** unt
 - GDAsset: Hovering uid path shows `preload(…)` code.
 - GDAsset: Hovering non-res paths like file and user schemes shows `FileAccess.open(…)` code.
 - GDAsset: Recognize `.remap` filetype as `godot-asset`.
-
 ### Fixed
 - GDAsset: Hovering Ext/Sub Resource calls should also work when mouse is over the string argument.
-- GDAsset: Fix relative path detection on ext_resource for Godot 4.
+- GDAsset: Fix relative path detection on `ext_resource` for Godot 4.
 
 ## [0.0.3] - 2023-05-16
 ### Changed
 - New icon, optimized for 24px and 42px display in IDE.
 - Using The Unlicense, which more explicitly says this is public domain.
-
 ### Added
 - GDShader: Support Godot 4.0 syntax (preprocessor syntax, new hints, new keywords) and gdshaderinc files.
 - GDAsset: Recognize GDScript and GDShader syntax in inline strings in any asset (even in code-as-tres files).
 - Allow declarative features like syntax coloring on untrusted workspaces.
 - Can now function as a Web Extension too.
 - Readme: Screenshot, donation link and table of possible features.
-
 ### Fixed
 - GDShader: Add missing operators and make operator syntax more specific.
 - GDAsset: Fix syntax for generic types like `Array[Dictionary]` and multiline sections.

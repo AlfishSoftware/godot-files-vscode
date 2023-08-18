@@ -362,7 +362,8 @@ function isPathWord(word: string, wordRange: vscode.Range, document: vscode.Text
   // get line text up to the word and check if word is the path of a ext_resource (for relative paths)
   const r = new vscode.Range(wordRange.start.line, 0, wordRange.end.line, wordRange.end.character + 1);
   const preWord = document.getText(r);
-  return /^\s*\[\s*ext_resource\s+[^\n;#]*?\bpath\s*=\s*"(?:[^"\\]*)"$/.test(preWord);
+  return preWord[wordRange.start.character - 1] == '"' &&
+    /^\s*\[\s*ext_resource\s+[^\n;#]*?\bpath\s*=\s*"(?:[^"\\]*)"$/.test(preWord);
 }
 function escCode(s: string) { return s.replace(/("|\\)/g, '\\$1'); }
 function gdCodeLoad(resPath: string, id: string | null, type: string | undefined, language: string) {

@@ -51,8 +51,10 @@
 			"patterns": [
 				{ "include": "#characterEscape" },
 				{
-					"name": "markup.underline.link.gdasset",
-					"match": "\\G[a-zA-Z][-+.a-zA-Z0-9]*://[^\\x{00}-\\x{1F} \"<>\\\\^`{|}\\x{7F}-\\x{9F}]*(?=\")"
+					"match": "\\G(?:[*])?([a-zA-Z][-+.a-zA-Z0-9]*://[^\\x{00}-\\x{1F} \"<>\\\\^`{|}\\x{7F}-\\x{9F}]*)(?=\")",
+					"captures": {
+						"1": { "name": "markup.underline.link.gdasset" }
+					}
 				}
 			],
 			"end": "\""
