@@ -4,14 +4,18 @@
 Features in early access are ready for use, but **restricted to supporters** until the next new feature takes its place in a future version.
 
 ## [Unreleased]
+### Changed
+- GDAsset: Better outline names like GDScript syntax for nodes and connections.
 ### Added
 - GDShader: Allow uint suffix on hex literals.
-- GDShader: Preprocessor token concatenation symbol (colored like a comment).
+- GDShader: Syntax-coloring for preprocessor token concatenation `##` symbol (colored like a comment).
 - GDAsset: Recognize `.tet` (Godot Text Editor Theme) filetype as `godot-asset`.
+- GDAsset: Outline recognizes `editable` tag and `instance(_placeholder)` node attributes in scene.
 ### Fixed
 - GDAsset: Fix hover/goto-def infinite loop on untitled files (stuck on "loading...").
 - GDAsset: Fix goto definition when cursor is on string argument of Ext/Sub Resource("id").
 - GDAsset: Fix partial `ext_resource` path hover at end of string being incorrectly accepted.
+- GDAsset: Fix duplicate preload code when hovering path to the file itself.
 - GDAsset: Tolerate `*` before resource path (for `[autoload]`).
 
 ## [0.0.4] - 2023-06-22

@@ -89,7 +89,6 @@ Each $ below means about a week of work needed to implement the feature. These g
 
 Id | Weeks | Possible Feature
 -|-|-
-aHoverSvgz | $ | Hover to Preview .svgz Images
 aColor | $ | Inline Color Decorators
 aGotoDocs | $$$ | Go to Online Docs of GDScript built-in types
 
