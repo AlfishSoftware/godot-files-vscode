@@ -5,7 +5,7 @@ This is *not* meant to replace the [godot-tools] extension, but to improve on it
 
 [godot-tools]: https://github.com/godotengine/godot-vscode-plugin
 
-**Compatibility**: Godot 3.x, 4.0
+**Compatibility**: Godot 3.x, 4.x
 
 ![Screenshot of godot-files extension for VSCode on a tscn file, showing syntax-coloring, outline and hover preview feature](./docs/showcase-gdasset.webp)
 
@@ -13,10 +13,10 @@ This is *not* meant to replace the [godot-tools] extension, but to improve on it
 
 Includes syntax-coloring for these languages:
 
-- Godot Shader files: `.gdshader`, `.gdshaderinc`
-- Better (more specific) grammar for the INI-like files supported by Godot (Asset Properties Definition):  
-  `.godot`, `.tscn`, `.escn`, `.tres`, `.gdns`, `.gdnlib`, `.import`, `.remap`, etc.
-- The same grammar is reused for `.cfg` and the INI-like XDG Desktop Entry files: `.desktop`, `.directory`  
+- Godot Shader files: `.gdshader`, `.gdshaderinc`.
+- Better (more specific) grammar for the INI-like files used by Godot (Asset Properties Definition):  
+  `.godot`, `.tscn`, `.escn`, `.tres`, `.gdns`, `.gdnlib`, `.import`, `.tet`, `.remap`.
+- The same grammar is reused for `.cfg` and the INI-like XDG Desktop Entry files: `.desktop`, `.directory`.  
   You might want to associate this language (Configuration Properties) with other INI-like formats as well.
 
 INI-like files also support:
@@ -57,14 +57,15 @@ VSCode is not recognizing "embeddedLanguages" as expected for some reason, so, i
 
 ## Support
 
-This software is free and in the [public domain].  
-👍 If you think this is useful, please star the [GitHub repo] and give it a rating on [Open-VSX].  
+This software is free and in the [public domain]. It respects your privacy by not collecting any data.  
+👍 If you think this is useful, please star the [GitHub repo] and give it a rating on [VS Marketplace] or [Open-VSX].  
 ❤️ [Itch Store] | [ArtStation] | [Unity Assets]  
 🌐 [GitHub] | [Bitbucket] | [Reddit] | [YouTube]
 
 [donate]: https://alfish.itch.io/godot-files-vscode
 [public domain]: https://unlicense.org/
 [GitHub repo]: https://github.com/AlfishSoftware/godot-files-vscode
+[VS Marketplace]: https://marketplace.visualstudio.com/items?itemName=alfish.godot-files
 [Open-VSX]: https://open-vsx.org/extension/alfish/godot-files
 [Itch Store]: https://alfish.itch.io/
 [ArtStation]: https://www.artstation.com/a/26333626
@@ -88,8 +89,7 @@ Each $ below means about a week of work needed to implement the feature. These g
 
 Id | Weeks | Possible Feature
 -|-|-
-aHoverSvgz | $ | Hover to Preview .svgz Images
-aColor | $ | Inline Color Decorators
+aColor | $ | Inline Color Decorators on `Color(…)` values
 aGotoDocs | $$$ | Go to Online Docs of GDScript built-in types
 
 ### Godot Shader
