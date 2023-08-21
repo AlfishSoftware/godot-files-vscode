@@ -3,7 +3,7 @@
 
 Features in early access are ready for use, but **restricted to supporters** until the next new feature takes its place in a future version.
 
-## [Unreleased]
+## [0.0.5] - 2023-08-21
 ### Changed
 - GDAsset: Better outline names like GDScript syntax for nodes and connections.
 ### Added
@@ -61,7 +61,8 @@ Features in early access are ready for use, but **restricted to supporters** unt
 - GDAsset: Image and font previews by hovering references and paths.
 - GDAsset: Hover resource references to show GDScript preload code.
 
-[Unreleased]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.0.4...develop
+[Unreleased]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.0.5...develop
+[0.0.5]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.0.4...v0.0.5
 [0.0.4]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.0.3...v0.0.4
 [0.0.3]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.0.2...v0.0.3
 [0.0.2]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.0.1...v0.0.2

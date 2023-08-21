@@ -5,7 +5,7 @@ This is *not* meant to replace the [godot-tools] extension, but to improve on it
 
 [godot-tools]: https://github.com/godotengine/godot-vscode-plugin
 
-**Compatibility**: Godot 3.x, 4.0
+**Compatibility**: Godot 3.x, 4.x
 
 ![Screenshot of godot-files extension for VSCode on a tscn file, showing syntax-coloring, outline and hover preview feature](./docs/showcase-gdasset.webp)
 
@@ -89,7 +89,7 @@ Each $ below means about a week of work needed to implement the feature. These g
 
 Id | Weeks | Possible Feature
 -|-|-
-aColor | $ | Inline Color Decorators
+aColor | $ | Inline Color Decorators on `Color(…)` values
 aGotoDocs | $$$ | Go to Online Docs of GDScript built-in types
 
 ### Godot Shader
