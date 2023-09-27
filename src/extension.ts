@@ -3,9 +3,9 @@ const createHash = nodejs && require('crypto').createHash;
 const homedir = nodejs && require('os').homedir();
 import {
   workspace, window, commands, languages,
-  ExtensionContext, CancellationToken, TextDocument, Range, Position, Uri, FileSystemError, FileType,
-  DocumentSymbol, SymbolKind, DocumentFilter, Definition, Location, Hover, MarkdownString,
-  DocumentSymbolProvider, DefinitionProvider, HoverProvider,
+  ExtensionContext, CancellationToken, TextDocument, Range, Position, Uri, FileSystemError, FileType, Color,
+  DocumentSymbol, SymbolKind, Definition, Location, Hover, MarkdownString, ColorInformation, ColorPresentation,
+  DocumentFilter, DocumentSymbolProvider, DefinitionProvider, HoverProvider, DocumentColorProvider, TextEdit,
 } from 'vscode';
 
 function md5(s: string) {
@@ -43,6 +43,17 @@ class GDResource {
 }
 
 class GDAsset {
+  static floatValue(code: string): number | null {
+    switch (code) { case 'nan': return NaN; case 'inf': return Infinity; case 'inf_neg': return -Infinity; }
+    const n = +code;
+    return isNaN(n) ? null : n;
+  }
+  static float16Code(value: number): string {
+    if (isNaN(value)) return 'nan';
+    if (value == Infinity) return 'inf';
+    if (value == -Infinity) return 'inf_neg';
+    return String(+value.toPrecision(6));
+  }
   static filename(resPath: string) {
     const match = /^(?:.*[/\\])?([^/\\]*?)(\.[^./\\]*)?(::.*)?$/.exec(resPath);
     if (!match) return null;
@@ -169,7 +180,8 @@ function sectionSymbol(document: TextDocument, match: RegExpMatchArray, range: R
 class GDAssetProvider implements
   DocumentSymbolProvider,
   DefinitionProvider,
-  HoverProvider
+  HoverProvider,
+  DocumentColorProvider
 {
   static godotDocs: DocumentFilter[] = [
     { language: 'godot-project' },
@@ -402,6 +414,59 @@ class GDAssetProvider implements
         hover.push(await resPathPreview(resPath, document));
     }
     return new Hover(hover, wordRange);
+  }
+  
+  async provideDocumentColors(document: TextDocument, token: CancellationToken): Promise<ColorInformation[]> {
+    if (document.languageId == 'config-definition') return [];
+    let gdasset = this.defs[document.uri.toString(true)];
+    if (!gdasset) {
+      await this.provideDocumentSymbols(document, token);
+      gdasset = this.defs[document.uri.toString(true)];
+      if (!gdasset) return [];
+    }
+    const colors: ColorInformation[] = [];
+    // locate all color code using regex, skipping occurrences inside a comment or string
+    for (const m of document.getText().matchAll(/\b((?:Color|P(?:acked|ool)ColorArray)\s*\(\s*)([\s,\w.+-]*?)\s*\)/g)) {
+      let start = m.index!;
+      let range = new Range(document.positionAt(start), document.positionAt(start + m[0].length));
+      if (gdasset.commentContaining(range) || gdasset.stringContaining(range)) continue;
+      const prefix = m[1];
+      if (prefix[0] == 'C') { // Color(...)
+        const [red, green, blue, alpha] = m[2].split(/\s*,\s*/, 4).map(GDAsset.floatValue);
+        colors.push(new ColorInformation(range, new Color(red ?? NaN, green ?? NaN, blue ?? NaN, alpha ?? NaN)));
+        continue;
+      }
+      // PackedColorArray(...) | PoolColorArray(...)
+      start += prefix.length;
+      for (const c of m[2].matchAll(/\b(?:[\w.+-]+\s*,\s*){0,3}[\w.+-]+/g)) {
+        const args = c[0];
+        const pos = start + c.index!;
+        range = new Range(document.positionAt(pos), document.positionAt(pos + args.length));
+        const [red, green, blue, alpha] = args.split(/\s*,\s*/, 4).map(GDAsset.floatValue);
+        colors.push(new ColorInformation(range, new Color(red ?? NaN, green ?? NaN, blue ?? NaN, alpha ?? 1)));
+      }
+    }
+    return colors;
+  }
+  async provideColorPresentations(
+    color: Color, context: { readonly document: TextDocument; readonly range: Range; }, token: CancellationToken
+  ): Promise<ColorPresentation[]> {
+    const { document, range } = context;
+    if (document.languageId == 'config-definition') return [];
+    const { red, green, blue, alpha } = color;
+    const r = GDAsset.float16Code(red ?? NaN);
+    const g = GDAsset.float16Code(green ?? NaN);
+    const b = GDAsset.float16Code(blue ?? NaN);
+    const a = GDAsset.float16Code(alpha ?? 1);
+    const args = `${r}, ${g}, ${b}, ${a}`;
+    const label = ok(red) && ok(green) && ok(blue) && ok(alpha)
+      ? `#${hex(red)}${hex(green)}${hex(blue)}${hex(alpha)}` : `Color(${args})`;
+    const colorPresentation = new ColorPresentation(label);
+    const code = /^Color\s*\([\s,\w.+-]*\)$/.test(document.getText(range)) ? `Color(${args})` : args;
+    colorPresentation.textEdit = new TextEdit(range, code);
+    return [colorPresentation];
+    function ok(c: number) { return c >= 0 && c <= 1; }
+    function hex(c: number) { return Math.round(c * 255).toString(16).toUpperCase().replace(/^.$/s, '0$&'); }
   }
 }
 
@@ -686,6 +751,7 @@ export async function activate(context: ExtensionContext) {
   ctx.subscriptions.push(languages.registerDocumentSymbolProvider(GDAssetProvider.docs, provider));
   ctx.subscriptions.push(languages.registerDefinitionProvider(GDAssetProvider.godotDocs, provider));
   ctx.subscriptions.push(languages.registerHoverProvider(GDAssetProvider.godotDocs, provider));
+  ctx.subscriptions.push(languages.registerColorProvider(GDAssetProvider.godotDocs, provider));
 }
 
 /** Runs to cleanup resources when extension is disabled. May not run in browser, and is limited to 5s.
