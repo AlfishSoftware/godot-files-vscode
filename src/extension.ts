@@ -1,12 +1,12 @@
+import {
+  workspace, window, commands, languages, ExtensionContext, Uri, CancellationToken,
+  TextDocument, Range, Position, FileSystemError, FileType, Color, TextEdit, MarkdownString,
+  DocumentSymbol, SymbolKind, Definition, Location, Hover, ColorInformation, ColorPresentation, InlayHint,
+  DocumentFilter, DocumentSymbolProvider, DefinitionProvider, HoverProvider, DocumentColorProvider, InlayHintsProvider,
+} from 'vscode';
 const nodejs = typeof process != 'undefined' ? process : undefined;
 const createHash = nodejs && require('crypto').createHash;
 const homedir = nodejs && require('os').homedir();
-import {
-  workspace, window, commands, languages,
-  ExtensionContext, CancellationToken, TextDocument, Range, Position, Uri, FileSystemError, FileType, Color,
-  DocumentSymbol, SymbolKind, Definition, Location, Hover, MarkdownString, ColorInformation, ColorPresentation,
-  DocumentFilter, DocumentSymbolProvider, DefinitionProvider, HoverProvider, DocumentColorProvider, TextEdit,
-} from 'vscode';
 
 function md5(s: string) {
   return createHash?.('md5').update(s).digest('hex');
@@ -84,16 +84,17 @@ class GDAsset {
   };
   strings: { range: Range, value: string; }[] = [];
   comments: { range: Range, value: string; }[] = [];
-  stringContaining(place: Position | Range) {
+  isInString(place: Position | Range) {
     for (const token of this.strings)
-      if (token.range.contains(place)) return token;
-    return null;
+      if (token.range.contains(place)) return true;
+    return false;
   }
-  commentContaining(place: Position | Range) {
+  isInComment(place: Position | Range) {
     for (const token of this.comments)
-      if (token.range.contains(place)) return token;
-    return null;
+      if (token.range.contains(place)) return true;
+    return false;
   }
+  isNonCode(place: Position | Range) { return this.isInString(place) || this.isInComment(place); }
 }
 
 function sectionSymbol(document: TextDocument, match: RegExpMatchArray, range: Range, gdasset: GDAsset) {
@@ -181,6 +182,7 @@ class GDAssetProvider implements
   DocumentSymbolProvider,
   DefinitionProvider,
   HoverProvider,
+  InlayHintsProvider,
   DocumentColorProvider
 {
   static godotDocs: DocumentFilter[] = [
@@ -210,7 +212,17 @@ class GDAssetProvider implements
     return s;
   }
   
-  defs: { [uri: string]: GDAsset | undefined } = {};
+  defs: { [uri: string]: GDAsset | undefined; } = {};
+  
+  async parsedGDAsset(document: TextDocument, token: CancellationToken) {
+    if (document.languageId == 'config-definition') return undefined;
+    let gdasset = this.defs[document.uri.toString(true)];
+    if (!gdasset) {
+      await this.provideDocumentSymbols(document, token);
+      gdasset = this.defs[document.uri.toString(true)];
+    }
+    return gdasset;
+  }
   
   async provideDocumentSymbols(document: TextDocument, token: CancellationToken): Promise<DocumentSymbol[]> {
     const gdasset = document.languageId == 'config-definition' ? null :
@@ -316,7 +328,7 @@ class GDAssetProvider implements
   async provideDefinition(document: TextDocument, position: Position, token: CancellationToken
   ): Promise<Definition | null> {
     const gdasset = this.defs[document.uri.toString(true)];
-    if (!gdasset || gdasset.commentContaining(position)) return null;
+    if (!gdasset || gdasset.isInComment(position)) return null;
     const wordRange = document.getWordRangeAtPosition(position);
     if (!wordRange) return null;
     const word = document.getText(wordRange);
@@ -330,7 +342,7 @@ class GDAssetProvider implements
       const id = match[2] ?? GDAssetProvider.unescapeString(match[3]);
       const s = gdasset.refs[keyword][id]?.symbol;
       if (!s) return null;
-      if (gdasset.stringContaining(wordRange)) return null;
+      if (gdasset.isInString(wordRange)) return null;
       if (keyword == 'ExtResource') {
         let d = document.getText(s.selectionRange).indexOf(' path="');
         d = d < 0 ? 0 : d + 7;
@@ -343,12 +355,12 @@ class GDAssetProvider implements
   
   async provideHover(document: TextDocument, position: Position, token: CancellationToken): Promise<Hover | null> {
     const gdasset = this.defs[document.uri.toString(true)];
-    if (!gdasset || gdasset.commentContaining(position)) return null;
+    if (!gdasset || gdasset.isInComment(position)) return null;
     const wordRange = document.getWordRangeAtPosition(position);
     if (!wordRange) return null;
     const word = document.getText(wordRange);
     const wordIsPath = isPathWord(word, wordRange, document);
-    if (!wordIsPath && gdasset.stringContaining(wordRange)) return null; // ignore strings (except resPaths)
+    if (!wordIsPath && gdasset.isInString(wordRange)) return null; // ignore strings (except resPaths)
     const hover: MarkdownString[] = [];
     let resPath, resRef;
     if (word == 'ext_resource' || wordIsPath) {
@@ -416,34 +428,63 @@ class GDAssetProvider implements
     return new Hover(hover, wordRange);
   }
   
-  async provideDocumentColors(document: TextDocument, token: CancellationToken): Promise<ColorInformation[]> {
-    if (document.languageId == 'config-definition') return [];
-    let gdasset = this.defs[document.uri.toString(true)];
-    if (!gdasset) {
-      await this.provideDocumentSymbols(document, token);
-      gdasset = this.defs[document.uri.toString(true)];
-      if (!gdasset) return [];
+  async provideInlayHints(document: TextDocument, range: Range, token: CancellationToken): Promise<InlayHint[]> {
+    const gdasset = await this.parsedGDAsset(document, token);
+    if (!supported || !gdasset) return [];
+    const hints: InlayHint[] = [];
+    // locate all packed vector arrays using regex, skipping occurrences inside a comment or string
+    const reqStart = document.offsetAt(range.start);
+    const reqSrc = document.getText(range);
+    for (const m of reqSrc.matchAll(/\b(P(?:acked|ool)(?:Vector([23])|Color)Array)(\s*\(\s*)([\s,\w.+-]*?)\s*\)/g)) {
+      const ctorStart = reqStart + m.index!;
+      const ctorRange = new Range(document.positionAt(ctorStart), document.positionAt(ctorStart + m[0].length));
+      if (gdasset.isNonCode(ctorRange)) continue;
+      const [, type, dim, paren, allArgs] = m;
+      const typeEnd = ctorStart + type.length;
+      const argsStart = typeEnd + paren.length;
+      // let i = 0;
+      const regex = dim == '2' ? regex2Floats : dim == '3' ? regex3Floats : regex4Floats;
+      for (const c of allArgs.matchAll(regex)) {
+        const args = c[0];
+        const itemPos = argsStart + c.index!;
+        const itemRange = new Range(document.positionAt(itemPos), document.positionAt(itemPos + args.length));
+        const head = new InlayHint(itemRange.start, '(');
+        // head.tooltip = `[${i++}]`; // would need to provide 0-based indices for all types of array
+        const tail = new InlayHint(itemRange.end, ')');
+        // tail.tooltip = `vector #${i}`; // would need to provide 1-based indices for all types of array
+        hints.push(head, tail);
+      }
+      //TODO would need to provide size for all arrays and dictionary
+      // const arrayHead = new InlayHint(document.positionAt(typeEnd), `[${i}]`);
+      // arrayHead.tooltip = i == 0 ? 'empty' : `${i} vector${i == 1 ? '' : 's'}`;
+      // hints.push(arrayHead);
     }
+    return hints;
+  }
+  
+  async provideDocumentColors(document: TextDocument, token: CancellationToken): Promise<ColorInformation[]> {
+    const gdasset = await this.parsedGDAsset(document, token);
+    if (!supported || !gdasset) return [];
     const colors: ColorInformation[] = [];
     // locate all color code using regex, skipping occurrences inside a comment or string
     for (const m of document.getText().matchAll(/\b((?:Color|P(?:acked|ool)ColorArray)\s*\(\s*)([\s,\w.+-]*?)\s*\)/g)) {
       let start = m.index!;
-      let range = new Range(document.positionAt(start), document.positionAt(start + m[0].length));
-      if (gdasset.commentContaining(range) || gdasset.stringContaining(range)) continue;
+      const ctorRange = new Range(document.positionAt(start), document.positionAt(start + m[0].length));
+      if (gdasset.isNonCode(ctorRange)) continue;
       const prefix = m[1];
       if (prefix[0] == 'C') { // Color(...)
         const [red, green, blue, alpha] = m[2].split(/\s*,\s*/, 4).map(GDAsset.floatValue);
-        colors.push(new ColorInformation(range, new Color(red ?? NaN, green ?? NaN, blue ?? NaN, alpha ?? NaN)));
+        colors.push(new ColorInformation(ctorRange, new Color(red ?? NaN, green ?? NaN, blue ?? NaN, alpha ?? NaN)));
         continue;
       }
       // PackedColorArray(...) | PoolColorArray(...)
       start += prefix.length;
-      for (const c of m[2].matchAll(/\b(?:[\w.+-]+\s*,\s*){0,3}[\w.+-]+/g)) {
+      for (const c of m[2].matchAll(regex4Floats)) {
         const args = c[0];
-        const pos = start + c.index!;
-        range = new Range(document.positionAt(pos), document.positionAt(pos + args.length));
+        const itemPos = start + c.index!;
+        const itemRange = new Range(document.positionAt(itemPos), document.positionAt(itemPos + args.length));
         const [red, green, blue, alpha] = args.split(/\s*,\s*/, 4).map(GDAsset.floatValue);
-        colors.push(new ColorInformation(range, new Color(red ?? NaN, green ?? NaN, blue ?? NaN, alpha ?? 1)));
+        colors.push(new ColorInformation(itemRange, new Color(red ?? NaN, green ?? NaN, blue ?? NaN, alpha ?? 1)));
       }
     }
     return colors;
@@ -469,6 +510,9 @@ class GDAssetProvider implements
     function hex(c: number) { return Math.round(c * 255).toString(16).toUpperCase().replace(/^.$/s, '0$&'); }
   }
 }
+const regex2Floats = /(?:[\w.+-]+\s*,\s*)?[\w.+-]+/g;
+const regex3Floats = /(?:[\w.+-]+\s*,\s*){0,2}[\w.+-]+/g;
+const regex4Floats = /(?:[\w.+-]+\s*,\s*){0,3}[\w.+-]+/g;
 
 function isPathWord(word: string, wordRange: Range, document: TextDocument) {
   // check absolute path with scheme
@@ -639,7 +683,7 @@ async function resPathPreview(resPath: string, document: TextDocument) {
 }
 /** Data URI for the PNG thumbnail of the resource from Godot cache; or null if not found. */
 async function resThumb(resUri: Uri) {
-  if (!supported || !process) return null;
+  if (!process) return null;
   // Thumbnail max is 64x64 px = ~16KiB max, far less than the ~74kB MarkdownString base64 limit; ok to embed
   const resPathHash = md5(resUri.fsPath
     .replace(/^[a-z]:/, g0 => g0.toUpperCase()).replaceAll('\\', '/'));
@@ -651,7 +695,7 @@ async function resThumb(resUri: Uri) {
   for (const cachePathString of cachePaths) {
     const cachePath = cachePathString.replace(/^~(?=\/)/, g0 => homedir ?? g0)
       .replace(platform == 'win32' ? /%(\w+)%/g : /\$\{(\w+)\}/g,
-        (g0, g1) => process!.env[g1] ?? g0);
+        (g0, g1) => process.env[g1] ?? g0);
     const thumbUri = Uri.joinPath(Uri.file(cachePath), `resthumb-${resPathHash}.png`);
     try {
       const stat = await workspace.fs.stat(thumbUri);
@@ -751,6 +795,7 @@ export async function activate(context: ExtensionContext) {
   ctx.subscriptions.push(languages.registerDocumentSymbolProvider(GDAssetProvider.docs, provider));
   ctx.subscriptions.push(languages.registerDefinitionProvider(GDAssetProvider.godotDocs, provider));
   ctx.subscriptions.push(languages.registerHoverProvider(GDAssetProvider.godotDocs, provider));
+  ctx.subscriptions.push(languages.registerInlayHintsProvider(GDAssetProvider.godotDocs, provider));
   ctx.subscriptions.push(languages.registerColorProvider(GDAssetProvider.godotDocs, provider));
 }
 

@@ -1,5 +1,5 @@
 // Override TypeScript definitions to disallow arbitrary Node.js
-declare var process: undefined | {
+declare const process: undefined | {
   readonly platform
   : 'aix' | 'android' | 'darwin' | 'freebsd' | 'haiku' | 'linux' | 'openbsd' | 'sunos' | 'win32' | 'cygwin' | 'netbsd';
   env: { [key: string]: string | undefined; };
