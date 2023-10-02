@@ -428,18 +428,24 @@ class GDAssetProvider implements
     return new Hover(hover, wordRange);
   }
   
-  async provideInlayHints(document: TextDocument, range: Range, token: CancellationToken): Promise<InlayHint[]> {
+  async provideInlayHints(document: TextDocument, range: Range, token: CancellationToken): Promise<InlayHint[] | null> {
+    const settings = workspace.getConfiguration('godotFiles', document);
+    const clarifyVectors = settings.get<boolean>('clarifyArrays.vector')!;
+    const clarifyColors = settings.get<boolean>('clarifyArrays.color')!;
+    if (!supported || !clarifyVectors && !clarifyColors) return null;
     const gdasset = await this.parsedGDAsset(document, token);
-    if (!supported || !gdasset) return [];
+    if (!gdasset) return null;
     const hints: InlayHint[] = [];
     // locate all packed vector arrays using regex, skipping occurrences inside a comment or string
     const reqStart = document.offsetAt(range.start);
     const reqSrc = document.getText(range);
     for (const m of reqSrc.matchAll(/\b(P(?:acked|ool)(?:Vector([23])|Color)Array)(\s*\(\s*)([\s,\w.+-]*?)\s*\)/g)) {
+      const dim = m[2];
+      if (dim && !clarifyVectors || !dim && !clarifyColors) continue;
       const ctorStart = reqStart + m.index!;
       const ctorRange = new Range(document.positionAt(ctorStart), document.positionAt(ctorStart + m[0].length));
       if (gdasset.isNonCode(ctorRange)) continue;
-      const [, type, dim, paren, allArgs] = m;
+      const [, type, , paren, allArgs] = m;
       const typeEnd = ctorStart + type.length;
       const argsStart = typeEnd + paren.length;
       // let i = 0;
@@ -462,17 +468,22 @@ class GDAssetProvider implements
     return hints;
   }
   
-  async provideDocumentColors(document: TextDocument, token: CancellationToken): Promise<ColorInformation[]> {
+  async provideDocumentColors(document: TextDocument, token: CancellationToken): Promise<ColorInformation[] | null> {
+    const settings = workspace.getConfiguration('godotFiles', document);
+    const inlineColorSingles = settings.get<boolean>('inlineColors.single')!;
+    const inlineColorArrays = settings.get<boolean>('inlineColors.array')!;
+    if (!supported || !inlineColorSingles && !inlineColorArrays) return null;
     const gdasset = await this.parsedGDAsset(document, token);
-    if (!supported || !gdasset) return [];
+    if (!gdasset) return null;
     const colors: ColorInformation[] = [];
     // locate all color code using regex, skipping occurrences inside a comment or string
     for (const m of document.getText().matchAll(/\b((?:Color|P(?:acked|ool)ColorArray)\s*\(\s*)([\s,\w.+-]*?)\s*\)/g)) {
+      const prefix = m[1], isSingle = prefix[0] == 'C';
+      if (isSingle && !inlineColorSingles || !isSingle && !inlineColorArrays) continue;
       let start = m.index!;
       const ctorRange = new Range(document.positionAt(start), document.positionAt(start + m[0].length));
       if (gdasset.isNonCode(ctorRange)) continue;
-      const prefix = m[1];
-      if (prefix[0] == 'C') { // Color(...)
+      if (isSingle) { // Color(...)
         const [red, green, blue, alpha] = m[2].split(/\s*,\s*/, 4).map(GDAsset.floatValue);
         colors.push(new ColorInformation(ctorRange, new Color(red ?? NaN, green ?? NaN, blue ?? NaN, alpha ?? NaN)));
         continue;
@@ -641,7 +652,7 @@ async function resPathPreview(resPath: string, document: TextDocument) {
     if (thumbSrc) return md.appendMarkdown(`[<img src="${thumbSrc}"/>](${resUriStr})`);
     return md.appendMarkdown(`[Image file](${resUriStr})`); // otherwise, give up and just link to file
   }
-  match = /\.(ttf|otf|woff)$/i.exec(resPath);
+  match = /\.([to]tf|woff2?)$/i.exec(resPath);
   if (!match) {
     // unknown file type that we cannot render directly; but maybe Godot can preview it
     const thumbSrc = await resThumb(resUri); // try the small thumbnail image from Godot cache

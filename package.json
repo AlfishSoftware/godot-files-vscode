@@ -256,17 +256,11 @@
 				}
 			]
 		},
-		"configuration": {
+		"configuration": [{
 			"title": "Godot Files",
 			"properties": {
-				"godotFiles.hover.previewResource": {
-					"scope": "language-overridable",
-					"type": "boolean",
-					"default": true,
-					"description": "Disable if you don't want tooltips to show an image preview of the resource or a link to it."
-				},
 				"godotFiles.godotCachePath": {
-					"scope": "machine",
+					"scope": "machine-overridable",
 					"type": "object",
 					"default": {
 						"win32": [
@@ -290,14 +284,52 @@
 							"description": "A path to Godot cache files in this platform."
 						}
 					},
-					"markdownDescription": "Paths to Godot cache files in each platform. The defaults should work in most cases. Add a path when using a Godot installation in self-contained mode.\n\nThe keys are platform ids as returned by NodeJS: `win32` (Windows), `darwin` (macOS), `linux`.\n\nEach key maps to an array of path strings. A starting `~/` in the path means the user's home directory. Environment variables are replaced using the syntax `%VARIABLE%` in Windows and `${VARIABLE}` in other platforms. Glob patterns are *not* allowed."
+					"markdownDescription": "Paths to Godot cache files in each platform. The defaults should work in most cases. Add a path when using a Godot installation in [self-contained mode](https://docs.godotengine.org/en/stable/tutorials/io/data_paths.html#self-contained-mode).\n\nThe keys are platform ids as returned by NodeJS: `win32` (Windows), `darwin` (macOS), `linux`.\n\nEach key maps to an array of path strings. A starting `~/` in the path means the user's home directory. Environment variables are replaced using the syntax `%VARIABLE%` in Windows and `${VARIABLE}` in other platforms. Glob patterns are *not* allowed."
 				}
 			}
-		}
+		}, {
+			"title": "GDAsset",
+			"properties": {
+				"godotFiles.hover.previewResource": {
+					"scope": "language-overridable",
+					"type": "boolean",
+					"default": true,
+					"description": "Disable if you don't want tooltips to show an image preview of the resource or a link to it."
+				},
+				"godotFiles.inlineColors.single": {
+					"order": 9E999,
+					"scope": "language-overridable",
+					"type": "boolean",
+					"default": true,
+					"markdownDescription": "Show inline color decorators on `Color(…)` values.  \n⚠ Exclusive to early access."
+				},
+				"godotFiles.inlineColors.array": {
+					"order": 9E999,
+					"scope": "language-overridable",
+					"type": "boolean",
+					"default": true,
+					"description": "Show inline color decorators on color values within arrays.\n⚠ Exclusive to early access."
+				},
+				"godotFiles.clarifyArrays.vector": {
+					"order": 9E999,
+					"scope": "language-overridable",
+					"type": "boolean",
+					"default": true,
+					"description": "Show implied parentheses around each vector in an array.\n⚠ Exclusive to early access."
+				},
+				"godotFiles.clarifyArrays.color": {
+					"order": 9E999,
+					"scope": "language-overridable",
+					"type": "boolean",
+					"default": false,
+					"description": "Show implied parentheses around each color in an array.\n⚠ Exclusive to early access."
+				}
+			}
+		}]
 	},
 	"devDependencies": {
 		"@types/vscode": "^1.82.0",
-		"typescript": "^5.1.3"
+		"typescript": "^5.2.2"
 	},
 	"engines": {
 		"vscode": "^1.82.0"
