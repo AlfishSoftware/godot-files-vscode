@@ -291,34 +291,35 @@
 			"title": "GDAsset",
 			"properties": {
 				"godotFiles.hover.previewResource": {
+					"order": 0,
 					"scope": "language-overridable",
 					"type": "boolean",
 					"default": true,
 					"description": "Disable if you don't want tooltips to show an image preview of the resource or a link to it."
 				},
 				"godotFiles.inlineColors.single": {
-					"order": 9E999,
+					"order": 100,
 					"scope": "language-overridable",
 					"type": "boolean",
 					"default": true,
 					"markdownDescription": "Show inline color decorators on `Color(…)` values.  \n⚠ Exclusive to early access."
 				},
 				"godotFiles.inlineColors.array": {
-					"order": 9E999,
+					"order": 100,
 					"scope": "language-overridable",
 					"type": "boolean",
 					"default": true,
 					"description": "Show inline color decorators on color values within arrays.\n⚠ Exclusive to early access."
 				},
 				"godotFiles.clarifyArrays.vector": {
-					"order": 9E999,
+					"order": 200,
 					"scope": "language-overridable",
 					"type": "boolean",
 					"default": true,
 					"description": "Show implied parentheses around each vector in an array.\n⚠ Exclusive to early access."
 				},
 				"godotFiles.clarifyArrays.color": {
-					"order": 9E999,
+					"order": 200,
 					"scope": "language-overridable",
 					"type": "boolean",
 					"default": false,

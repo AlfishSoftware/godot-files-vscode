@@ -116,7 +116,7 @@ Each $ below means about a week of work needed to implement the feature. These g
 Id | Weeks | Possible Feature
 -|-|-
 aArrayCount | $ | Show array size and element indices
-aGotoDocs | $$$ | Go to Online Docs of built-in Variant types
+aGotoDocs | $$$ | Go to Online Docs of built-in Godot types
 aHoverCartesian | $$$$$ | Cartesian hover previews for some coordinate values like vector, quat, basis, etc
 
 ### Godot Shader
