@@ -105,7 +105,7 @@
 				"mimetypes": [
 					"application/x-godot-resource"
 				],
-				"firstLine": "^\\[(gd_resource type=\".*?\" load_steps=\\d+ format=\\d+)\\]$",
+				"firstLine": "^\\[gd_resource(\\s+\\w+=(\\d+|\"([^\"\\\\]|\\\\.)*\"))*\\s*\\]\\s*([;#].*)?$",
 				"configuration": "./lang.gdasset/gdasset.language-configuration.json"
 			},
 			{
@@ -125,7 +125,7 @@
 				"mimetypes": [
 					"application/x-godot-scene"
 				],
-				"firstLine": "^\\[(gd_scene load_steps=\\d+ format=\\d+)\\]$",
+				"firstLine": "^\\[gd_scene(\\s+\\w+=(\\d+|\"([^\"\\\\]|\\\\.)*\"))*\\s*\\]\\s*([;#].*)?$",
 				"configuration": "./lang.gdasset/gdasset.language-configuration.json"
 			},
 			{
@@ -152,7 +152,7 @@
 					"dark": "./lang.gdasset/godot-asset.dark.svg",
 					"light": "./lang.gdasset/godot-asset.light.svg"
 				},
-				"firstLine": "^\\[(remap|general|preset\\.\\d+)\\]$",
+				"firstLine": "^\\[(remap|general|preset\\.\\d+)(\\s+\\w+=(\\d+|\"([^\"\\\\]|\\\\.)*\"))*\\s*\\]\\s*([;#].*)?$",
 				"configuration": "./lang.gdasset/gdasset.language-configuration.json"
 			},
 			{
