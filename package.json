@@ -1,7 +1,7 @@
 {
 	"publisher": "alfish",
 	"name": "godot-files",
-	"version": "0.0.6",
+	"version": "0.0.7",
 	"license": "Unlicense",
 	"displayName": "Godot Files",
 	"description": "Provides syntax-coloring for some files supported by Godot Editor.",
@@ -105,7 +105,7 @@
 				"mimetypes": [
 					"application/x-godot-resource"
 				],
-				"firstLine": "^\\[(gd_resource type=\".*?\" load_steps=\\d+ format=\\d+)\\]$",
+				"firstLine": "^\\[gd_resource(\\s+\\w+=(\\d+|\"([^\"\\\\]|\\\\.)*\"))*\\s*\\]\\s*([;#].*)?$",
 				"configuration": "./lang.gdasset/gdasset.language-configuration.json"
 			},
 			{
@@ -125,7 +125,7 @@
 				"mimetypes": [
 					"application/x-godot-scene"
 				],
-				"firstLine": "^\\[(gd_scene load_steps=\\d+ format=\\d+)\\]$",
+				"firstLine": "^\\[gd_scene(\\s+\\w+=(\\d+|\"([^\"\\\\]|\\\\.)*\"))*\\s*\\]\\s*([;#].*)?$",
 				"configuration": "./lang.gdasset/gdasset.language-configuration.json"
 			},
 			{
@@ -152,7 +152,7 @@
 					"dark": "./lang.gdasset/godot-asset.dark.svg",
 					"light": "./lang.gdasset/godot-asset.light.svg"
 				},
-				"firstLine": "^\\[(remap|general|preset\\.\\d+)\\]$",
+				"firstLine": "^\\[(remap|general|preset\\.\\d+)(\\s+\\w+=(\\d+|\"([^\"\\\\]|\\\\.)*\"))*\\s*\\]\\s*([;#].*)?$",
 				"configuration": "./lang.gdasset/gdasset.language-configuration.json"
 			},
 			{
@@ -256,84 +256,88 @@
 				}
 			]
 		},
-		"configuration": [{
-			"title": "Godot Files",
-			"properties": {
-				"godotFiles.godotCachePath": {
-					"scope": "machine-overridable",
-					"type": "object",
-					"default": {
-						"win32": [
-							"%LOCALAPPDATA%/Godot/",
-							"~/AppData/Local/Godot/",
-							"%TEMP%/Godot/"
-						],
-						"darwin": [
-							"~/Library/Caches/Godot/"
-						],
-						"linux": [
-							"~/.cache/godot/",
-							"~/.var/app/org.godotengine.Godot/cache/godot/"
-						]
+		"configuration": [
+			{
+				"title": "Godot Files",
+				"properties": {
+					"godotFiles.godotCachePath": {
+						"scope": "machine-overridable",
+						"type": "object",
+						"default": {
+							"win32": [
+								"%LOCALAPPDATA%/Godot/",
+								"~/AppData/Local/Godot/",
+								"%TEMP%/Godot/"
+							],
+							"darwin": [
+								"~/Library/Caches/Godot/"
+							],
+							"linux": [
+								"~/.cache/godot/",
+								"~/.var/app/org.godotengine.GodotSharp/cache/godot/",
+								"~/.var/app/org.godotengine.Godot/cache/godot/"
+							]
+						},
+						"additionalProperties": {
+							"type": "array",
+							"description": "Array of paths to Godot cache files for this platform id (as returned by NodeJS).",
+							"items": {
+								"type": "string",
+								"description": "A path to Godot cache files in this platform."
+							}
+						},
+						"markdownDescription": "Paths to Godot cache files in each platform. The defaults should work in most cases. Add a path when using a Godot installation in [self-contained mode](https://docs.godotengine.org/en/stable/tutorials/io/data_paths.html#self-contained-mode).\n\nThe keys are platform ids as returned by NodeJS: `win32` (Windows), `darwin` (macOS), `linux`.\n\nEach key maps to an array of path strings. A starting `~/` in the path means the user's home directory. Environment variables are replaced using the syntax `%VARIABLE%` in Windows and `${VARIABLE}` in other platforms. Glob patterns are *not* allowed. The order in the array doesn't matter, since all paths are always scanned to get the most recent cache file."
+					}
+				}
+			},
+			{
+				"title": "GDAsset",
+				"properties": {
+					"godotFiles.hover.previewResource": {
+						"order": 0,
+						"scope": "language-overridable",
+						"type": "boolean",
+						"default": true,
+						"description": "Disable if you don't want tooltips to show an image preview of the resource or a link to it."
 					},
-					"additionalProperties": {
-						"type": "array",
-						"description": "Array of paths to Godot cache files for this platform id (as returned by NodeJS).",
-						"items": {
-							"type": "string",
-							"description": "A path to Godot cache files in this platform."
-						}
+					"godotFiles.inlineColors.single": {
+						"order": 100,
+						"scope": "language-overridable",
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "Show inline color decorators on `Color(…)` values.  \n⚠ Exclusive to early access."
 					},
-					"markdownDescription": "Paths to Godot cache files in each platform. The defaults should work in most cases. Add a path when using a Godot installation in [self-contained mode](https://docs.godotengine.org/en/stable/tutorials/io/data_paths.html#self-contained-mode).\n\nThe keys are platform ids as returned by NodeJS: `win32` (Windows), `darwin` (macOS), `linux`.\n\nEach key maps to an array of path strings. A starting `~/` in the path means the user's home directory. Environment variables are replaced using the syntax `%VARIABLE%` in Windows and `${VARIABLE}` in other platforms. Glob patterns are *not* allowed."
+					"godotFiles.inlineColors.array": {
+						"order": 100,
+						"scope": "language-overridable",
+						"type": "boolean",
+						"default": true,
+						"description": "Show inline color decorators on color values within arrays.\n⚠ Exclusive to early access."
+					},
+					"godotFiles.clarifyArrays.vector": {
+						"order": 200,
+						"scope": "language-overridable",
+						"type": "boolean",
+						"default": true,
+						"description": "Show implied parentheses around each vector in an array.\n⚠ Exclusive to early access."
+					},
+					"godotFiles.clarifyArrays.color": {
+						"order": 200,
+						"scope": "language-overridable",
+						"type": "boolean",
+						"default": false,
+						"description": "Show implied parentheses around each color in an array.\n⚠ Exclusive to early access."
+					}
 				}
 			}
-		}, {
-			"title": "GDAsset",
-			"properties": {
-				"godotFiles.hover.previewResource": {
-					"order": 0,
-					"scope": "language-overridable",
-					"type": "boolean",
-					"default": true,
-					"description": "Disable if you don't want tooltips to show an image preview of the resource or a link to it."
-				},
-				"godotFiles.inlineColors.single": {
-					"order": 100,
-					"scope": "language-overridable",
-					"type": "boolean",
-					"default": true,
-					"markdownDescription": "Show inline color decorators on `Color(…)` values.  \n⚠ Exclusive to early access."
-				},
-				"godotFiles.inlineColors.array": {
-					"order": 100,
-					"scope": "language-overridable",
-					"type": "boolean",
-					"default": true,
-					"description": "Show inline color decorators on color values within arrays.\n⚠ Exclusive to early access."
-				},
-				"godotFiles.clarifyArrays.vector": {
-					"order": 200,
-					"scope": "language-overridable",
-					"type": "boolean",
-					"default": true,
-					"description": "Show implied parentheses around each vector in an array.\n⚠ Exclusive to early access."
-				},
-				"godotFiles.clarifyArrays.color": {
-					"order": 200,
-					"scope": "language-overridable",
-					"type": "boolean",
-					"default": false,
-					"description": "Show implied parentheses around each color in an array.\n⚠ Exclusive to early access."
-				}
-			}
-		}]
+		]
 	},
 	"devDependencies": {
-		"@types/vscode": "^1.82.0",
-		"typescript": "^5.2.2"
+		"@types/vscode": "^1.84.2",
+		"typescript": "^5.3.2"
 	},
 	"engines": {
-		"vscode": "^1.82.0"
+		"vscode": "^1.84.2"
 	},
 	"scripts": {
 		"open-in-browser": "npm run compile && vscode-test-web --quality=stable --browser=none --extensionDevelopmentPath=. .",

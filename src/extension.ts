@@ -24,7 +24,7 @@ function jsHash(s: string, seed = 0) { // 53-bit hash, see https://stackoverflow
   return 0x100000000 * (0x1FFFFF & b) + (a >>> 0);
 }
 /** Convert bytes to a base64 string, using either nodejs or web API. */
-function base64(data: Uint8Array) {
+export function base64(data: Uint8Array) {
   if (nodejs) return Buffer.from(data).toString('base64');
   const url = new FileReaderSync().readAsDataURL(new Blob([data]));
   return url.substring(url.indexOf(',', 12) + 1); // `data:${mime};base64,${data}`
@@ -34,6 +34,19 @@ function base64(data: Uint8Array) {
 */
 function encodeDataURIText(data: string) {
   return encodeURI(data).replace(/#|%20/g, s => s == '#' ? '%23' : ' ');
+}
+/** Text for a number of bytes using the appropriate base-1024 unit (byte(s), KiB, MiB, GiB, TiB). */
+export function byteUnits(numBytes: number) {
+  if (numBytes == 1) return '1 byte';
+  if (numBytes < 1024) return numBytes + ' bytes';
+  const k = numBytes / 1024;
+  if (k < 1024) return k.toFixed(1) + ' KiB';
+  const m = k / 1024;
+  if (m < 1024) return m.toFixed(1) + ' MiB';
+  const g = m / 1024;
+  if (g < 1024) return g.toFixed(1) + ' GiB';
+  const t = g / 1024;
+  return t.toFixed(1) + ' TiB';
 }
 
 class GDResource {
@@ -214,17 +227,17 @@ class GDAssetProvider implements
   
   defs: { [uri: string]: GDAsset | undefined; } = {};
   
-  async parsedGDAsset(document: TextDocument, token: CancellationToken) {
+  async parsedGDAsset(document: TextDocument, _token: CancellationToken) {
     if (document.languageId == 'config-definition') return undefined;
     let gdasset = this.defs[document.uri.toString(true)];
     if (!gdasset) {
-      await this.provideDocumentSymbols(document, token);
+      await this.provideDocumentSymbols(document, _token);
       gdasset = this.defs[document.uri.toString(true)];
     }
     return gdasset;
   }
   
-  async provideDocumentSymbols(document: TextDocument, token: CancellationToken): Promise<DocumentSymbol[]> {
+  async provideDocumentSymbols(document: TextDocument, _token: CancellationToken): Promise<DocumentSymbol[]> {
     const gdasset = document.languageId == 'config-definition' ? null :
       this.defs[document.uri.toString(true)] = new GDAsset();
     let previousEnd: Position | undefined;
@@ -420,10 +433,14 @@ class GDAssetProvider implements
       resPath = res.path;
       hover.push(gdCodeLoad(resPath, null, res.type, document.languageId));
     } else return null;
+    if (token.isCancellationRequested) return null;
     if (workspace.getConfiguration('godotFiles', document).get<boolean>('hover.previewResource')!) {
       // show link to res:// path if available
-      if (!/^(?:user|uid):\/\//.test(resPath)) // Locating user:// or uid:// paths is not supported yet
-        hover.push(await resPathPreview(resPath, document));
+      if (!/^(?:user|uid):\/\//.test(resPath)) { // Locating user:// or uid:// paths is not supported yet
+        const mdPreview = await resPathPreview(resPath, document, token);
+        if (token.isCancellationRequested) return null;
+        if (mdPreview) hover.push(mdPreview);
+      }
     }
     return new Hover(hover, wordRange);
   }
@@ -434,7 +451,7 @@ class GDAssetProvider implements
     const clarifyColors = settings.get<boolean>('clarifyArrays.color')!;
     if (!supported || !clarifyVectors && !clarifyColors) return null;
     const gdasset = await this.parsedGDAsset(document, token);
-    if (!gdasset) return null;
+    if (!gdasset || token.isCancellationRequested) return null;
     const hints: InlayHint[] = [];
     // locate all packed vector arrays using regex, skipping occurrences inside a comment or string
     const reqStart = document.offsetAt(range.start);
@@ -474,7 +491,7 @@ class GDAssetProvider implements
     const inlineColorArrays = settings.get<boolean>('inlineColors.array')!;
     if (!supported || !inlineColorSingles && !inlineColorArrays) return null;
     const gdasset = await this.parsedGDAsset(document, token);
-    if (!gdasset) return null;
+    if (!gdasset || token.isCancellationRequested) return null;
     const colors: ColorInformation[] = [];
     // locate all color code using regex, skipping occurrences inside a comment or string
     for (const m of document.getText().matchAll(/\b((?:Color|P(?:acked|ool)ColorArray)\s*\(\s*)([\s,\w.+-]*?)\s*\)/g)) {
@@ -501,7 +518,7 @@ class GDAssetProvider implements
     return colors;
   }
   async provideColorPresentations(
-    color: Color, context: { readonly document: TextDocument; readonly range: Range; }, token: CancellationToken
+    color: Color, context: { readonly document: TextDocument; readonly range: Range; }, _token: CancellationToken
   ): Promise<ColorPresentation[]> {
     const { document, range } = context;
     if (document.languageId == 'config-definition') return [];
@@ -546,7 +563,11 @@ function gdCodeLoad(resPath: string, id: string | null, type: string | undefined
   }
   return new MarkdownString().appendCodeblock(code, language);
 }
-async function projectDir(assetUri: Uri) {
+/** Find the root folder Uri of the closest Godot project containing the asset.
+ * @param assetUri Uri of the asset file for which to locate the project.
+ * @returns Uri of the project's root folder if found, or null if the asset is not inside a project.
+ */
+export async function projectDir(assetUri: Uri) {
   let uri = assetUri;
   do {
     const parent = Uri.joinPath(uri, '..'); // remove last path segment
@@ -562,7 +583,8 @@ async function projectDir(assetUri: Uri) {
   return null;
 }
 async function resPathOfDocument(document: TextDocument) {
-  const assetUri = document.uri, assetPath = assetUri.path;
+  const assetUri = document.uri;
+  const assetPath = assetUri.path;
   const projDir = await projectDir(assetUri);
   if (projDir && assetPath.startsWith(projDir.path))
     return 'res:/' + assetPath.replace(projDir.path, ''); // remove proj path at the start to make it relative to proj
@@ -573,12 +595,14 @@ const uriRegex = /^[a-zA-Z][a-zA-Z0-9.+-]*:\/\/[^\x00-\x1F "<>\\^`{|}\x7F-\x9F]*
  * @param resPath Path of resource to locate. Can be relative to the document or to its project's root.
  * @param document Asset where path is. Its location and project are used as context to resolve the res path.
  * @returns Uri of the resource if it's found, or that URI as a string if file is not found.
+ * @throws Error if any error happens other than FileNotFound.
  */
 async function locateResPath(resPath: string, document: TextDocument) {
+  const assetUri = document.uri;
   let resUri: Uri;
   resPath = resPath.replace(/::[^:/\\]*$/, '');
   if (resPath.startsWith('res://')) {
-    const projDir = await projectDir(document.uri);
+    const projDir = await projectDir(assetUri);
     if (!projDir) return resPath; // no project.godot found, res paths cannot be resolved
     resUri = Uri.joinPath(projDir, resPath.substring(6)); // 6 == 'res://'.length
   } else if (resPath.startsWith('file://')) {
@@ -588,7 +612,7 @@ async function locateResPath(resPath: string, document: TextDocument) {
   } else {
     if (uriRegex.test(resPath)) // does resPath have a scheme?
       return resPath; // better not to load arbitrary URI schemes like http, etc
-    resUri = Uri.joinPath(document.uri, '..', resPath); // path is relative to folder of document
+    resUri = Uri.joinPath(assetUri, '..', resPath); // path is relative to folder of document
   }
   try {
     const resStat = await workspace.fs.stat(resUri);
@@ -604,12 +628,14 @@ const fontTest = `\
 <tspan>JFK GOT MY VHS, PC AND XLR WEB QUIZ</tspan>
 <tspan x='0' y='20'>new job: fix mr. gluck's hazy tv pdq!</tspan>
 <tspan x='0' y='40'>Oo0 Ili1 Zz2 3 A4 S5 G6 T7 B8 g9</tspan>`;
-async function resPathPreview(resPath: string, document: TextDocument) {
+async function resPathPreview(resPath: string, document: TextDocument, token: CancellationToken
+): Promise<MarkdownString | null> {
   const md = new MarkdownString();
   md.supportHtml = true;
   let resLoc;
   try {
     resLoc = await locateResPath(resPath, document);
+    if (token.isCancellationRequested) return null;
   } catch (err) {
     const errName = (err as Error)?.name ?? 'Error';
     const errMsg = (err as Error)?.message ?? '';
@@ -642,22 +668,22 @@ async function resPathPreview(resPath: string, document: TextDocument) {
     }
     if (mdScheme.has(resUri.scheme)) // load image if allowed
       return md.appendMarkdown(`[<img height=128 src="${resUriStr}"/>](${resUriStr})`);
-    const thumbSrc = await resThumb(resUri); // try the small thumbnail image from Godot cache
+    const thumbSrc = await resThumb(resUri, token); // try the small thumbnail image from Godot cache
     if (thumbSrc) return md.appendMarkdown(`[<img src="${thumbSrc}"/>](${resUriStr})`);
     else return md.appendMarkdown(`[Image file](${resUriStr})`); // otherwise, give up and just link to file
   }
   if (/\.(?:svgz|tga|dds|exr|hdr)$/i.test(resPath)) {
     // supported by Godot, but not by MarkdownString preview directly
-    const thumbSrc = await resThumb(resUri); // try the small thumbnail image from Godot cache
+    const thumbSrc = await resThumb(resUri, token); // try the small thumbnail image from Godot cache
     if (thumbSrc) return md.appendMarkdown(`[<img src="${thumbSrc}"/>](${resUriStr})`);
     return md.appendMarkdown(`[Image file](${resUriStr})`); // otherwise, give up and just link to file
   }
   match = /\.([to]tf|woff2?)$/i.exec(resPath);
   if (!match) {
     // unknown file type that we cannot render directly; but maybe Godot can preview it
-    const thumbSrc = await resThumb(resUri); // try the small thumbnail image from Godot cache
+    const thumbSrc = await resThumb(resUri, token); // try the small thumbnail image from Godot cache
     if (thumbSrc) return md.appendMarkdown(`[<img src="${thumbSrc}"/>](${resUriStr})`);
-    return md.appendMarkdown(`[File](${resUriStr}) (${fileSize(resStat.size)})`); // otherwise, give up and just link to file
+    return md.appendMarkdown(`[File](${resUriStr}) (${byteUnits(resStat.size)})`); // otherwise, give up and just link to file
   }
   // font file; we should embed it as base64 URI inside a font test SVG
   const type = match[1].toLowerCase();
@@ -682,8 +708,10 @@ async function resPathPreview(resPath: string, document: TextDocument) {
   try { // try to stat at that cache path
     await workspace.fs.stat(imgSrc); // if it succeeds, preview is already cached in tmp folder
   } catch { // otherwise, it must be created and written to tmp cache
+    if (token.isCancellationRequested) return null;
     try {
       const imgData = await svgFontTest(resUri, type);
+      if (token.isCancellationRequested) return null;
       await workspace.fs.writeFile(imgSrc, new TextEncoder().encode(imgData)); // will auto create dirs
     } catch (err) { // some fs error? give up and just link
       console.error(err);
@@ -692,8 +720,8 @@ async function resPathPreview(resPath: string, document: TextDocument) {
   } // font preview SVG file is at cached path (logs folder); will be cleaned on deactivate if possible, or eventually
   return md.appendMarkdown(`[<img src="${imgSrc}"/>](${resUriStr})`);
 }
-/** Data URI for the PNG thumbnail of the resource from Godot cache; or null if not found. */
-async function resThumb(resUri: Uri) {
+/** Data URI for the PNG thumbnail of the resource from Godot cache; or null if not found or cancelled. */
+async function resThumb(resUri: Uri, token: CancellationToken) {
   if (!process) return null;
   // Thumbnail max is 64x64 px = ~16KiB max, far less than the ~74kB MarkdownString base64 limit; ok to embed
   const resPathHash = md5(resUri.fsPath
@@ -710,6 +738,7 @@ async function resThumb(resUri: Uri) {
     const thumbUri = Uri.joinPath(Uri.file(cachePath), `resthumb-${resPathHash}.png`);
     try {
       const stat = await workspace.fs.stat(thumbUri);
+      if (token.isCancellationRequested) return null;
       const mtime = stat.mtime, size = stat.size;
       if (lastModifiedTime >= mtime || size <= 90 || size > 74000) continue;
       lastModifiedTime = mtime;
@@ -737,18 +766,6 @@ ${fontTest}
 }
 /** URL schemes that markdownRenderer allows loading from */
 const mdScheme = new Set(['data', 'file', 'https', 'vscode-file', 'vscode-remote', 'vscode-remote-resource', 'mailto']);
-function fileSize(numBytes: number) {
-  if (numBytes == 1) return '1 byte';
-  if (numBytes < 1024) return numBytes + ' bytes';
-  const k = numBytes / 1024;
-  if (k < 1024) return k.toFixed(1) + ' KiB';
-  const m = k / 1024;
-  if (m < 1024) return m.toFixed(1) + ' MiB';
-  const g = m / 1024;
-  if (g < 1024) return g.toFixed(1) + ' GiB';
-  const t = g / 1024;
-  return t.toFixed(1) + ' TiB';
-}
 
 async function unlockEarlyAccess() {
   if (supported) {

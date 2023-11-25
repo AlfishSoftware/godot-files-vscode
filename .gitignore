@@ -230,6 +230,7 @@ $RECYCLE.BIN/
 
 ### ===== PROJECT ===== ###
 !dist
+/build/
 *.js
 *.js.map
 /.github/RELEASE-NOTES-v*.md

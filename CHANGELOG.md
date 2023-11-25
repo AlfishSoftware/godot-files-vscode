@@ -4,6 +4,12 @@
 Features currently in [early access](README.md#early-access) are marked with 🔒 as they're restricted to supporters.  
 Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're unlocked for everyone since that version.
 
+## [0.0.7] - 2023-11-25
+### Fixed
+- Add the `org.godotengine.GodotSharp` flatpak cache path to the defaults for `godotCachePath` setting.
+- GDAsset: Fix filetype detection from the first line for Godot 4+ (e.g. in untitled files, which have no extension).
+- Improve `.tscn` file icon colors to better match Godot's XYZ axes' colors.
+
 ## [0.0.6] - 2023-10-02
 ### Added
 - 🔒 GDAsset: Inline color decorators on `Color(…)` values and within arrays.
@@ -69,7 +75,8 @@ Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're
 - GDAsset: Image and font previews by hovering references and paths.
 - GDAsset: Hover resource references to show GDScript preload code.
 
-[Unreleased]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.0.6...develop
+[Unreleased]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.0.7...develop
+[0.0.7]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.0.6...v0.0.7
 [0.0.6]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.0.5...v0.0.6
 [0.0.5]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.0.4...v0.0.5
 [0.0.4]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.0.3...v0.0.4
