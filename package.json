@@ -333,11 +333,11 @@
 		]
 	},
 	"devDependencies": {
-		"@types/vscode": "^1.84.1",
+		"@types/vscode": "^1.84.2",
 		"typescript": "^5.3.2"
 	},
 	"engines": {
-		"vscode": "^1.84.1"
+		"vscode": "^1.84.2"
 	},
 	"scripts": {
 		"open-in-browser": "npm run compile && vscode-test-web --quality=stable --browser=none --extensionDevelopmentPath=. .",

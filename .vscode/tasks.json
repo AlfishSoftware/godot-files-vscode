@@ -9,10 +9,19 @@
 			"problemMatcher": [
 				"$tsc",
 			],
-			"detail": "tsc -p ./",
+			"detail": "Compile the source code.",
 			"presentation": {
 				"reveal": "silent",
 			},
 		},
+		{
+			"label": "npm: open-in-browser",
+			"type": "npm",
+			"script": "open-in-browser",
+			"problemMatcher": [
+				"$tsc",
+			],
+			"detail": "Compile and run local browser IDE server for this extension.",
+		}
 	],
 }

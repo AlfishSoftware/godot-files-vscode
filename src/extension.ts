@@ -24,7 +24,7 @@ function jsHash(s: string, seed = 0) { // 53-bit hash, see https://stackoverflow
   return 0x100000000 * (0x1FFFFF & b) + (a >>> 0);
 }
 /** Convert bytes to a base64 string, using either nodejs or web API. */
-function base64(data: Uint8Array) {
+export function base64(data: Uint8Array) {
   if (nodejs) return Buffer.from(data).toString('base64');
   const url = new FileReaderSync().readAsDataURL(new Blob([data]));
   return url.substring(url.indexOf(',', 12) + 1); // `data:${mime};base64,${data}`
