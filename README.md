@@ -15,16 +15,15 @@ This extension also works on browser IDEs ([vscode.dev](https://vscode.dev) and 
 Includes syntax-coloring for these languages:
 
 - **Godot Shader** files: `.gdshader`, `.gdshaderinc`.
-- Better (more specific) grammar for the INI-like files used by Godot (Asset Properties Definition):  
+- Better (more specific) grammar for the INI-like files used by Godot (called "GDAsset" here):  
   `.godot`, `.tscn`, `.escn`, `.tres`, `.gdns`, `.gdnlib`, `.import`, `.tet`, `.remap`.
-- The same grammar is reused for `.cfg` and the INI-like XDG Desktop Entry files: `.desktop`, `.directory`.  
-  You might want to associate this language (Configuration Properties) with other INI-like formats as well.
+- The same grammar is reused for `.cfg` and the INI-like XDG Desktop Entry files: `.desktop`, `.directory`. Those fit better because this grammar is "smarter" than regular INI. E.g., it supports sub-properties, `;`-separated lists, apostrophe (single quote) inside unquoted strings like `don't`, etc. Feel free to associate this language (`config-definition` / Configuration Properties) with any other (non-Godot) INI-like formats as well if you notice it fits better.
 
-**INI-like** files also support:
+**INI-like** files (including GDAsset) also support:
 
 - Outline and breadcrumb items.
 
-**GDAsset** files (i.e., the INI-like Godot Asset files) also support:
+**GDAsset** files also support:
 
 - Syntax-coloring of embedded code in asset strings for GDScript and Godot Shader resources (see image above).  
   😎 It even handles both inner and outer languages' escape sequences gracefully, and colors them differently:  

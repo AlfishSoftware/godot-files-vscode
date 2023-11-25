@@ -35,6 +35,19 @@ export function base64(data: Uint8Array) {
 function encodeDataURIText(data: string) {
   return encodeURI(data).replace(/#|%20/g, s => s == '#' ? '%23' : ' ');
 }
+/** Text for a number of bytes using the appropriate base-1024 unit (byte(s), KiB, MiB, GiB, TiB). */
+export function byteUnits(numBytes: number) {
+  if (numBytes == 1) return '1 byte';
+  if (numBytes < 1024) return numBytes + ' bytes';
+  const k = numBytes / 1024;
+  if (k < 1024) return k.toFixed(1) + ' KiB';
+  const m = k / 1024;
+  if (m < 1024) return m.toFixed(1) + ' MiB';
+  const g = m / 1024;
+  if (g < 1024) return g.toFixed(1) + ' GiB';
+  const t = g / 1024;
+  return t.toFixed(1) + ' TiB';
+}
 
 class GDResource {
   path!: string;
@@ -670,7 +683,7 @@ async function resPathPreview(resPath: string, document: TextDocument, token: Ca
     // unknown file type that we cannot render directly; but maybe Godot can preview it
     const thumbSrc = await resThumb(resUri, token); // try the small thumbnail image from Godot cache
     if (thumbSrc) return md.appendMarkdown(`[<img src="${thumbSrc}"/>](${resUriStr})`);
-    return md.appendMarkdown(`[File](${resUriStr}) (${fileSize(resStat.size)})`); // otherwise, give up and just link to file
+    return md.appendMarkdown(`[File](${resUriStr}) (${byteUnits(resStat.size)})`); // otherwise, give up and just link to file
   }
   // font file; we should embed it as base64 URI inside a font test SVG
   const type = match[1].toLowerCase();
@@ -753,18 +766,6 @@ ${fontTest}
 }
 /** URL schemes that markdownRenderer allows loading from */
 const mdScheme = new Set(['data', 'file', 'https', 'vscode-file', 'vscode-remote', 'vscode-remote-resource', 'mailto']);
-function fileSize(numBytes: number) {
-  if (numBytes == 1) return '1 byte';
-  if (numBytes < 1024) return numBytes + ' bytes';
-  const k = numBytes / 1024;
-  if (k < 1024) return k.toFixed(1) + ' KiB';
-  const m = k / 1024;
-  if (m < 1024) return m.toFixed(1) + ' MiB';
-  const g = m / 1024;
-  if (g < 1024) return g.toFixed(1) + ' GiB';
-  const t = g / 1024;
-  return t.toFixed(1) + ' TiB';
-}
 
 async function unlockEarlyAccess() {
   if (supported) {
