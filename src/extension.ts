@@ -359,15 +359,27 @@ class GDAssetProvider implements
         return new Location(resLoc.uri, new Position(0, 0));
       return null;
     }
+    if (gdasset.isInString(wordRange)) return null;
     if ((match = word.match(/^(?:@?[A-Z][A-Za-z0-9]+|float|int|bool)$/))) {
       const className = match[0];
       const config = workspace.getConfiguration('godotFiles', document);
       const online = config.get<boolean>('apiDocs.online') && await isOnline();
       if (online) {
-        const language = 'en', version = 'stable';
+        // We could get locale properly, but it seems other locales don't support every version consistently.
+        // Also the API will probably still be in english even in those locales.
+        // const locale = env.language.toLowerCase();
+        // let apiLocale: string;
+        // if (docsLocales.includes(locale)) apiLocale = locale;
+        // else {
+        //   const lang = locale.replace(/[-_].*$/, '');
+        //   apiLocale = docsLocales.includes(lang) ? lang : 'en';
+        // }
+        const apiLocale = 'en';
+        const version = await godotVersionOfDocument(document);
+        const apiVersion = version?.api || (version?.major == 3 ? latestApiGodot3 : 'stable');
         if (await env.openExternal(Uri.from({
           scheme: 'https', authority: 'docs.godotengine.org',
-          path: `/${language}/${version}/classes/class_${className.toLowerCase()}.html`
+          path: `/${apiLocale}/${apiVersion}/classes/class_${className.toLowerCase()}.html`
         }))) return null;
       } else if (extensions.getExtension('geequlim.godot-tools')?.isActive) {
         return new Location(Uri.from({ scheme: 'gddoc', path: className + '.gddoc' }), new Position(0, 0));
@@ -375,7 +387,6 @@ class GDAssetProvider implements
       window.showErrorMessage(`Could not open documentation for ${className}.`);
       return null;
     }
-    if (gdasset.isInString(wordRange)) return null;
     if ((match = word.match(/^((?:Ext|Sub)Resource)\s*\(\s*(?:(\d+)|"([^"\\]*)")\s*\)$/))) {
       const keyword = match[1] as 'ExtResource' | 'SubResource';
       const id = match[2] ?? GDAssetProvider.unescapeString(match[3]);
@@ -606,6 +617,48 @@ export async function projectDir(assetUri: Uri) {
       return parent; // folder containing project.godot
     } catch { /* project.godot was not found on that folder */ }
   } while (uri.path);
+  return null;
+}
+const projGodotVersionRegex = /^\s*config\/features\s*=\s*PackedStringArray\s*\(\s*(.*?)\s*\)\s*(?:[;#].*)?$/m;
+/** Get the Godot version of the project on the specified folder.
+ * @param projectDirUri Uri of the folder containing the project.godot file.
+ * @returns An object with versions (major, and if found, minor too) or null if not found.
+ */
+async function godotVersionOfProject(projectDirUri: Uri) {
+  let t: string;
+  try {
+    t = new TextDecoder().decode(await workspace.fs.readFile(Uri.joinPath(projectDirUri, 'project.godot')));
+  } catch { return null; }
+  let m = t.match(projGodotVersionRegex);
+  if (m && m[1]) {
+    m = m[1].split(/\s*,\s*/g).map(s => s.match(/^"((\d+)\.(\d+)[^"\\]*)"$/))
+      .find(m => m)!;
+    if (m && m[1]) return { api: m[1], major: +m[2], minor: +m[3] };
+  }
+  m = t.match(/^\s*config_version\s*=\s*(\d+)\s*(?:[;#].*)?$/m);
+  if (!m || !m[1]) return null;
+  const configVersion = +m[1];
+  if (configVersion == 5) return { major: 4 };
+  if (configVersion == 4) return { major: 3 };
+  return null;
+}
+const assetGodotVersionRegex =
+  /^\s*\[\s*gd_(?:resource|scene)(?:\s+\w+=(?:\d+|".*?"))*?\s+format=(\d+)\b.*?\]\s*(?:[;#].*)?$/m;
+  /** Get the Godot version of the project with the specified document.
+   * @param document Text document of the asset.
+   * @returns An object with versions (major, and if found, minor too) or null if not found.
+   */
+async function godotVersionOfDocument(document: TextDocument) {
+  const projDir = await projectDir(document.uri);
+  if (projDir) {
+    const version = await godotVersionOfProject(projDir);
+    if (version) return version;
+  }
+  const m = document.getText().match(assetGodotVersionRegex);
+  if (!m || !m[1]) return null;
+  const format = +m[1];
+  if (format == 3) return { major: 4 };
+  if (format == 2) return { major: 3 };
   return null;
 }
 /** URL schemes where you can get a project dir for an asset. */
@@ -868,5 +921,8 @@ export function deactivate() {
     nodejs && require('fs').rmSync(tmpUri.fsPath, { force: true, recursive: true });
   } catch { /* ignore, logs should be auto-deleted eventually anyway */ }
 }
+
+const latestApiGodot3 = '3.6';
+// const docsLocales = ['en', 'cs', 'de', 'es', 'fr', 'it', 'ja', 'ko', 'pl', 'pt-br', 'ru', 'uk', 'zh-cn', 'zh-tw'];
 
 const checksum = '1ee835486c75add4e298d9120c62801254ecb9f69309f1f67af4d3495bdf7ba14e288b73298311f5ef7839ec34bfc12211a035911d3ad19a60e822a9f44d4d5c';
