@@ -14,7 +14,7 @@ function md5(s: string) {
 function sha512(s: string) {
   return createHash?.('sha512').update(s).digest('hex');
 }
-function jsHash(s: string, seed = 0) { // 53-bit hash, see https://stackoverflow.com/a/52171480
+export function jsHash(s: string, seed = 0) { // 53-bit hash, see https://stackoverflow.com/a/52171480
   let a = 0xDEADBEEF ^ seed, b = 0x41C6CE57 ^ seed;
   for (let i = 0, c; i < s.length; i++) {
     c = s.charCodeAt(i); a = Math.imul(a ^ c, 2654435761); b = Math.imul(b ^ c, 1597334677);
@@ -68,7 +68,7 @@ class GDAsset {
     return String(+value.toPrecision(6));
   }
   static filename(resPath: string) {
-    const match = /^(?:.*[/\\])?([^/\\]*?)(\.[^./\\]*)?(::.*)?$/.exec(resPath);
+    const match = /^(?:.*[/\\])?([^/\\]*?)(\.[^./\\<>]*)?(::.*)?$/.exec(resPath);
     if (!match) return null;
     return { title: match[1], ext: match[2], subPath: match[3] };
   }
@@ -123,7 +123,7 @@ function sectionSymbol(document: TextDocument, match: RegExpMatchArray, range: R
   switch (tag) {
     case 'gd_scene': {
       const docUriPath = document.uri.path;
-      const [, fileTitle, ext] = /^\/(?:.*\/)*(.*?)(\.[^.]*)?$/.exec(docUriPath) ?? [undefined, docUriPath];
+      const [, fileTitle, ext] = /^\/(?:.*\/)*(.*?)(\.\w*)?$/.exec(docUriPath) ?? [undefined, docUriPath];
       symbol.name = fileTitle;
       symbol.detail = 'PackedScene';
       symbol.kind = SymbolKind.File;
@@ -568,6 +568,7 @@ function gdCodeLoad(resPath: string, id: string | null, type: string | undefined
  * @returns Uri of the project's root folder if found, or null if the asset is not inside a project.
  */
 export async function projectDir(assetUri: Uri) {
+  if (!resScheme.has(assetUri.scheme)) return null;
   let uri = assetUri;
   do {
     const parent = Uri.joinPath(uri, '..'); // remove last path segment
@@ -582,6 +583,8 @@ export async function projectDir(assetUri: Uri) {
   } while (uri.path);
   return null;
 }
+/** URL schemes where you can get a project dir for an asset. */
+const resScheme = new Set(['file', 'vscode-file', 'vscode-remote', 'vscode-remote-resource']);
 async function resPathOfDocument(document: TextDocument) {
   const assetUri = document.uri;
   const assetPath = assetUri.path;
@@ -683,7 +686,8 @@ async function resPathPreview(resPath: string, document: TextDocument, token: Ca
     // unknown file type that we cannot render directly; but maybe Godot can preview it
     const thumbSrc = await resThumb(resUri, token); // try the small thumbnail image from Godot cache
     if (thumbSrc) return md.appendMarkdown(`[<img src="${thumbSrc}"/>](${resUriStr})`);
-    return md.appendMarkdown(`[File](${resUriStr}) (${byteUnits(resStat.size)})`); // otherwise, give up and just link to file
+    // otherwise, give up and just link to file
+    return md.appendMarkdown(`[File](${resUriStr}) (${byteUnits(resStat.size)})`);
   }
   // font file; we should embed it as base64 URI inside a font test SVG
   const type = match[1].toLowerCase();
@@ -721,8 +725,8 @@ async function resPathPreview(resPath: string, document: TextDocument, token: Ca
   return md.appendMarkdown(`[<img src="${imgSrc}"/>](${resUriStr})`);
 }
 /** Data URI for the PNG thumbnail of the resource from Godot cache; or null if not found or cancelled. */
-async function resThumb(resUri: Uri, token: CancellationToken) {
-  if (!process) return null;
+export async function resThumb(resUri: Uri, token: CancellationToken) {
+  if (!process || resUri.scheme != 'file') return null;
   // Thumbnail max is 64x64 px = ~16KiB max, far less than the ~74kB MarkdownString base64 limit; ok to embed
   const resPathHash = md5(resUri.fsPath
     .replace(/^[a-z]:/, g0 => g0.toUpperCase()).replaceAll('\\', '/'));
@@ -812,13 +816,13 @@ export async function activate(context: ExtensionContext) {
   // cleanup garbage from older versions; no need to await
   if (ctx.storageUri) del(ctx.storageUri);
   del(ctx.globalStorageUri);
-  // check if supporting
   ctx.globalState.setKeysForSync([]);
   if (nodejs) {
+    // check if supporting
     if (ctx.globalState.get('supportKey') == checksum) supported = true;
     ctx.subscriptions.push(commands.registerCommand('godotFiles.unlockEarlyAccess', unlockEarlyAccess));
   }
-  // register all providers
+  // register multi-platform providers
   const provider = new GDAssetProvider();
   ctx.subscriptions.push(languages.registerDocumentSymbolProvider(GDAssetProvider.docs, provider));
   ctx.subscriptions.push(languages.registerDefinitionProvider(GDAssetProvider.godotDocs, provider));

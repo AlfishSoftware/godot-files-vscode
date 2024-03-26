@@ -5,7 +5,7 @@ This is *not* meant to replace the official [godot-tools] extension, but to impr
 
 [godot-tools]: https://github.com/godotengine/godot-vscode-plugin
 
-**Compatibility**: Godot 3.x, 4.x  
+**Compatibility**: Godot 3.x LTS and 4.0 to 4.x  
 This extension also works on browser IDEs ([vscode.dev](https://vscode.dev) and [github.dev](https://github.dev)), with limited functionality.
 
 ![Screenshot of godot-files extension for VSCode on a tscn file, showing syntax-coloring, outline and hover preview feature](docs/showcase-gdasset.webp)
@@ -28,10 +28,13 @@ Includes syntax-coloring for these languages:
 - Syntax-coloring of embedded code in asset strings for GDScript and Godot Shader resources (see image above).  
   😎 It even handles both inner and outer languages' escape sequences gracefully, and colors them differently:  
   ![Showcasing how embedded code escape sequences are handled gracefully](docs/showcase-embedded-code-escapes.webp)
+
 - Navigate to definition of `SubResource` and `ExtResource` references, and to resource paths.  
   ![Showcasing navigate to definition](docs/showcase-goto-definition.png)
+
 - Hover resource references or paths to show code for loading in GDScript (`preload(…)`, `load(…)` or `FileAccess.open(…)`).  
   ![Showcasing code for loading when previewing user path](docs/showcase-user-path-load.webp)
+
 - Hover image and font resource paths or their `ExtResource` references to preview them directly.  
   🔧 You can disable resource previews when hovering with the setting `godotFiles.hover.previewResource`.
   

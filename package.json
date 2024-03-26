@@ -1,7 +1,7 @@
 {
 	"publisher": "alfish",
 	"name": "godot-files",
-	"version": "0.0.7",
+	"version": "0.0.8",
 	"license": "Unlicense",
 	"displayName": "Godot Files",
 	"description": "Provides syntax-coloring for some files supported by Godot Editor.",
@@ -275,7 +275,9 @@
 							"linux": [
 								"~/.cache/godot/",
 								"~/.var/app/org.godotengine.GodotSharp/cache/godot/",
-								"~/.var/app/org.godotengine.Godot/cache/godot/"
+								"~/.var/app/org.godotengine.Godot3Sharp/cache/godot/",
+								"~/.var/app/org.godotengine.Godot/cache/godot/",
+								"~/.var/app/org.godotengine.Godot3/cache/godot/"
 							]
 						},
 						"additionalProperties": {
@@ -305,14 +307,14 @@
 						"scope": "language-overridable",
 						"type": "boolean",
 						"default": true,
-						"markdownDescription": "Show inline color decorators on `Color(…)` values.  \n⚠ Exclusive to early access."
+						"markdownDescription": "Show inline color decorators on `Color(…)` values."
 					},
 					"godotFiles.inlineColors.array": {
 						"order": 100,
 						"scope": "language-overridable",
 						"type": "boolean",
 						"default": true,
-						"description": "Show inline color decorators on color values within arrays.\n⚠ Exclusive to early access."
+						"description": "Show inline color decorators on color values within arrays."
 					},
 					"godotFiles.clarifyArrays.vector": {
 						"order": 200,
