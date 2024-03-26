@@ -457,7 +457,7 @@
 				{ "include": "#characterEscape" },
 				{
 					"comment": "Break source because it interferes with escaped quote pattern.",
-					"match": "\\s*\\b(?:(?:[a-z]+\\s+)*(?:func|signal)\\s+)?[A-Za-z_]\\w*\\s*[(]",
+					"match": "(?:\\b(?:[a-z]+\\s+)*(?:func|signal)\\s+)?(?:@|\\b)[A-Za-z_]\\w*\\s*[(]|\\bvar\\s+[A-Za-z_]\\w*\\s*:?",
 					"captures": {
 						"0": {
 							"patterns": [
