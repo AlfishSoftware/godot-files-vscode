@@ -289,6 +289,13 @@
 							}
 						},
 						"markdownDescription": "Paths to Godot cache files in each platform. The defaults should work in most cases. Add a path when using a Godot installation in [self-contained mode](https://docs.godotengine.org/en/stable/tutorials/io/data_paths.html#self-contained-mode).\n\nThe keys are platform ids as returned by NodeJS: `win32` (Windows), `darwin` (macOS), `linux`.\n\nEach key maps to an array of path strings. A starting `~/` in the path means the user's home directory. Environment variables are replaced using the syntax `%VARIABLE%` in Windows and `${VARIABLE}` in other platforms. Glob patterns are *not* allowed. The order in the array doesn't matter, since all paths are always scanned to get the most recent cache file."
+					},
+					"godotFiles.apiDocs.online": {
+						"order": 0,
+						"scope": "machine-overridable",
+						"type": "boolean",
+						"default": true,
+						"description": "Disable to only use the official godot-tools extension to open API documentation in a tab (requires Godot Editor to be running and connected). By default, the URL is opened if you're online."
 					}
 				}
 			},

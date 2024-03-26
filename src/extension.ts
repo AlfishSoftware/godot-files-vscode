@@ -1,5 +1,5 @@
 import {
-  workspace, window, commands, languages, ExtensionContext, Uri, CancellationToken,
+  workspace, window, commands, languages, extensions, env, ExtensionContext, Uri, CancellationToken,
   TextDocument, Range, Position, FileSystemError, FileType, Color, TextEdit, MarkdownString,
   DocumentSymbol, SymbolKind, Definition, Location, Hover, ColorInformation, ColorPresentation, InlayHint,
   DocumentFilter, DocumentSymbolProvider, DefinitionProvider, HoverProvider, DocumentColorProvider, InlayHintsProvider,
@@ -7,6 +7,7 @@ import {
 const nodejs = typeof process != 'undefined' ? process : undefined;
 const createHash = nodejs && require('crypto').createHash;
 const homedir = nodejs && require('os').homedir();
+const dns = nodejs && require('dns/promises');
 
 function md5(s: string) {
   return createHash?.('md5').update(s).digest('hex');
@@ -47,6 +48,12 @@ export function byteUnits(numBytes: number) {
   if (g < 1024) return g.toFixed(1) + ' GiB';
   const t = g / 1024;
   return t.toFixed(1) + ' TiB';
+}
+/** Returns false if the user is not online. */
+async function isOnline() {
+  if (typeof navigator != 'undefined') return navigator.onLine;
+  try { return dns ? !!(await dns.lookup('docs.godotengine.org')).address : false; }
+  catch (err) { return false; }
 }
 
 class GDResource {
@@ -350,12 +357,30 @@ class GDAssetProvider implements
       const resLoc = await locateResPath(word, document);
       if (typeof resLoc != 'string')
         return new Location(resLoc.uri, new Position(0, 0));
-    } else if ((match = word.match(/^((?:Ext|Sub)Resource)\s*\(\s*(?:(\d+)|"([^"\\]*)")\s*\)$/))) {
+      return null;
+    }
+    if ((match = word.match(/^(?:@?[A-Z][A-Za-z0-9]+|float|int|bool)$/))) {
+      const className = match[0];
+      const config = workspace.getConfiguration('godotFiles', document);
+      const online = config.get<boolean>('apiDocs.online') && await isOnline();
+      if (online) {
+        const language = 'en', version = 'stable';
+        if (await env.openExternal(Uri.from({
+          scheme: 'https', authority: 'docs.godotengine.org',
+          path: `/${language}/${version}/classes/class_${className.toLowerCase()}.html`
+        }))) return null;
+      } else if (extensions.getExtension('geequlim.godot-tools')?.isActive) {
+        return new Location(Uri.from({ scheme: 'gddoc', path: className + '.gddoc' }), new Position(0, 0));
+      }
+      window.showErrorMessage(`Could not open documentation for ${className}.`);
+      return null;
+    }
+    if (gdasset.isInString(wordRange)) return null;
+    if ((match = word.match(/^((?:Ext|Sub)Resource)\s*\(\s*(?:(\d+)|"([^"\\]*)")\s*\)$/))) {
       const keyword = match[1] as 'ExtResource' | 'SubResource';
       const id = match[2] ?? GDAssetProvider.unescapeString(match[3]);
       const s = gdasset.refs[keyword][id]?.symbol;
       if (!s) return null;
-      if (gdasset.isInString(wordRange)) return null;
       if (keyword == 'ExtResource') {
         let d = document.getText(s.selectionRange).indexOf(' path="');
         d = d < 0 ? 0 : d + 7;

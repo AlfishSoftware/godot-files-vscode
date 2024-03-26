@@ -67,3 +67,8 @@ declare module 'util' {
   export function promisify<TCustom extends Function>(fn: CustomPromisify<TCustom>): TCustom;
 }
 declare function require(module: 'util'): typeof import('util');
+
+declare module 'dns/promises' {
+  function lookup(hostname: string): Promise<{ address: string; family: number; }>;
+}
+declare function require(module: 'dns/promises'): typeof import('dns/promises');
