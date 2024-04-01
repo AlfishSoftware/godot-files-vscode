@@ -14,10 +14,12 @@ This extension also works on browser IDEs ([vscode.dev](https://vscode.dev) and 
 
 Includes syntax-coloring for these languages:
 
-- **Godot Shader** files: `.gdshader`, `.gdshaderinc`.
+- **Godot Shader** files: `*.gdshader`, `*.gdshaderinc`.
 - Better (more specific) grammar for the INI-like files used by Godot (called "GDAsset" here):  
-  `.godot`, `.tscn`, `.escn`, `.tres`, `.gdns`, `.gdnlib`, `.import`, `.tet`, `.remap`.
-- The same grammar is reused for `.cfg` and the INI-like XDG Desktop Entry files: `.desktop`, `.directory`. Those fit better because this grammar is "smarter" than regular INI. E.g., it supports sub-properties, `;`-separated lists, apostrophe (single quote) inside unquoted strings like `don't`, etc. Feel free to associate this language (`config-definition` / Configuration Properties) with any other (non-Godot) INI-like formats as well if you notice it fits better.
+  `project.godot`, `*.tscn`, `*.escn`, `*.tres`, `*.gdns`, `*.gdnlib`, `*.import`, `*.tet`, `*.remap`.
+- The same grammar is reused for other INI-like files:  
+  `*.cfg`, Git config files (`.gitconfig`, `.git/config`) and XDG Desktop Entry files (`.desktop`, `.directory`).  
+  It fits better than INI and Properties because this grammar is "smarter" than regular INI. E.g., it supports sub-properties, literals (booleans, numbers, strings), quoted strings in section headers, `;`-separated lists, apostrophe (single quote) inside unquoted strings like `don't`, etc. You might want to associate this language (`config-definition` / Configuration Properties) with any other (non-Godot) INI-like formats as well if you notice it fits better.
 
 **INI-like** files (including GDAsset) also support:
 

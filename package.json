@@ -166,6 +166,12 @@
 					".desktop",
 					".directory"
 				],
+				"filenames": [
+					".gitconfig"
+				],
+				"filenamePatterns": [
+					"**/.git/config"
+				],
 				"icon": {
 					"dark": "./lang.gdasset/godot-asset.dark.svg",
 					"light": "./lang.gdasset/godot-asset.light.svg"
