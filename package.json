@@ -251,14 +251,14 @@
 			{
 				"command": "godotFiles.unlockEarlyAccess",
 				"title": "Godot Files: Unlock features in early access",
-				"enablement": "isWorkspaceTrusted && !isWeb"
+				"enablement": "isWorkspaceTrusted"
 			}
 		],
 		"menus": {
 			"extension/context": [
 				{
 					"command": "godotFiles.unlockEarlyAccess",
-					"when": "extension == alfish.godot-files && isWorkspaceTrusted && !isWeb"
+					"when": "extension == alfish.godot-files && isWorkspaceTrusted"
 				}
 			]
 		},

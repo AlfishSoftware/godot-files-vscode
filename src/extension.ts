@@ -12,8 +12,10 @@ const dns = nodejs && require('dns/promises');
 function md5(s: string) {
   return createHash?.('md5').update(s).digest('hex');
 }
-function sha512(s: string) {
-  return createHash?.('sha512').update(s).digest('hex');
+async function sha512(s: string) {
+  if (createHash) return createHash('sha512').update(s).digest('hex');
+  return Array.prototype.map.call(new Uint8Array(await crypto.subtle.digest('SHA-512', new TextEncoder().encode(s))),
+    (b: number) => b.toString(16).padStart(2, '0')).join('');
 }
 export function jsHash(s: string, seed = 0) { // 53-bit hash, see https://stackoverflow.com/a/52171480
   let a = 0xDEADBEEF ^ seed, b = 0x41C6CE57 ^ seed;
@@ -52,8 +54,12 @@ export function byteUnits(numBytes: number) {
 /** Returns false if the user is not online. */
 async function isOnline() {
   if (typeof navigator != 'undefined') return navigator.onLine;
-  try { return dns ? !!(await dns.lookup('docs.godotengine.org')).address : false; }
+  try { return dns ? !!(await dns.lookup(docsHost)).address : false; }
   catch (err) { return false; }
+}
+/** Converts a name from "PascalCase" convention to "snake_case". */
+function snakeCase(pascalCase: string) {
+  return pascalCase.replace(/(?<!^)\d*[A-Z_]/g, s => '_' + s).toLowerCase();
 }
 
 class GDResource {
@@ -360,7 +366,20 @@ class GDAssetProvider implements
       return null;
     }
     if (gdasset.isInString(wordRange)) return null;
-    if ((match = word.match(/^(?:@?[A-Z][A-Za-z0-9]+|float|int|bool)$/))) {
+    if ((match = word.match(/^((?:Ext|Sub)Resource)\s*\(\s*(?:(\d+)|"([^"\\]*)")\s*\)$/))) {
+      const keyword = match[1] as 'ExtResource' | 'SubResource';
+      const id = match[2] ?? GDAssetProvider.unescapeString(match[3]);
+      const s = gdasset.refs[keyword][id]?.symbol;
+      if (!s) return null;
+      if (keyword == 'ExtResource') {
+        let d = document.getText(s.selectionRange).indexOf(' path="');
+        d = d < 0 ? 0 : d + 7;
+        return new Location(document.uri, s.range.start.translate(0, d));
+      }
+      return new Location(document.uri, s.range);
+    }
+    const outWord = document.getText(new Range(wordRange.start.translate(0, -7), wordRange.end.translate(0, 1)));
+    if (outWord.match(/\btype=".*"$|\($/) && (match = word.match(/^(?:@?[A-Z][A-Za-z0-9]+|float|int|bool)$/))) {
       const className = match[0];
       const config = workspace.getConfiguration('godotFiles', document);
       const online = config.get<boolean>('apiDocs.online') && await isOnline();
@@ -377,27 +396,46 @@ class GDAssetProvider implements
         const apiLocale = 'en';
         const version = await godotVersionOfDocument(document);
         const apiVersion = version?.api || (version?.major == 3 ? latestApiGodot3 : 'stable');
-        if (await env.openExternal(Uri.from({
-          scheme: 'https', authority: 'docs.godotengine.org',
-          path: `/${apiLocale}/${apiVersion}/classes/class_${className.toLowerCase()}.html`
-        }))) return null;
+        const ghBranch = version?.api || (version?.major == 3 ? '3.x' : 'master');
+        const iconName = version?.major == 3 ? 'icon_' + snakeCase(className) : className;
+        const apiUrl = 'https://' + docsHost +
+          `/${apiLocale}/${apiVersion}/classes/class_${className.toLowerCase()}.html`;
+        // if (await env.openExternal(Uri.parse(apiUrl, true))) return null;
+        try {
+          const response = await fetch(apiUrl);
+          if (!response.ok)
+            throw new Error(`Error fetching Godot API docs: ${response.status} ${response.statusText} ${apiUrl}`);
+          const responseHtml = await response.text();
+          const webviewPanel = window.createWebviewPanel('godotFiles.docs.online', className, 1, {
+            localResourceRoots: [], enableScripts: true
+          });
+          try {
+            const u = `https://raw.githubusercontent.com/godotengine/godot/${ghBranch}/editor/icons/${iconName}.svg`;
+            const iconResponse = await fetch(u);
+            if (iconResponse.ok) {
+              const iconBlob = new Uint8Array(await iconResponse.arrayBuffer());
+              webviewPanel.iconPath = Uri.from({
+                scheme: 'data', path: 'image/svg+xml;base64,' + base64(iconBlob)
+              });
+            } else {
+              console.warn(`Cannot load Godot class icon: ${iconResponse.status} ${iconResponse.statusText} ${u}`);
+              webviewPanel.iconPath = Uri.from({ scheme: 'https', authority: docsHost, path: '/favicon.ico' });
+            }
+          } catch (e) { console.error(e); }
+          webviewPanel.webview.html = responseHtml.replace(
+            /(?<=<head>\s*(?:<meta\s+charset\s*=\s*["']utf-8["']\s*\/>)?)/i, `<base href="${apiUrl}"/><style>
+body.wy-body-for-nav{margin:unset}
+nav.wy-nav-top,nav.wy-nav-side,div.rst-versions,div.rst-footer-buttons{display:none}
+div.wy-grid-for-nav{left:0;right:0}
+section.wy-nav-content-wrap,div.wy-nav-content{margin:auto}
+</style>`);
+          return null;
+        } catch (e) { console.error(e); }
       } else if (extensions.getExtension('geequlim.godot-tools')?.isActive) {
         return new Location(Uri.from({ scheme: 'gddoc', path: className + '.gddoc' }), new Position(0, 0));
       }
       window.showErrorMessage(`Could not open documentation for ${className}.`);
       return null;
-    }
-    if ((match = word.match(/^((?:Ext|Sub)Resource)\s*\(\s*(?:(\d+)|"([^"\\]*)")\s*\)$/))) {
-      const keyword = match[1] as 'ExtResource' | 'SubResource';
-      const id = match[2] ?? GDAssetProvider.unescapeString(match[3]);
-      const s = gdasset.refs[keyword][id]?.symbol;
-      if (!s) return null;
-      if (keyword == 'ExtResource') {
-        let d = document.getText(s.selectionRange).indexOf(' path="');
-        d = d < 0 ? 0 : d + 7;
-        return new Location(document.uri, s.range.start.translate(0, d));
-      }
-      return new Location(document.uri, s.range);
     }
     return null;
   }
@@ -864,7 +902,7 @@ async function unlockEarlyAccess() {
     prompt: 'Check the README page for more info.'
   });
   if (!password) return;
-  const hash = sha512(password);
+  const hash = await sha512(password);
   if (hash != checksum) {
     window.showErrorMessage(
       'Incorrect password. Paste it exactly like you received when donating.');
@@ -895,11 +933,9 @@ export async function activate(context: ExtensionContext) {
   if (ctx.storageUri) del(ctx.storageUri);
   del(ctx.globalStorageUri);
   ctx.globalState.setKeysForSync([]);
-  if (nodejs) {
-    // check if supporting
-    if (ctx.globalState.get('supportKey') == checksum) supported = true;
-    ctx.subscriptions.push(commands.registerCommand('godotFiles.unlockEarlyAccess', unlockEarlyAccess));
-  }
+  // check if supporting
+  if (ctx.globalState.get('supportKey') == checksum) supported = true;
+  ctx.subscriptions.push(commands.registerCommand('godotFiles.unlockEarlyAccess', unlockEarlyAccess));
   // register multi-platform providers
   const provider = new GDAssetProvider();
   ctx.subscriptions.push(languages.registerDocumentSymbolProvider(GDAssetProvider.docs, provider));
@@ -922,6 +958,7 @@ export function deactivate() {
   } catch { /* ignore, logs should be auto-deleted eventually anyway */ }
 }
 
+const docsHost = 'docs.godotengine.org';
 const latestApiGodot3 = '3.6';
 // const docsLocales = ['en', 'cs', 'de', 'es', 'fr', 'it', 'ja', 'ko', 'pl', 'pt-br', 'ru', 'uk', 'zh-cn', 'zh-tw'];
 
