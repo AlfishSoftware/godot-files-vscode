@@ -379,7 +379,7 @@ class GDAssetProvider implements
       return new Location(document.uri, s.range);
     }
     const outWord = document.getText(new Range(wordRange.start.translate(0, -7), wordRange.end.translate(0, 1)));
-    if (outWord.match(/\btype=".*"$|\($/) && (match = word.match(/^(?:@?[A-Z][A-Za-z0-9]+|float|int|bool)$/))) {
+    if (outWord.match(/\btype=".*"$|[([\]]$/) && (match = word.match(/^(?:@?[A-Z][A-Za-z0-9]+|float|int|bool)$/))) {
       const className = match[0];
       const config = workspace.getConfiguration('godotFiles', document);
       const online = config.get<boolean>('apiDocs.online') && await isOnline();
@@ -395,40 +395,8 @@ class GDAssetProvider implements
         // }
         const apiLocale = 'en';
         const version = await godotVersionOfDocument(document);
-        const apiVersion = version?.api || (version?.major == 3 ? latestApiGodot3 : 'stable');
-        const ghBranch = version?.api || (version?.major == 3 ? '3.x' : 'master');
-        const iconName = version?.major == 3 ? 'icon_' + snakeCase(className) : className;
-        const apiUrl = 'https://' + docsHost +
-          `/${apiLocale}/${apiVersion}/classes/class_${className.toLowerCase()}.html`;
-        // if (await env.openExternal(Uri.parse(apiUrl, true))) return null;
         try {
-          const response = await fetch(apiUrl);
-          if (!response.ok)
-            throw new Error(`Error fetching Godot API docs: ${response.status} ${response.statusText} ${apiUrl}`);
-          const responseHtml = await response.text();
-          const webviewPanel = window.createWebviewPanel('godotFiles.docs.online', className, 1, {
-            localResourceRoots: [], enableScripts: true
-          });
-          try {
-            const u = `https://raw.githubusercontent.com/godotengine/godot/${ghBranch}/editor/icons/${iconName}.svg`;
-            const iconResponse = await fetch(u);
-            if (iconResponse.ok) {
-              const iconBlob = new Uint8Array(await iconResponse.arrayBuffer());
-              webviewPanel.iconPath = Uri.from({
-                scheme: 'data', path: 'image/svg+xml;base64,' + base64(iconBlob)
-              });
-            } else {
-              console.warn(`Cannot load Godot class icon: ${iconResponse.status} ${iconResponse.statusText} ${u}`);
-              webviewPanel.iconPath = Uri.from({ scheme: 'https', authority: docsHost, path: '/favicon.ico' });
-            }
-          } catch (e) { console.error(e); }
-          webviewPanel.webview.html = responseHtml.replace(
-            /(?<=<head>\s*(?:<meta\s+charset\s*=\s*["']utf-8["']\s*\/>)?)/i, `<base href="${apiUrl}"/><style>
-body.wy-body-for-nav{margin:unset}
-nav.wy-nav-top,nav.wy-nav-side,div.rst-versions,div.rst-footer-buttons{display:none}
-div.wy-grid-for-nav{left:0;right:0}
-section.wy-nav-content-wrap,div.wy-nav-content{margin:auto}
-</style>`);
+          await openApiDocs(className, version, apiLocale);
           return null;
         } catch (e) { console.error(e); }
       } else if (extensions.getExtension('geequlim.godot-tools')?.isActive) {
@@ -657,12 +625,13 @@ export async function projectDir(assetUri: Uri) {
   } while (uri.path);
   return null;
 }
+interface GodotVersion { major: number; minor?: number; api?: string; }
 const projGodotVersionRegex = /^\s*config\/features\s*=\s*PackedStringArray\s*\(\s*(.*?)\s*\)\s*(?:[;#].*)?$/m;
 /** Get the Godot version of the project on the specified folder.
  * @param projectDirUri Uri of the folder containing the project.godot file.
  * @returns An object with versions (major, and if found, minor too) or null if not found.
  */
-async function godotVersionOfProject(projectDirUri: Uri) {
+async function godotVersionOfProject(projectDirUri: Uri): Promise<GodotVersion | null> {
   let t: string;
   try {
     t = new TextDecoder().decode(await workspace.fs.readFile(Uri.joinPath(projectDirUri, 'project.godot')));
@@ -886,6 +855,65 @@ ${fontTest}
 }
 /** URL schemes that markdownRenderer allows loading from */
 const mdScheme = new Set(['data', 'file', 'https', 'vscode-file', 'vscode-remote', 'vscode-remote-resource', 'mailto']);
+
+async function openApiDocs(className: string, version: GodotVersion | null, apiLocale = 'en') {
+  const apiVersion = version?.api || (version?.major == 3 ? latestApiGodot3 : 'stable');
+  const apiUrl = 'https://' + docsHost +
+    `/${apiLocale}/${apiVersion}/classes/class_${className.toLowerCase()}.html`;
+  const openInTabs = true; //TODO as setting
+  if (openInTabs) await openApiDocsInTab(className, version, apiUrl);
+  else await openApiDocsInBrowser(apiUrl);
+}
+async function openApiDocsInBrowser(apiUrl: string) {
+  if (!await env.openExternal(Uri.parse(apiUrl, true))) throw new Error('Could not open URL in browser: ' + apiUrl);
+}
+async function openApiDocsInTab(className: string, version: GodotVersion | null, apiUrl: string) {
+  const ghBranch = version?.api || (version?.major == 3 ? '3.x' : 'master');
+  const iconName = version?.major == 3 ? 'icon_' + snakeCase(className) : className;
+  const response = await fetch(apiUrl);
+  if (!response.ok)
+    throw new Error(`Error fetching Godot API docs: ${response.status} ${response.statusText} ${apiUrl}`);
+  const html = await response.text();
+  const webviewPanel = window.createWebviewPanel('godotFiles.docs.online', className, 1, {
+    localResourceRoots: [], enableScripts: true
+  });
+  try {
+    const iconUrl = `https://raw.githubusercontent.com/godotengine/godot/${ghBranch}/editor/icons/${iconName}.svg`;
+    const iconResponse = await fetch(iconUrl);
+    if (iconResponse.ok) {
+      const iconBlob = new Uint8Array(await iconResponse.arrayBuffer());
+      webviewPanel.iconPath = Uri.from({ scheme: 'data', path: 'image/svg+xml;base64,' + base64(iconBlob) });
+    } else {
+      console.warn(`Cannot load Godot class icon: ${iconResponse.status} ${iconResponse.statusText} ${iconUrl}`);
+      webviewPanel.iconPath = Uri.from({ scheme: 'https', authority: docsHost, path: '/favicon.ico' });
+    }
+  } catch (e) { console.error(e); }
+  const cspHost = 'https://' + docsHost.replace(/^docs\./, '*.'); + '/en/*';
+  const csp = `object-src 'none'; script-src 'unsafe-inline' ${cspHost}; img-src data: ${cspHost}`;
+  const allowNavigation = true; //TODO as setting
+  const injectHead = allowNavigation ? '' : `<style>
+body.wy-body-for-nav { margin: unset }
+nav.wy-nav-top, nav.wy-nav-side, div.rst-versions, div.rst-footer-buttons { display: none }
+section.wy-nav-content-wrap, div.wy-nav-content { margin: auto }
+</style>`;
+  webviewPanel.webview.html = html.replace(/(?<=<head>\s*(?:<meta\s+charset\s*=\s*["']utf-8["']\s*\/>)?)/i, `\
+<base href="${apiUrl}"/><style>
+body.wy-body-for-nav { padding: 0 }
+div.rst-other-versions > dl:nth-child(1), #rtd-sidebar { display: none !important }
+</style><script>
+function vscodeSubmitForm(event) { event.preventDefault();
+  const form = event.target, a = document.createElement('a');
+  a.href = form.action + '?' + new URLSearchParams(new FormData(form)).toString();
+  a.style.display = 'none'; form.append(a); a.click(); a.remove();
+}
+document.addEventListener('DOMContentLoaded', () => {
+  document.forms[0]?.addEventListener('submit', vscodeSubmitForm);
+  for (const a of document.querySelectorAll('div.rst-other-versions > dl:nth-child(2) > dd > a'))
+    a.title = a.href = document.baseURI.replace(/(?<=\\/en\\/)[^/]+(?=\\/)/, a.text);
+});
+</script><meta http-equiv="Content-Security-Policy" content="${csp}"/>
+` + injectHead);
+}
 
 async function unlockEarlyAccess() {
   if (supported) {
