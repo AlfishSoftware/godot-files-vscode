@@ -378,31 +378,27 @@ class GDAssetProvider implements
       }
       return new Location(document.uri, s.range);
     }
-    const outWord = document.getText(new Range(wordRange.start.translate(0, -7), wordRange.end.translate(0, 1)));
-    if (outWord.match(/\btype=".*"$|[([\]]$/) && (match = word.match(/^(?:@?[A-Z][A-Za-z0-9]+|float|int|bool)$/))) {
-      const className = match[0];
-      const config = workspace.getConfiguration('godotFiles', document);
-      const online = config.get<boolean>('apiDocs.online') && await isOnline();
-      if (online) {
-        // We could get locale properly, but it seems other locales don't support every version consistently.
-        // Also the API will probably still be in english even in those locales.
-        // const locale = env.language.toLowerCase();
-        // let apiLocale: string;
-        // if (docsLocales.includes(locale)) apiLocale = locale;
-        // else {
-        //   const lang = locale.replace(/[-_].*$/, '');
-        //   apiLocale = docsLocales.includes(lang) ? lang : 'en';
-        // }
-        const apiLocale = 'en';
-        const version = await godotVersionOfDocument(document);
-        try {
-          await openApiDocs(className, version, apiLocale);
-          return null;
-        } catch (e) { console.error(e); }
-      } else if (extensions.getExtension('geequlim.godot-tools')?.isActive) {
-        return new Location(Uri.from({ scheme: 'gddoc', path: className + '.gddoc' }), new Position(0, 0));
+    const outWord = document.getText(new Range(
+      wordRange.start.line, 0, wordRange.end.line, wordRange.end.character + 1));
+    if (outWord.match(/\btype=".*"$|[([\]]$/) && (match = word.match(/^(?:@?[A-Z][A-Za-z0-9]+|float|int|bool)$/)))
+      return await apiDocs(document, match[0], '', token);
+    const line = document.lineAt(wordRange.start);
+    if ((match = line.text.match(/^\s*(\w+)\s*=/)) && match[1] == word) {
+      // when on a property, find out its class and navigate to it in the docs of its class
+      const regexSectionClass =
+        /^\s*\[\s*(\w+)(?:\s+\w+\s*=\s*(?:\d+|"[^"\\]*"))*?(?:\s+type\s*=\s*"([^"\\]*)")?.*?\s*\]\s*(?:[;#].*)?$/;
+      for (let i = line.lineNumber - 1; i >= 0; i--) {
+        if (!(match = document.lineAt(i).text.match(regexSectionClass))) continue;
+        let className = match[2];
+        if (!className) {
+          const sectionTag = match[1];
+          if (sectionTag == 'resource' && gdasset.resource?.type) className = gdasset.resource.type;
+          else if (sectionTag == 'node') className = 'Node';
+          else if (sectionTag == 'sub_resource') className = 'Resource';
+          else return null;
+        }
+        return await apiDocs(document, className, word, token);
       }
-      window.showErrorMessage(`Could not open documentation for ${className}.`);
       return null;
     }
     return null;
@@ -856,36 +852,78 @@ ${fontTest}
 /** URL schemes that markdownRenderer allows loading from */
 const mdScheme = new Set(['data', 'file', 'https', 'vscode-file', 'vscode-remote', 'vscode-remote-resource', 'mailto']);
 
-async function openApiDocs(className: string, version: GodotVersion | null, apiLocale = 'en') {
+async function apiDocs(
+  document: TextDocument, className: string, memberName: string = '', token: CancellationToken | null = null
+) {
+  const config = workspace.getConfiguration('godotFiles', document);
+  const online = config.get<boolean>('apiDocs.online') && await isOnline();
+  if (token?.isCancellationRequested) return null;
+  if (online) {
+    // We could get locale properly, but it seems other locales don't support every version consistently.
+    // Also the API will probably still be in english even in those locales.
+    // const locale = env.language.toLowerCase();
+    // let apiLocale: string;
+    // if (docsLocales.includes(locale)) apiLocale = locale;
+    // else {
+    //   const lang = locale.replace(/[-_].*$/, '');
+    //   apiLocale = docsLocales.includes(lang) ? lang : 'en';
+    // }
+    const apiLocale = 'en';
+    const version = await godotVersionOfDocument(document);
+    if (token?.isCancellationRequested) return null;
+    try {
+      await openApiDocsWebpage(className, memberName, version, apiLocale);
+      return null;
+    } catch (e) { console.error(e); }
+  } else if (extensions.getExtension('geequlim.godot-tools')?.isActive) {
+    const uri = Uri.from({ scheme: 'gddoc', path: className + '.gddoc', fragment: memberName || undefined });
+    return new Location(uri, new Position(0, 0));
+  }
+  window.showErrorMessage(`Could not open documentation for ${className}.`);
+  return null;
+}
+async function openApiDocsWebpage(
+  className: string, memberName: string = '', version: GodotVersion | null = null, apiLocale = 'en',
+  token: CancellationToken | null = null
+) {
   const apiVersion = version?.api || (version?.major == 3 ? latestApiGodot3 : 'stable');
-  const apiUrl = 'https://' + docsHost +
-    `/${apiLocale}/${apiVersion}/classes/class_${className.toLowerCase()}.html`;
+  const classLower = className.toLowerCase();
+  const apiUrl = 'https://' + docsHost + `/${apiLocale}/${apiVersion}/classes/class_${classLower}.html`;
+  let fragment = '';
+  if (memberName) {
+    const memberDash = memberName.replaceAll('_', '-');
+    const metaType = apiVersion == '3.0' || apiVersion == '2.1' ? '' : 'property-';
+    fragment = `#class-${classLower}-${metaType}${memberDash}`;
+  }
   const openInTabs = true; //TODO as setting
-  if (openInTabs) await openApiDocsInTab(className, version, apiUrl);
-  else await openApiDocsInBrowser(apiUrl);
+  if (openInTabs) await openApiDocsInTab(className, version, apiUrl, fragment, token);
+  else await openApiDocsInBrowser(apiUrl + fragment);
 }
 async function openApiDocsInBrowser(apiUrl: string) {
   if (!await env.openExternal(Uri.parse(apiUrl, true))) throw new Error('Could not open URL in browser: ' + apiUrl);
 }
-async function openApiDocsInTab(className: string, version: GodotVersion | null, apiUrl: string) {
+async function openApiDocsInTab(
+  className: string, version: GodotVersion | null, apiUrl: string, fragment: string,
+  token: CancellationToken | null = null
+) {
   const ghBranch = version?.api || (version?.major == 3 ? '3.x' : 'master');
   const iconName = version?.major == 3 ? 'icon_' + snakeCase(className) : className;
   const response = await fetch(apiUrl);
   if (!response.ok)
     throw new Error(`Error fetching Godot API docs: ${response.status} ${response.statusText} ${apiUrl}`);
+  if (token?.isCancellationRequested) return;
   const html = await response.text();
-  const webviewPanel = window.createWebviewPanel('godotFiles.docs.online', className, 1, {
-    localResourceRoots: [], enableScripts: true
-  });
+  let iconPath;
   try {
     const iconUrl = `https://raw.githubusercontent.com/godotengine/godot/${ghBranch}/editor/icons/${iconName}.svg`;
+    if (token?.isCancellationRequested) return;
     const iconResponse = await fetch(iconUrl);
     if (iconResponse.ok) {
       const iconBlob = new Uint8Array(await iconResponse.arrayBuffer());
-      webviewPanel.iconPath = Uri.from({ scheme: 'data', path: 'image/svg+xml;base64,' + base64(iconBlob) });
+      iconPath = Uri.from({ scheme: 'data', path: 'image/svg+xml;base64,' + base64(iconBlob) });
     } else {
       console.warn(`Cannot load Godot class icon: ${iconResponse.status} ${iconResponse.statusText} ${iconUrl}`);
-      webviewPanel.iconPath = Uri.from({ scheme: 'https', authority: docsHost, path: '/favicon.ico' });
+      iconPath = Uri.from({ scheme: 'https', authority: docsHost, path: '/favicon.ico' });
     }
   } catch (e) { console.error(e); }
   const cspHost = 'https://' + docsHost.replace(/^docs\./, '*.'); + '/en/*';
@@ -896,11 +934,12 @@ body.wy-body-for-nav { margin: unset }
 nav.wy-nav-top, nav.wy-nav-side, div.rst-versions, div.rst-footer-buttons { display: none }
 section.wy-nav-content-wrap, div.wy-nav-content { margin: auto }
 </style>`;
-  webviewPanel.webview.html = html.replace(/(?<=<head>\s*(?:<meta\s+charset\s*=\s*["']utf-8["']\s*\/>)?)/i, `\
+  const finalHtml = html.replace(/(?<=<head>\s*(?:<meta\s+charset\s*=\s*["']utf-8["']\s*\/>)?)/i, `\
 <base href="${apiUrl}"/><style>
 body.wy-body-for-nav { padding: 0 }
 div.rst-other-versions > dl:nth-child(1), #rtd-sidebar { display: none !important }
 </style><script>
+location.hash = "${fragment || className.toLowerCase()}";
 function vscodeSubmitForm(event) { event.preventDefault();
   const form = event.target, a = document.createElement('a');
   a.href = form.action + '?' + new URLSearchParams(new FormData(form)).toString();
@@ -913,6 +952,12 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script><meta http-equiv="Content-Security-Policy" content="${csp}"/>
 ` + injectHead);
+  if (token?.isCancellationRequested) return;
+  const webviewPanel = window.createWebviewPanel('godotFiles.docs.online', className, 1, {
+    localResourceRoots: [], enableScripts: true
+  });
+  if (iconPath) webviewPanel.iconPath = iconPath;
+  webviewPanel.webview.html = finalHtml;
 }
 
 async function unlockEarlyAccess() {
