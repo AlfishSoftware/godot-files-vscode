@@ -386,17 +386,19 @@ class GDAssetProvider implements
     if ((match = line.text.match(/^\s*(\w+)\s*=/)) && match[1] == word) {
       // when on a property, find out its class and navigate to it in the docs of its class
       const regexSectionClass =
-        /^\s*\[\s*(\w+)(?:\s+\w+\s*=\s*(?:\d+|"[^"\\]*"))*?(?:\s+type\s*=\s*"([^"\\]*)")?.*?\s*\]\s*(?:[;#].*)?$/;
+        /^\s*\[\s*\w+(?:\s+\w+\s*=\s*(?:\d+|"[^"\\]*"))*?\s+type\s*=\s*"([^"\\]+)".*?\s*\]\s*(?:[;#].*)?$/;
+      const regexSectionNoClass = /^\s*\[\s*(\w+)(?:\s+\w+\s*=\s*(?:\d+|"[^"\\]*"))*?.*?\s*\]\s*(?:[;#].*)?$/;
       for (let i = line.lineNumber - 1; i >= 0; i--) {
-        if (!(match = document.lineAt(i).text.match(regexSectionClass))) continue;
-        let className = match[2];
-        if (!className) {
-          const sectionTag = match[1];
-          if (sectionTag == 'resource' && gdasset.resource?.type) className = gdasset.resource.type;
-          else if (sectionTag == 'node') className = 'Node';
-          else if (sectionTag == 'sub_resource') className = 'Resource';
-          else return null;
-        }
+        const textLine = document.lineAt(i).text;
+        if ((match = textLine.match(regexSectionClass)))
+          return await apiDocs(document, match[1], word, token);
+        if (!(match = textLine.match(regexSectionNoClass))) continue;
+        let className;
+        const sectionTag = match[1];
+        if (sectionTag == 'resource' && gdasset.resource?.type) className = gdasset.resource.type;
+        else if (sectionTag == 'node') className = 'Node';
+        else if (sectionTag == 'sub_resource') className = 'Resource';
+        else return null;
         return await apiDocs(document, className, word, token);
       }
       return null;
@@ -852,8 +854,19 @@ ${fontTest}
 /** URL schemes that markdownRenderer allows loading from */
 const mdScheme = new Set(['data', 'file', 'https', 'vscode-file', 'vscode-remote', 'vscode-remote-resource', 'mailto']);
 
+async function fetchAsDataUri(url: string) {
+  try {
+    const response = await fetch(url);
+    if (response.ok) {
+      const blob = await response.blob();
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      return Uri.from({ scheme: 'data', path: blob.type + ';base64,' + base64(bytes) });
+    } else console.warn(`Could not fetch as data URI: ${response.status} (${response.statusText}) ${url}`);
+  } catch (e) { console.error(e); }
+  return null;
+}
 async function apiDocs(
-  document: TextDocument, className: string, memberName: string = '', token: CancellationToken | null = null
+  document: TextDocument, className: string, memberName: string, token: CancellationToken | null
 ) {
   const config = workspace.getConfiguration('godotFiles', document);
   const online = config.get<boolean>('apiDocs.online') && await isOnline();
@@ -872,7 +885,7 @@ async function apiDocs(
     const version = await godotVersionOfDocument(document);
     if (token?.isCancellationRequested) return null;
     try {
-      await openApiDocsWebpage(className, memberName, version, apiLocale);
+      await openApiDocsWebpage(className, memberName, version, apiLocale, token);
       return null;
     } catch (e) { console.error(e); }
   } else if (extensions.getExtension('geequlim.godot-tools')?.isActive) {
@@ -883,81 +896,105 @@ async function apiDocs(
   return null;
 }
 async function openApiDocsWebpage(
-  className: string, memberName: string = '', version: GodotVersion | null = null, apiLocale = 'en',
-  token: CancellationToken | null = null
+  className: string, memberName: string, version: GodotVersion | null, apiLocale: string,
+  token: CancellationToken | null
 ) {
   const apiVersion = version?.api || (version?.major == 3 ? latestApiGodot3 : 'stable');
   const classLower = className.toLowerCase();
-  const apiUrl = 'https://' + docsHost + `/${apiLocale}/${apiVersion}/classes/class_${classLower}.html`;
-  let fragment = '';
-  if (memberName) {
-    const memberDash = memberName.replaceAll('_', '-');
-    const metaType = apiVersion == '3.0' || apiVersion == '2.1' ? '' : 'property-';
-    fragment = `#class-${classLower}-${metaType}${memberDash}`;
-  }
+  const page = `classes/class_${classLower}.html`;
+  const fragment = '#class-' + classLower + (!memberName ? '' :
+    `-${apiVersion == '3.0' || apiVersion == '2.1' ? '' : 'property-'}${memberName.replaceAll('_', '-')}`);
   const openInTabs = true; //TODO as setting
-  if (openInTabs) await openApiDocsInTab(className, version, apiUrl, fragment, token);
-  else await openApiDocsInBrowser(apiUrl + fragment);
+  if (openInTabs) await openDocsInTab(apiLocale, apiVersion, page, fragment, token);
+  else await openDocsInBrowser(apiLocale, apiVersion, page, fragment);
 }
-async function openApiDocsInBrowser(apiUrl: string) {
-  if (!await env.openExternal(Uri.parse(apiUrl, true))) throw new Error('Could not open URL in browser: ' + apiUrl);
+async function openDocsInBrowser(locale: string, version: string, page: string, fragment: string) {
+  const url = `https://${docsHost}/${locale}/${version}/${page}${fragment}`;
+  if (!await env.openExternal(Uri.parse(url, true))) throw new Error('Could not open URL in browser: ' + url);
 }
-async function openApiDocsInTab(
-  className: string, version: GodotVersion | null, apiUrl: string, fragment: string,
-  token: CancellationToken | null = null
+async function openDocsInTab(locale: string, version: string, page: string, fragment: string,
+  token: CancellationToken | null
 ) {
-  const ghBranch = version?.api || (version?.major == 3 ? '3.x' : 'master');
-  const iconName = version?.major == 3 ? 'icon_' + snakeCase(className) : className;
-  const response = await fetch(apiUrl);
+  const docsUrl = `https://${docsHost}/${locale}/${version}/${page}`;
+  const response = await fetch(docsUrl);
   if (!response.ok)
-    throw new Error(`Error fetching Godot API docs: ${response.status} ${response.statusText} ${apiUrl}`);
+    throw new Error(`Error fetching Godot docs: ${response.status} (${response.statusText}) ${docsUrl}`);
   if (token?.isCancellationRequested) return;
   const html = await response.text();
-  let iconPath;
-  try {
-    const iconUrl = `https://raw.githubusercontent.com/godotengine/godot/${ghBranch}/editor/icons/${iconName}.svg`;
-    if (token?.isCancellationRequested) return;
-    const iconResponse = await fetch(iconUrl);
-    if (iconResponse.ok) {
-      const iconBlob = new Uint8Array(await iconResponse.arrayBuffer());
-      iconPath = Uri.from({ scheme: 'data', path: 'image/svg+xml;base64,' + base64(iconBlob) });
-    } else {
-      console.warn(`Cannot load Godot class icon: ${iconResponse.status} ${iconResponse.statusText} ${iconUrl}`);
-      iconPath = Uri.from({ scheme: 'https', authority: docsHost, path: '/favicon.ico' });
-    }
-  } catch (e) { console.error(e); }
-  const cspHost = 'https://' + docsHost.replace(/^docs\./, '*.'); + '/en/*';
-  const csp = `object-src 'none'; script-src 'unsafe-inline' ${cspHost}; img-src data: ${cspHost}`;
+  if (token?.isCancellationRequested) return;
+  const title = html.match(/<meta\s+property\s*=\s*"og:title"\s+content\s*=\s*"(.*?)"\s*\/?>/i)?.[1] ||
+    html.match(/<title>(.*?)(?: &mdash;[^<]*)?<\/title>/i)?.[1] || 'Godot Docs';
+  let iconUrl = '';
+  if (page.match(/^classes\/class_(\w+)\.html(?:\?.*)?$/)?.[1] == title.toLowerCase()) {
+    const className = title;
+    const old = /^[32]\.\w+/.test(version);
+    const ghBranch = old ? '3.x' : version.startsWith('4.') ? version : 'master';
+    const iconName = old ? 'icon_' + snakeCase(className) : className;
+    iconUrl = `https://raw.githubusercontent.com/godotengine/godot/${ghBranch}/editor/icons/${iconName}.svg`;
+  }
+  const iconPath = (iconUrl ? await fetchAsDataUri(iconUrl) : null) ??
+    Uri.from({ scheme: 'https', authority: docsHost, path: '/favicon.ico' });
+  const p = `https://${docsHost.replace(/^docs\./, '*.')}/${locale}/`, csp =
+    `default-src data: https:; script-src 'unsafe-inline' ${p}; style-src 'unsafe-inline' ${p}`;
   const allowNavigation = true; //TODO as setting
   const injectHead = allowNavigation ? '' : `<style>
 body.wy-body-for-nav { margin: unset }
 nav.wy-nav-top, nav.wy-nav-side, div.rst-versions, div.rst-footer-buttons { display: none }
 section.wy-nav-content-wrap, div.wy-nav-content { margin: auto }
 </style>`;
-  const finalHtml = html.replace(/(?<=<head>\s*(?:<meta\s+charset\s*=\s*["']utf-8["']\s*\/>)?)/i, `\
-<base href="${apiUrl}"/><style>
-body.wy-body-for-nav { padding: 0 }
+  const finalHtml = html.replace(/(?<=<head>\s*(?:<meta\s+charset\s*=\s*["']utf-8["']\s*\/?>)?)/i, `\
+<base href="${docsUrl}"/><style>
+body.wy-body-for-nav { padding: 0; font-size: unset }
 div.rst-other-versions > dl:nth-child(1), #rtd-sidebar { display: none !important }
 </style><script>
-location.hash = "${fragment || className.toLowerCase()}";
+location.hash = "${fragment}";
 function vscodeSubmitForm(event) { event.preventDefault();
   const form = event.target, a = document.createElement('a');
   a.href = form.action + '?' + new URLSearchParams(new FormData(form)).toString();
   a.style.display = 'none'; form.append(a); a.click(); a.remove();
 }
+const vscode = acquireVsCodeApi();
+document.addEventListener('click', event => {
+  const a = event.target.closest('a');
+  if (!a || a.href.startsWith(document.baseURI + '#')) return;
+  event.preventDefault(); event.stopPropagation();
+  vscode.postMessage({ navigateTo: a.href });
+});
 document.addEventListener('DOMContentLoaded', () => {
   document.forms[0]?.addEventListener('submit', vscodeSubmitForm);
   for (const a of document.querySelectorAll('div.rst-other-versions > dl:nth-child(2) > dd > a'))
-    a.title = a.href = document.baseURI.replace(/(?<=\\/en\\/)[^/]+(?=\\/)/, a.text);
+    a.href = a.title = document.baseURI.replace(/(?<=\\/${locale}\\/)[^/]+(?=\\/)/, a.text);
 });
 </script><meta http-equiv="Content-Security-Policy" content="${csp}"/>
 ` + injectHead);
   if (token?.isCancellationRequested) return;
-  const webviewPanel = window.createWebviewPanel('godotFiles.docs.online', className, 1, {
+  const webviewPanel = window.createWebviewPanel('godotFiles.docs.online', title, 1, {
     localResourceRoots: [], enableScripts: true
   });
   if (iconPath) webviewPanel.iconPath = iconPath;
-  webviewPanel.webview.html = finalHtml;
+  const webview = webviewPanel.webview;
+  webview.onDidReceiveMessage(onDocsTabMessage);
+  webview.html = finalHtml;
+}
+async function onDocsTabMessage(msg: { navigateTo: string; }) {
+  const url = msg.navigateTo.replace(/^http:/i, 'https:');
+  if (!url.startsWith('https:')) { console.warn('Refusing to navigate to this scheme: ' + url); return; }
+  const origin = `https://${docsHost}/`;
+  let m;
+  if (!url.startsWith(origin) || !(m = url.substring(origin.length).match(/^(\w+)\/([^/]+)\/([^#]+\.html)(#.*)?$/))) {
+    if (!await env.openExternal(Uri.parse(url, true)))
+      window.showErrorMessage('Could not open URL in browser: ' + url);
+    return;
+  }
+  const [, locale, version, page, fragment] = m;
+  try {
+    await openDocsInTab(locale, version, page, fragment, null);
+  } catch (e) {
+    console.error(e);
+    if (await window.showErrorMessage('Could not open URL internally: ' + url, 'Open in browser'))
+      if (!await env.openExternal(Uri.parse(url, true)))
+        window.showErrorMessage('Could not open URL in browser: ' + url);
+  }
 }
 
 async function unlockEarlyAccess() {
