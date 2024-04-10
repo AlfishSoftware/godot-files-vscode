@@ -937,9 +937,9 @@ async function openDocsInTab(locale: string, version: string, page: string, frag
   if (token?.isCancellationRequested) return;
   const title = html.match(/<meta\s+property\s*=\s*"og:title"\s+content\s*=\s*"(.*?)"\s*\/?>/i)?.[1] ||
     html.match(/<title>(.*?)(?: &mdash;[^<]*)?<\/title>/i)?.[1] || 'Godot Docs';
-  let iconUrl = '';
+  let iconUrl = '', className = '';
   if (page.match(/^classes\/class_(\w+)\.html(?:\?.*)?$/)?.[1] == title.toLowerCase()) {
-    const className = title;
+    className = title;
     const old = /^[32]\.\w+/.test(version);
     const ghBranch = old ? '3.x' : version.startsWith('4.') ? version : 'master';
     const iconName = old ? 'icon_' + snakeCase(className) : className;
@@ -964,16 +964,34 @@ location.hash = "${fragment}";
 function vscodeSubmitForm(event) { event.preventDefault();
   const form = event.target, a = document.createElement('a');
   a.href = form.action + '?' + new URLSearchParams(new FormData(form)).toString();
-  a.style.display = 'none'; form.append(a); a.click(); a.remove();
+  a.target = '_blank'; a.style.display = 'none'; form.append(a); a.click(); a.remove();
 }
 const vscode = acquireVsCodeApi();
 document.addEventListener('click', event => {
-  const a = event.target.closest('a');
-  if (!a || a.href.startsWith(document.baseURI + '#')) return;
+  const a = event.target.closest('a'); if (!a) return;
+  const openInNewTab = a.target && a.target != '_self' || event.ctrlKey || event.metaKey || event.button === 1;
+  if (!openInNewTab && a.href.startsWith(document.baseURI + '#')) return;
   event.preventDefault(); event.stopPropagation();
-  vscode.postMessage({ navigateTo: a.href });
+  vscode.postMessage({ navigateTo: a.href, exitThisPage: !openInNewTab });
 });
 document.addEventListener('DOMContentLoaded', () => {
+  const hash = location.hash.replace(/^#/, ''), idPrefix = 'class-${className.toLowerCase()}-property-';
+  if (!document.getElementById(hash) && hash.startsWith(idPrefix)) {
+    const baseClassUrl = document.evaluate(
+      '//h1/following-sibling::p/child::strong[text()="Inherits:"]/following-sibling::a',
+      document, null, XPathResult.FIRST_ORDERED_NODE_TYPE
+    ).singleNodeValue?.href;
+    const idProp = hash.substring(idPrefix.length);
+    if (/\\bclass_\\w+\\.html#class-\\w+$/.test(baseClassUrl)) {
+      const basePropUrl = baseClassUrl + '-property-' + idProp;
+      vscode.postMessage({ navigateTo: basePropUrl, exitThisPage: true }); stop(); return;
+    } else document.getElementsByClassName('admonition-grid')[0]?.insertAdjacentHTML('afterbegin', \`\\
+      <div class="admonition warning not-found">
+        <p class="first admonition-title">Not found</p><p><strong>The property was not found:</strong>
+        <code class="docutils literal notranslate">\${idProp.replaceAll('-', '_')}</code>.</p>
+      </div>\`
+    );
+  }
   document.forms[0]?.addEventListener('submit', vscodeSubmitForm);
   for (const a of document.querySelectorAll('div.rst-other-versions > dl:nth-child(2) > dd > a'))
     a.href = a.title = document.baseURI.replace(/(?<=\\/${locale}\\/)[^/]+(?=\\/)/, a.text);
@@ -982,31 +1000,36 @@ document.addEventListener('DOMContentLoaded', () => {
 ` + injectHead);
   if (token?.isCancellationRequested) return;
   const webviewPanel = window.createWebviewPanel('godotFiles.docs.online', title, 1, {
-    localResourceRoots: [], enableScripts: true
+    localResourceRoots: [], enableScripts: true, retainContextWhenHidden: true
   });
   if (iconPath) webviewPanel.iconPath = iconPath;
   const webview = webviewPanel.webview;
-  webview.onDidReceiveMessage(onDocsTabMessage);
+  webview.onDidReceiveMessage(msg => onDocsTabMessage(msg).then(exit => {
+    if (exit) webviewPanel.dispose();
+  }));
   webview.html = finalHtml;
 }
-async function onDocsTabMessage(msg: { navigateTo: string; }) {
+async function onDocsTabMessage(msg: { navigateTo: string; exitThisPage?: boolean; }) {
   const url = msg.navigateTo.replace(/^http:/i, 'https:');
-  if (!url.startsWith('https:')) { console.warn('Refusing to navigate to this scheme: ' + url); return; }
+  if (!url.startsWith('https:')) { console.warn('Refusing to navigate to this scheme: ' + url); return false; }
   const origin = `https://${docsHost}/`;
   let m;
   if (!url.startsWith(origin) || !(m = url.substring(origin.length).match(/^(\w+)\/([^/]+)\/([^#]+\.html)(#.*)?$/))) {
     if (!await env.openExternal(Uri.parse(url, true)))
       window.showErrorMessage('Could not open URL in browser: ' + url);
-    return;
+    return false;
   }
   const [, locale, version, page, fragment] = m;
   try {
     await openDocsInTab(locale, version, page, fragment, null);
+    return !!msg.exitThisPage;
   } catch (e) {
     console.error(e);
-    if (await window.showErrorMessage('Could not open URL internally: ' + url, 'Open in browser'))
-      if (!await env.openExternal(Uri.parse(url, true)))
+    window.showErrorMessage('Could not open URL internally: ' + url, 'Open in browser').then(async (btn) => {
+      if (btn && !await env.openExternal(Uri.parse(url, true)))
         window.showErrorMessage('Could not open URL in browser: ' + url);
+    });
+    return false;
   }
 }
 //#endregion Api Docs
