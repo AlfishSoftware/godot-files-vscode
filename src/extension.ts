@@ -9,6 +9,7 @@ const createHash = nodejs && require('crypto').createHash;
 const homedir = nodejs && require('os').homedir();
 const dns = nodejs && require('dns/promises');
 
+//#region Utility Helpers
 function md5(s: string) {
   return createHash?.('md5').update(s).digest('hex');
 }
@@ -61,7 +62,9 @@ async function isOnline() {
 function snakeCase(pascalCase: string) {
   return pascalCase.replace(/(?<!^)\d*[A-Z_]/g, s => '_' + s).toLowerCase();
 }
+//#endregion Utility Helpers
 
+//#region GDAsset Structure
 class GDResource {
   path!: string;
   type!: string;
@@ -203,7 +206,9 @@ function sectionSymbol(document: TextDocument, match: RegExpMatchArray, range: R
   }
   return symbol;
 }
+//#endregion GDAsset Structure
 
+//#region GDAsset Features
 class GDAssetProvider implements
   DocumentSymbolProvider,
   DefinitionProvider,
@@ -603,6 +608,9 @@ function gdCodeLoad(resPath: string, id: string | null, type: string | undefined
   }
   return new MarkdownString().appendCodeblock(code, language);
 }
+//#endregion GDAsset Features
+
+//#region Godot Project Helpers
 /** Find the root folder Uri of the closest Godot project containing the asset.
  * @param assetUri Uri of the asset file for which to locate the project.
  * @returns Uri of the project's root folder if found, or null if the asset is not inside a project.
@@ -709,6 +717,9 @@ async function locateResPath(resPath: string, document: TextDocument) {
     throw err;
   }
 }
+//#endregion Godot Project Helpers
+
+//#region Asset Previewing
 // Perfect pangrams for testing all ASCII letters; also letters which might be confused with numbers.
 const fontTest = `\
 <tspan>JFK GOT MY VHS, PC AND XLR WEB QUIZ</tspan>
@@ -853,7 +864,9 @@ ${fontTest}
 }
 /** URL schemes that markdownRenderer allows loading from */
 const mdScheme = new Set(['data', 'file', 'https', 'vscode-file', 'vscode-remote', 'vscode-remote-resource', 'mailto']);
+//#endregion Asset Previewing
 
+//#region Api Docs
 async function fetchAsDataUri(url: string) {
   try {
     const response = await fetch(url);
@@ -996,7 +1009,9 @@ async function onDocsTabMessage(msg: { navigateTo: string; }) {
         window.showErrorMessage('Could not open URL in browser: ' + url);
   }
 }
+//#endregion Api Docs
 
+//#region Extension Entry
 async function unlockEarlyAccess() {
   if (supported) {
     if (await window.showInformationMessage('Early access is already enabled.', 'OK', 'Disable') == 'Disable') {
@@ -1067,6 +1082,7 @@ export function deactivate() {
     nodejs && require('fs').rmSync(tmpUri.fsPath, { force: true, recursive: true });
   } catch { /* ignore, logs should be auto-deleted eventually anyway */ }
 }
+//#endregion Extension Entry
 
 const docsHost = 'docs.godotengine.org';
 const latestApiGodot3 = '3.6';
