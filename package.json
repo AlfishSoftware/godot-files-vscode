@@ -296,12 +296,22 @@
 						},
 						"markdownDescription": "Paths to Godot cache files in each platform. The defaults should work in most cases. Add a path when using a Godot installation in [self-contained mode](https://docs.godotengine.org/en/stable/tutorials/io/data_paths.html#self-contained-mode).\n\nThe keys are platform ids as returned by NodeJS: `win32` (Windows), `darwin` (macOS), `linux`.\n\nEach key maps to an array of path strings. A starting `~/` in the path means the user's home directory. Environment variables are replaced using the syntax `%VARIABLE%` in Windows and `${VARIABLE}` in other platforms. Glob patterns are *not* allowed. The order in the array doesn't matter, since all paths are always scanned to get the most recent cache file."
 					},
-					"godotFiles.apiDocs.online": {
-						"order": 0,
+					"godotFiles.apiDocs.viewer": {
+						"order": 100,
 						"scope": "machine-overridable",
-						"type": "boolean",
-						"default": true,
-						"description": "Disable to only use the official godot-tools extension to open API documentation in a tab (requires Godot Editor to be running and connected). By default, the URL is opened if you're online."
+						"type": "string",
+						"default": "webview",
+						"markdownDescription": "Specifies how the Godot API documentation is opened.\n\n⚠ This setting is exclusive to [early access](command:godotFiles.unlockEarlyAccess) (otherwise, `godot-tools` will be used).",
+						"enum": [
+							"browser",
+							"webview",
+							"godot-tools"
+						],
+						"enumDescriptions": [
+							"Use your browser to open the documentation URL. Supports going to the specific API version.",
+							"Use a tab in the IDE to open the documentation website. Supports going to the specific API version and redirecting inherited members to their definition.",
+							"Use the official godot-tools extension to open API documentation in a tab. Note that this requires the Godot Editor to be running and connected to that extension."
+						]
 					}
 				}
 			},
@@ -334,14 +344,14 @@
 						"scope": "language-overridable",
 						"type": "boolean",
 						"default": true,
-						"description": "Show implied parentheses around each vector in an array.\n⚠ Exclusive to early access."
+						"markdownDescription": "Show implied parentheses around each vector in a packed array.\n\n⚠ Exclusive to [early access](command:godotFiles.unlockEarlyAccess)."
 					},
 					"godotFiles.clarifyArrays.color": {
 						"order": 200,
 						"scope": "language-overridable",
 						"type": "boolean",
 						"default": false,
-						"description": "Show implied parentheses around each color in an array.\n⚠ Exclusive to early access."
+						"markdownDescription": "Show implied parentheses around each color in a packed array.\n\n⚠ Exclusive to [early access](command:godotFiles.unlockEarlyAccess)."
 					}
 				}
 			}

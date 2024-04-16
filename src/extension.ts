@@ -55,7 +55,7 @@ export function byteUnits(numBytes: number) {
 /** Returns false if the user is not online. */
 async function isOnline() {
   if (typeof navigator != 'undefined') return navigator.onLine;
-  try { return dns ? !!(await dns.lookup(docsHost)).address : false; }
+  try { return dns ? !!(await dns.lookup(onlineDocsHost)).address : false; }
   catch (err) { return false; }
 }
 /** Converts a name from "PascalCase" convention to "snake_case". */
@@ -867,6 +867,9 @@ const mdScheme = new Set(['data', 'file', 'https', 'vscode-file', 'vscode-remote
 //#endregion Asset Previewing
 
 //#region Api Docs
+const onlineDocsHost = 'docs.godotengine.org';
+const latestApiGodot3 = '3.6';
+// const docsLocales = ['en', 'cs', 'de', 'es', 'fr', 'it', 'ja', 'ko', 'pl', 'pt-br', 'ru', 'uk', 'zh-cn', 'zh-tw'];
 async function fetchAsDataUri(url: string) {
   try {
     const response = await fetch(url);
@@ -882,9 +885,8 @@ async function apiDocs(
   document: TextDocument, className: string, memberName: string, token: CancellationToken | null
 ) {
   const config = workspace.getConfiguration('godotFiles', document);
-  const online = config.get<boolean>('apiDocs.online') && await isOnline();
-  if (token?.isCancellationRequested) return null;
-  if (online) {
+  const viewer = supported ? config.get<string>('apiDocs.viewer')! : 'godot-tools';
+  if (viewer != 'godot-tools' && await isOnline()) {
     // We could get locale properly, but it seems other locales don't support every version consistently.
     // Also the API will probably still be in english even in those locales.
     // const locale = env.language.toLowerCase();
@@ -898,18 +900,19 @@ async function apiDocs(
     const version = await godotVersionOfDocument(document);
     if (token?.isCancellationRequested) return null;
     try {
-      await openApiDocsWebpage(className, memberName, version, apiLocale, token);
+      await openApiDocsWebpage(className, memberName, version, apiLocale, viewer == 'browser', token);
       return null;
     } catch (e) { console.error(e); }
   } else if (extensions.getExtension('geequlim.godot-tools')?.isActive) {
     const uri = Uri.from({ scheme: 'gddoc', path: className + '.gddoc', fragment: memberName || undefined });
     return new Location(uri, new Position(0, 0));
   }
-  window.showErrorMessage(`Could not open documentation for ${className}.`);
+  const reason: string = viewer == 'godot-tools' ? 'Is the godot-tools extension running?' : 'Are you online?';
+  window.showErrorMessage(`Could not open documentation for ${className}. ${reason}`);
   return null;
 }
 async function openApiDocsWebpage(
-  className: string, memberName: string, version: GodotVersion | null, apiLocale: string,
+  className: string, memberName: string, version: GodotVersion | null, apiLocale: string, useBrowser: boolean,
   token: CancellationToken | null
 ) {
   const apiVersion = version?.api || (version?.major == 3 ? latestApiGodot3 : 'stable');
@@ -917,18 +920,17 @@ async function openApiDocsWebpage(
   const page = `classes/class_${classLower}.html`;
   const fragment = '#class-' + classLower + (!memberName ? '' :
     `-${apiVersion == '3.0' || apiVersion == '2.1' ? '' : 'property-'}${memberName.replaceAll('_', '-')}`);
-  const openInTabs = true; //TODO as setting
-  if (openInTabs) await openDocsInTab(apiLocale, apiVersion, page, fragment, token);
-  else await openDocsInBrowser(apiLocale, apiVersion, page, fragment);
+  if (useBrowser) await openDocsInBrowser(apiLocale, apiVersion, page, fragment);
+  else await openDocsInTab(apiLocale, apiVersion, page, fragment, token);
 }
 async function openDocsInBrowser(locale: string, version: string, page: string, fragment: string) {
-  const url = `https://${docsHost}/${locale}/${version}/${page}${fragment}`;
+  const url = `https://${onlineDocsHost}/${locale}/${version}/${page}${fragment}`;
   if (!await env.openExternal(Uri.parse(url, true))) throw new Error('Could not open URL in browser: ' + url);
 }
 async function openDocsInTab(locale: string, version: string, page: string, fragment: string,
   token: CancellationToken | null
 ) {
-  const docsUrl = `https://${docsHost}/${locale}/${version}/${page}`;
+  const docsUrl = `https://${onlineDocsHost}/${locale}/${version}/${page}`;
   const response = await fetch(docsUrl);
   if (!response.ok)
     throw new Error(`Error fetching Godot docs: ${response.status} (${response.statusText}) ${docsUrl}`);
@@ -946,9 +948,15 @@ async function openDocsInTab(locale: string, version: string, page: string, frag
     iconUrl = `https://raw.githubusercontent.com/godotengine/godot/${ghBranch}/editor/icons/${iconName}.svg`;
   }
   const iconPath = (iconUrl ? await fetchAsDataUri(iconUrl) : null) ??
-    Uri.from({ scheme: 'https', authority: docsHost, path: '/favicon.ico' });
-  const p = `https://${docsHost.replace(/^docs\./, '*.')}/${locale}/`, csp =
-    `default-src data: https:; script-src 'unsafe-inline' ${p}; style-src 'unsafe-inline' ${p}`;
+    Uri.from({ scheme: 'https', authority: onlineDocsHost, path: '/favicon.ico' });
+  if (token?.isCancellationRequested) return;
+  const webviewPanel = window.createWebviewPanel('godotFiles.docs.online', title, 1, {
+    localResourceRoots: [], enableScripts: true, retainContextWhenHidden: true
+  });
+  webviewPanel.iconPath = iconPath;
+  const webview = webviewPanel.webview;
+  const p = `https://${onlineDocsHost.replace(/^docs\./, '*.')}/${locale}/`;
+  const csp = `default-src data: https:; script-src 'unsafe-inline' ${p}; style-src 'unsafe-inline' ${p}`;
   const allowNavigation = true; //TODO as setting
   const injectHead = allowNavigation ? '' : `<style>
 body.wy-body-for-nav { margin: unset }
@@ -998,12 +1006,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script><meta http-equiv="Content-Security-Policy" content="${csp}"/>
 ` + injectHead);
-  if (token?.isCancellationRequested) return;
-  const webviewPanel = window.createWebviewPanel('godotFiles.docs.online', title, 1, {
-    localResourceRoots: [], enableScripts: true, retainContextWhenHidden: true
-  });
-  if (iconPath) webviewPanel.iconPath = iconPath;
-  const webview = webviewPanel.webview;
   webview.onDidReceiveMessage(msg => onDocsTabMessage(msg).then(exit => {
     if (exit) webviewPanel.dispose();
   }));
@@ -1012,7 +1014,7 @@ document.addEventListener('DOMContentLoaded', () => {
 async function onDocsTabMessage(msg: { navigateTo: string; exitThisPage?: boolean; }) {
   const url = msg.navigateTo.replace(/^http:/i, 'https:');
   if (!url.startsWith('https:')) { console.warn('Refusing to navigate to this scheme: ' + url); return false; }
-  const origin = `https://${docsHost}/`;
+  const origin = `https://${onlineDocsHost}/`;
   let m;
   if (!url.startsWith(origin) || !(m = url.substring(origin.length).match(/^(\w+)\/([^/]+)\/([^#]+\.html)(#.*)?$/))) {
     if (!await env.openExternal(Uri.parse(url, true)))
@@ -1106,9 +1108,5 @@ export function deactivate() {
   } catch { /* ignore, logs should be auto-deleted eventually anyway */ }
 }
 //#endregion Extension Entry
-
-const docsHost = 'docs.godotengine.org';
-const latestApiGodot3 = '3.6';
-// const docsLocales = ['en', 'cs', 'de', 'es', 'fr', 'it', 'ja', 'ko', 'pl', 'pt-br', 'ru', 'uk', 'zh-cn', 'zh-tw'];
 
 const checksum = '1ee835486c75add4e298d9120c62801254ecb9f69309f1f67af4d3495bdf7ba14e288b73298311f5ef7839ec34bfc12211a035911d3ad19a60e822a9f44d4d5c';
