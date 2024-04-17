@@ -534,7 +534,7 @@ class GDAssetProvider implements
     const settings = workspace.getConfiguration('godotFiles', document);
     const inlineColorSingles = settings.get<boolean>('inlineColors.single')!;
     const inlineColorArrays = settings.get<boolean>('inlineColors.array')!;
-    if (!supported || !inlineColorSingles && !inlineColorArrays) return null;
+    if (!inlineColorSingles && !inlineColorArrays) return null;
     const gdasset = await this.parsedGDAsset(document, token);
     if (!gdasset || token.isCancellationRequested) return null;
     const colors: ColorInformation[] = [];
@@ -830,9 +830,12 @@ export async function resThumb(resUri: Uri, token: CancellationToken) {
     .get<{ [platform: string]: string[]; }>('godotCachePath')![platform] ?? [];
   let lastThumbUri = null, lastModifiedTime = -Infinity;
   for (const cachePathString of cachePaths) {
-    const cachePath = cachePathString.replace(/^~(?=\/)/, g0 => homedir ?? g0)
-      .replace(platform == 'win32' ? /%(\w+)%/g : /\$\{(\w+)\}/g,
-        (g0, g1) => process.env[g1] ?? g0);
+    const cachePath = cachePathString.replace(/^~(?=\/)|\$\{userHome\}/g, g0 => homedir ?? g0)
+      .replace(/\$\{env:(\w+)\}/g, (g0, g1) => process.env[g1] ?? g0)
+      .replace(/\$\{workspaceFolder(?::(.*?))?\}/g, (g0, g1) => !g1
+        ? (workspace.getWorkspaceFolder(resUri) ?? workspace.workspaceFolders?.[0])?.uri.fsPath ?? g0
+        : workspace.workspaceFolders?.find(f => f.name == g1)?.uri.fsPath ?? g0
+      );
     const thumbUri = Uri.joinPath(Uri.file(cachePath), `resthumb-${resPathHash}.png`);
     try {
       const stat = await workspace.fs.stat(thumbUri);
@@ -950,7 +953,7 @@ async function openDocsInTab(locale: string, version: string, page: string, frag
   const iconPath = (iconUrl ? await fetchAsDataUri(iconUrl) : null) ??
     Uri.from({ scheme: 'https', authority: onlineDocsHost, path: '/favicon.ico' });
   if (token?.isCancellationRequested) return;
-  const webviewPanel = window.createWebviewPanel('godotFiles.docs.online', title, 1, {
+  const webviewPanel = window.createWebviewPanel('godotFiles.docs.website', title, 1, {
     localResourceRoots: [], enableScripts: true, retainContextWhenHidden: true
   });
   webviewPanel.iconPath = iconPath;

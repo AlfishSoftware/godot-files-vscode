@@ -271,9 +271,9 @@
 						"type": "object",
 						"default": {
 							"win32": [
-								"%LOCALAPPDATA%/Godot/",
+								"${env:LOCALAPPDATA}/Godot/",
 								"~/AppData/Local/Godot/",
-								"%TEMP%/Godot/"
+								"${env:TEMP}/Godot/"
 							],
 							"darwin": [
 								"~/Library/Caches/Godot/"
@@ -294,14 +294,14 @@
 								"description": "A path to Godot cache files in this platform."
 							}
 						},
-						"markdownDescription": "Paths to Godot cache files in each platform. The defaults should work in most cases. Add a path when using a Godot installation in [self-contained mode](https://docs.godotengine.org/en/stable/tutorials/io/data_paths.html#self-contained-mode).\n\nThe keys are platform ids as returned by NodeJS: `win32` (Windows), `darwin` (macOS), `linux`.\n\nEach key maps to an array of path strings. A starting `~/` in the path means the user's home directory. Environment variables are replaced using the syntax `%VARIABLE%` in Windows and `${VARIABLE}` in other platforms. Glob patterns are *not* allowed. The order in the array doesn't matter, since all paths are always scanned to get the most recent cache file."
+						"markdownDescription": "Paths to Godot cache files in each platform. The defaults should work in most cases. Add a path when using a Godot installation in [self-contained mode](https://docs.godotengine.org/en/stable/tutorials/io/data_paths.html#self-contained-mode).\n\nThe keys are platform ids as returned by NodeJS: `win32` (Windows), `darwin` (macOS), `linux`.\n\nEach key maps to an array of path strings. A starting `~/` in the path is equivalent to `${userHome}/`. Substitution is also supported for `${workspaceFolder}` and `${env:VARIABLE}`. Glob patterns are *not* allowed. The order in the array doesn't matter, since all paths are always scanned to get the most recent cache file."
 					},
 					"godotFiles.apiDocs.viewer": {
 						"order": 100,
 						"scope": "machine-overridable",
 						"type": "string",
 						"default": "webview",
-						"markdownDescription": "Specifies how the Godot API documentation is opened.\n\n⚠ This setting is exclusive to [early access](command:godotFiles.unlockEarlyAccess) (otherwise, `godot-tools` will be used).",
+						"markdownDescription": "Specifies how the Godot API documentation is opened when online. The `godot-tools` viewer will be used when you're offline.\n\n⚠ This setting is exclusive to [early access](command:godotFiles.unlockEarlyAccess) (otherwise, only `godot-tools` will be used).",
 						"enum": [
 							"browser",
 							"webview",
@@ -309,7 +309,7 @@
 						],
 						"enumDescriptions": [
 							"Use your browser to open the documentation URL. Supports going to the specific API version.",
-							"Use a tab in the IDE to open the documentation website. Supports going to the specific API version and redirecting inherited members to their definition.",
+							"Use a tab in the IDE to open the documentation website. Supports going to the specific API version and redirecting inherited members to their definition.\nNote: it's possible that some future website changes could break this, so use the browser instead if you notice issues.",
 							"Use the official godot-tools extension to open API documentation in a tab. Note that this requires the Godot Editor to be running and connected to that extension."
 						]
 					}
