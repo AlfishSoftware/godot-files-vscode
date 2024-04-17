@@ -312,6 +312,13 @@
 							"Use a tab in the IDE to open the documentation website. Supports going to the specific API version and redirecting inherited members to their definition.\nNote: it's possible that some future website changes could break this, so use the browser instead if you notice issues.",
 							"Use the official godot-tools extension to open API documentation in a tab. Note that this requires the Godot Editor to be running and connected to that extension."
 						]
+					},
+					"godotFiles.apiDocs.webview.keepTabs": {
+						"order": 101,
+						"scope": "machine",
+						"type": "boolean",
+						"default": false,
+						"markdownDescription": "Enable to always open links in a new tab; otherwise you need to hold Ctrl/Cmd when clicking a link to open it in a new tab.\n\n⚠ Applies only to the `webview` documentation viewer, which is exclusive to [early access](command:godotFiles.unlockEarlyAccess)."
 					}
 				}
 			},

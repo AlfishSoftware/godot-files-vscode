@@ -1027,7 +1027,7 @@ async function onDocsTabMessage(msg: { navigateTo: string; exitThisPage?: boolea
   const [, locale, version, page, fragment] = m;
   try {
     await openDocsInTab(locale, version, page, fragment, null);
-    return !!msg.exitThisPage;
+    return !!msg.exitThisPage && !workspace.getConfiguration('godotFiles.apiDocs.webview').get<boolean>('keepTabs')!;
   } catch (e) {
     console.error(e);
     window.showErrorMessage('Could not open URL internally: ' + url, 'Open in browser').then(async (btn) => {
