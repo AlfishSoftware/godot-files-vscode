@@ -313,6 +313,13 @@
 							"Use the official godot-tools extension to open API documentation in a tab. Note that this requires the Godot Editor to be running and connected to that extension."
 						]
 					},
+					"godotFiles.apiDocs.webview.hideSidebar": {
+						"order": 101,
+						"scope": "machine",
+						"type": "boolean",
+						"default": false,
+						"markdownDescription": "Enable to hide the navigation sidebar when loading a page, showing only the documentation content itself.\n\n⚠ Applies only to the `webview` documentation viewer, which is exclusive to [early access](command:godotFiles.unlockEarlyAccess)."
+					},
 					"godotFiles.apiDocs.webview.keepTabs": {
 						"order": 101,
 						"scope": "machine",

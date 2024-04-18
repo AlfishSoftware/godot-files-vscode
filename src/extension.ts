@@ -934,7 +934,14 @@ async function openDocsInTab(locale: string, version: string, page: string, frag
   token: CancellationToken | null
 ) {
   const docsUrl = `https://${onlineDocsHost}/${locale}/${version}/${page}`;
-  const response = await fetch(docsUrl);
+  console.info('Godot Files :: Fetching in docs webview: ' + docsUrl + fragment);
+  let response; try {
+    response = await fetch(docsUrl);
+  } catch (e) {
+    const cause = (e as { cause: unknown; })?.cause;
+    if (cause) console.error(cause);
+    throw e;
+  }
   if (!response.ok)
     throw new Error(`Error fetching Godot docs: ${response.status} (${response.statusText}) ${docsUrl}`);
   if (token?.isCancellationRequested) return;
@@ -960,14 +967,15 @@ async function openDocsInTab(locale: string, version: string, page: string, frag
   const webview = webviewPanel.webview;
   const p = `https://${onlineDocsHost.replace(/^docs\./, '*.')}/${locale}/`;
   const csp = `default-src data: https:; script-src 'unsafe-inline' ${p}; style-src 'unsafe-inline' ${p}`;
-  const allowNavigation = true; //TODO as setting
-  const injectHead = allowNavigation ? '' : `<style>
+  const hideNav = page != 'index.html' &&
+    workspace.getConfiguration('godotFiles.apiDocs.webview').get<boolean>('hideSidebar')!;
+  const injectHead = hideNav ? `<style>
 body.wy-body-for-nav { margin: unset }
 nav.wy-nav-top, nav.wy-nav-side, div.rst-versions, div.rst-footer-buttons { display: none }
 section.wy-nav-content-wrap, div.wy-nav-content { margin: auto }
-</style>`;
+</style>` : '';
   const finalHtml = html.replace(/(?<=<head>\s*(?:<meta\s+charset\s*=\s*["']utf-8["']\s*\/?>)?)/i, `\
-<base href="${docsUrl}"/><style>
+<base href="${docsUrl}"/>${injectHead}<style>
 body.wy-body-for-nav { padding: 0; font-size: unset }
 div.rst-other-versions > dl:nth-child(1), #rtd-sidebar { display: none !important }
 </style><script>
@@ -1008,7 +1016,7 @@ document.addEventListener('DOMContentLoaded', () => {
     a.href = a.title = document.baseURI.replace(/(?<=\\/${locale}\\/)[^/]+(?=\\/)/, a.text);
 });
 </script><meta http-equiv="Content-Security-Policy" content="${csp}"/>
-` + injectHead);
+`);
   webview.onDidReceiveMessage(msg => onDocsTabMessage(msg).then(exit => {
     if (exit) webviewPanel.dispose();
   }));
@@ -1026,7 +1034,7 @@ async function onDocsTabMessage(msg: { navigateTo: string; exitThisPage?: boolea
   }
   const [, locale, version, page, fragment] = m;
   try {
-    await openDocsInTab(locale, version, page, fragment, null);
+    await openDocsInTab(locale, version, page, fragment ?? '', null);
     return !!msg.exitThisPage && !workspace.getConfiguration('godotFiles.apiDocs.webview').get<boolean>('keepTabs')!;
   } catch (e) {
     console.error(e);
