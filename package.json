@@ -156,6 +156,16 @@
 				"configuration": "./lang.gdasset/gdasset.language-configuration.json"
 			},
 			{
+				"id": "godot-documentation-webpage",
+				"filenamePatterns": [
+					"**/godot-documentation.*.ide:/**/*.html/*"
+				],
+				"icon": {
+					"dark": "./lang.godot-docs/godot-documentation-webpage.color.svg",
+					"light": "./lang.godot-docs/godot-documentation-webpage.color.svg"
+				}
+			},
+			{
 				"id": "config-definition",
 				"aliases": [
 					"Configuration Properties",
@@ -254,6 +264,15 @@
 				"enablement": "isWorkspaceTrusted"
 			}
 		],
+		"customEditors": [
+			{
+				"viewType": "godotFiles.documentationBrowser",
+				"displayName": "Godot Documentation Browser",
+				"selector": [
+					{ "filenamePattern": "**/godot-documentation.*.ide:/**/*.html/*" }
+				]
+			}
+		],
 		"menus": {
 			"extension/context": [
 				{
@@ -296,12 +315,12 @@
 						},
 						"markdownDescription": "Paths to Godot cache files in each platform. The defaults should work in most cases. Add a path when using a Godot installation in [self-contained mode](https://docs.godotengine.org/en/stable/tutorials/io/data_paths.html#self-contained-mode).\n\nThe keys are platform ids as returned by NodeJS: `win32` (Windows), `darwin` (macOS), `linux`.\n\nEach key maps to an array of path strings. A starting `~/` in the path is equivalent to `${userHome}/`. Substitution is also supported for `${workspaceFolder}` and `${env:VARIABLE}`. Glob patterns are *not* allowed. The order in the array doesn't matter, since all paths are always scanned to get the most recent cache file."
 					},
-					"godotFiles.apiDocs.viewer": {
+					"godotFiles.documentation.viewer": {
 						"order": 100,
 						"scope": "machine-overridable",
 						"type": "string",
 						"default": "webview",
-						"markdownDescription": "Specifies how the Godot API documentation is opened when online. The `godot-tools` viewer will be used when you're offline.\n\n⚠ This setting is exclusive to [early access](command:godotFiles.unlockEarlyAccess) (otherwise, only `godot-tools` will be used).",
+						"markdownDescription": "Specifies how the Godot Documentation is opened when online. The `godot-tools` viewer will be used when you're offline.\n\n⚠ This setting is exclusive to [early access](command:godotFiles.unlockEarlyAccess) (otherwise, only `godot-tools` will be used).",
 						"enum": [
 							"browser",
 							"webview",
@@ -309,18 +328,18 @@
 						],
 						"enumDescriptions": [
 							"Use your browser to open the documentation URL. Supports going to the specific API version.",
-							"Use a tab in the IDE to open the documentation website. Supports going to the specific API version and redirecting inherited members to their definition.\nNote: it's possible that some future website changes could break this, so use the browser instead if you notice issues.",
-							"Use the official godot-tools extension to open API documentation in a tab. Note that this requires the Godot Editor to be running and connected to that extension."
+							"Use a tab in the IDE to open the documentation website. Supports going to the specific API version. Supports redirecting inherited members to their definition.\nNote: it's possible that some future website changes could break this, so use the browser instead if you notice issues.",
+							"Use the official godot-tools extension to open a documentation in a tab. Note that this requires the Godot Editor to be running and connected to that extension."
 						]
 					},
-					"godotFiles.apiDocs.webview.hideSidebar": {
+					"godotFiles.documentation.webview.hideSidebar": {
 						"order": 101,
 						"scope": "machine",
 						"type": "boolean",
 						"default": false,
-						"markdownDescription": "Enable to hide the navigation sidebar when loading a page, showing only the documentation content itself.\n\n⚠ Applies only to the `webview` documentation viewer, which is exclusive to [early access](command:godotFiles.unlockEarlyAccess)."
+						"markdownDescription": "Enable to show only the documentation content itself, hiding the navigation sidebar when loading a page (except for the home page).\n\n⚠ Applies only to the `webview` documentation viewer, which is exclusive to [early access](command:godotFiles.unlockEarlyAccess)."
 					},
-					"godotFiles.apiDocs.webview.keepTabs": {
+					"godotFiles.documentation.webview.keepTabs": {
 						"order": 101,
 						"scope": "machine",
 						"type": "boolean",

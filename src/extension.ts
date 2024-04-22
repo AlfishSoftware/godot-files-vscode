@@ -3,6 +3,7 @@ import {
   TextDocument, Range, Position, FileSystemError, FileType, Color, TextEdit, MarkdownString,
   DocumentSymbol, SymbolKind, Definition, Location, Hover, ColorInformation, ColorPresentation, InlayHint,
   DocumentFilter, DocumentSymbolProvider, DefinitionProvider, HoverProvider, DocumentColorProvider, InlayHintsProvider,
+  WebviewPanel, CustomDocument, CustomDocumentOpenContext, CustomReadonlyEditorProvider,
 } from 'vscode';
 const nodejs = typeof process != 'undefined' ? process : undefined;
 const createHash = nodejs && require('crypto').createHash;
@@ -59,8 +60,20 @@ async function isOnline() {
   catch (err) { return false; }
 }
 /** Converts a name from "PascalCase" convention to "snake_case". */
-function snakeCase(pascalCase: string) {
+function _snakeCase(pascalCase: string) {
   return pascalCase.replace(/(?<!^)\d*[A-Z_]/g, s => '_' + s).toLowerCase();
+}
+/** Fetch a URL, returning its contents as a data URI. */
+async function _fetchAsDataUri(url: string) {
+  try {
+    const response = await fetch(url);
+    if (response.ok) {
+      const blob = await response.blob();
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      return Uri.from({ scheme: 'data', path: blob.type + ';base64,' + base64(bytes) });
+    } else console.warn(`Could not fetch as data URI: ${response.status} (${response.statusText}) ${url}`);
+  } catch (e) { console.error(e); }
+  return null;
 }
 //#endregion Utility Helpers
 
@@ -869,26 +882,41 @@ ${fontTest}
 const mdScheme = new Set(['data', 'file', 'https', 'vscode-file', 'vscode-remote', 'vscode-remote-resource', 'mailto']);
 //#endregion Asset Previewing
 
-//#region Api Docs
+//#region Godot Docs
 const onlineDocsHost = 'docs.godotengine.org';
 const latestApiGodot3 = '3.6';
 // const docsLocales = ['en', 'cs', 'de', 'es', 'fr', 'it', 'ja', 'ko', 'pl', 'pt-br', 'ru', 'uk', 'zh-cn', 'zh-tw'];
-async function fetchAsDataUri(url: string) {
-  try {
-    const response = await fetch(url);
-    if (response.ok) {
-      const blob = await response.blob();
-      const bytes = new Uint8Array(await blob.arrayBuffer());
-      return Uri.from({ scheme: 'data', path: blob.type + ';base64,' + base64(bytes) });
-    } else console.warn(`Could not fetch as data URI: ${response.status} (${response.statusText}) ${url}`);
-  } catch (e) { console.error(e); }
-  return null;
+class GodotDocumentationProvider implements CustomReadonlyEditorProvider
+{
+  static readonly viewType = 'godotFiles.documentationBrowser';
+  async openCustomDocument(uri: Uri, openContext: CustomDocumentOpenContext, token: CancellationToken
+  ): Promise<CustomDocument> {
+    return { uri: uri, dispose() {}, };
+  }
+  async resolveCustomEditor(document: CustomDocument, webviewPanel: WebviewPanel, token: CancellationToken
+  ): Promise<void> {
+    const { path, fragment } = document.uri;
+    const [, viewer, urlPath, title] = path.match(/^.*?\/godot-documentation\.(\w+)\.ide:\/(.*?)\/([^/]+)$/) ?? [];
+    const urlFragment = fragment ? '#' + fragment : '';
+    if (viewer == 'webview') {
+      try {
+        await openDocsInTab(urlPath, urlFragment, webviewPanel, token);
+        return;
+      } catch (e) { console.error(e); throw e; }
+    } else if (viewer == 'browser') {
+      const url = `https://${onlineDocsHost}/${urlPath}${urlFragment}`;
+      if (!await env.openExternal(Uri.parse(url, true)))
+        window.showErrorMessage(`Could not open documentation for "${title}" in browser. URL: ${url}`);
+    } else window.showErrorMessage('Documentation viewer could not open path: ' + path);
+    webviewPanel.dispose();
+  }
 }
+const pos0 = new Position(0, 0);
 async function apiDocs(
   document: TextDocument, className: string, memberName: string, token: CancellationToken | null
 ) {
   const config = workspace.getConfiguration('godotFiles', document);
-  const viewer = supported ? config.get<string>('apiDocs.viewer')! : 'godot-tools';
+  const viewer = supported ? config.get<string>('documentation.viewer')! : 'godot-tools';
   if (viewer != 'godot-tools' && await isOnline()) {
     // We could get locale properly, but it seems other locales don't support every version consistently.
     // Also the API will probably still be in english even in those locales.
@@ -900,41 +928,37 @@ async function apiDocs(
     //   apiLocale = docsLocales.includes(lang) ? lang : 'en';
     // }
     const apiLocale = 'en';
-    const version = await godotVersionOfDocument(document);
+    const gdVersion = await godotVersionOfDocument(document);
     if (token?.isCancellationRequested) return null;
     try {
-      await openApiDocsWebpage(className, memberName, version, apiLocale, viewer == 'browser', token);
-      return null;
+      return new Location(apiDocsPageUri(className, memberName, gdVersion, apiLocale, viewer), pos0);
     } catch (e) { console.error(e); }
   } else if (extensions.getExtension('geequlim.godot-tools')?.isActive) {
     const uri = Uri.from({ scheme: 'gddoc', path: className + '.gddoc', fragment: memberName || undefined });
-    return new Location(uri, new Position(0, 0));
+    return new Location(uri, pos0);
   }
   const reason: string = viewer == 'godot-tools' ? 'Is the godot-tools extension running?' : 'Are you online?';
   window.showErrorMessage(`Could not open documentation for ${className}. ${reason}`);
   return null;
 }
-async function openApiDocsWebpage(
-  className: string, memberName: string, version: GodotVersion | null, apiLocale: string, useBrowser: boolean,
-  token: CancellationToken | null
+function apiDocsPageUri(
+  className: string, memberName: string, gdVersion: GodotVersion | null, locale: string, viewer: string,
 ) {
-  const apiVersion = version?.api || (version?.major == 3 ? latestApiGodot3 : 'stable');
+  const version = gdVersion?.api || (gdVersion?.major == 3 ? latestApiGodot3 : 'stable');
   const classLower = className.toLowerCase();
   const page = `classes/class_${classLower}.html`;
   const fragment = '#class-' + classLower + (!memberName ? '' :
-    `-${apiVersion == '3.0' || apiVersion == '2.1' ? '' : 'property-'}${memberName.replaceAll('_', '-')}`);
-  if (useBrowser) await openDocsInBrowser(apiLocale, apiVersion, page, fragment);
-  else await openDocsInTab(apiLocale, apiVersion, page, fragment, token);
+    `-${version == '3.0' || version == '2.1' ? '' : 'property-'}${memberName.replaceAll('_', '-')}`);
+  return docsPageUri(viewer, `${locale}/${version}/${page}`, className, fragment);
 }
-async function openDocsInBrowser(locale: string, version: string, page: string, fragment: string) {
-  const url = `https://${onlineDocsHost}/${locale}/${version}/${page}${fragment}`;
-  if (!await env.openExternal(Uri.parse(url, true))) throw new Error('Could not open URL in browser: ' + url);
+function docsPageUri(viewer: string, urlPath: string, title: string, fragment: string) {
+  return Uri.parse(`untitled:${ctx.extension.id}/godot-documentation.${viewer}.ide:/${urlPath}/${title}${fragment}`);
 }
-async function openDocsInTab(locale: string, version: string, page: string, fragment: string,
-  token: CancellationToken | null
-) {
-  const docsUrl = `https://${onlineDocsHost}/${locale}/${version}/${page}`;
-  console.info('Godot Files :: Fetching in docs webview: ' + docsUrl + fragment);
+
+interface GodotDocsPage { docsUrl: string; title: string; html: string; }
+const docsPageCache = new Map<string, GodotDocsPage>();
+async function fetchDocsPage(urlPath: string) {
+  const docsUrl = `https://${onlineDocsHost}/${urlPath}`;
   let response; try {
     response = await fetch(docsUrl);
   } catch (e) {
@@ -944,31 +968,48 @@ async function openDocsInTab(locale: string, version: string, page: string, frag
   }
   if (!response.ok)
     throw new Error(`Error fetching Godot docs: ${response.status} (${response.statusText}) ${docsUrl}`);
-  if (token?.isCancellationRequested) return;
+  //if (token?.isCancellationRequested) return;
   const html = await response.text();
-  if (token?.isCancellationRequested) return;
   const title = html.match(/<meta\s+property\s*=\s*"og:title"\s+content\s*=\s*"(.*?)"\s*\/?>/i)?.[1] ||
     html.match(/<title>(.*?)(?: &mdash;[^<]*)?<\/title>/i)?.[1] || 'Godot Docs';
-  let iconUrl = '', className = '';
+  return { docsUrl, title, html } as GodotDocsPage;
+}
+async function openDocsInTab(urlPath: string, fragment: string, webviewPanel: WebviewPanel | null,
+  token: CancellationToken | null
+) {
+  const cachedPage = docsPageCache.get(urlPath);
+  if (cachedPage) docsPageCache.delete(urlPath);
+  const { docsUrl, title, html } = cachedPage ?? await fetchDocsPage(urlPath);
+  console.info('Godot Files :: Fetched in docs webview: ' + docsUrl + fragment);
+  if (token?.isCancellationRequested) return;
+  const [, locale, _version, page] = urlPath.match(/^(\w+)\/([^/]+)\/([^#]+\.html)$/)
+    ?? ['', 'en', 'stable', '404.html'];
+  let className = '';
+  //let iconUrl = '';
   if (page.match(/^classes\/class_(\w+)\.html(?:\?.*)?$/)?.[1] == title.toLowerCase()) {
     className = title;
-    const old = /^[32]\.\w+/.test(version);
-    const ghBranch = old ? '3.x' : version.startsWith('4.') ? version : 'master';
-    const iconName = old ? 'icon_' + snakeCase(className) : className;
-    iconUrl = `https://raw.githubusercontent.com/godotengine/godot/${ghBranch}/editor/icons/${iconName}.svg`;
+    // This would get the same icon for the class used in the Godot Editor.
+    //const old = /^[32]\.\w+/.test(version);
+    //const ghBranch = old ? '3.x' : version.startsWith('4.') ? version : 'master';
+    //const iconName = old ? 'icon_' + snakeCase(className) : className;
+    //iconUrl = `https://raw.githubusercontent.com/godotengine/godot/${ghBranch}/editor/icons/${iconName}.svg`;
   }
-  const iconPath = (iconUrl ? await fetchAsDataUri(iconUrl) : null) ??
-    Uri.from({ scheme: 'https', authority: onlineDocsHost, path: '/favicon.ico' });
+  // Would use a 3rd-party icon. Instead, get a generic docs icon from the extension itself.
+  //const iconPath = (iconUrl ? await fetchAsDataUri(iconUrl) : null) ??
+  //  Uri.from({ scheme: 'https', authority: onlineDocsHost, path: '/favicon.ico' });
+  const iconPath = Uri.joinPath(ctx.extensionUri, 'lang.godot-docs/godot-documentation-webpage.color.svg');
   if (token?.isCancellationRequested) return;
-  const webviewPanel = window.createWebviewPanel('godotFiles.docs.website', title, 1, {
-    localResourceRoots: [], enableScripts: true, retainContextWhenHidden: true
+  if (webviewPanel) webviewPanel.title = title;
+  else webviewPanel = window.createWebviewPanel(GodotDocumentationProvider.viewType, title, 1, {
+    retainContextWhenHidden: true
   });
   webviewPanel.iconPath = iconPath;
   const webview = webviewPanel.webview;
+  webview.options = { localResourceRoots: [], enableScripts: true };
   const p = `https://${onlineDocsHost.replace(/^docs\./, '*.')}/${locale}/`;
   const csp = `default-src data: https:; script-src 'unsafe-inline' ${p}; style-src 'unsafe-inline' ${p}`;
   const hideNav = page != 'index.html' &&
-    workspace.getConfiguration('godotFiles.apiDocs.webview').get<boolean>('hideSidebar')!;
+    workspace.getConfiguration('godotFiles.documentation.webview').get<boolean>('hideSidebar')!;
   const injectHead = hideNav ? `<style>
 body.wy-body-for-nav { margin: unset }
 nav.wy-nav-top, nav.wy-nav-side, div.rst-versions, div.rst-footer-buttons { display: none }
@@ -1027,25 +1068,29 @@ async function onDocsTabMessage(msg: { navigateTo: string; exitThisPage?: boolea
   if (!url.startsWith('https:')) { console.warn('Refusing to navigate to this scheme: ' + url); return false; }
   const origin = `https://${onlineDocsHost}/`;
   let m;
-  if (!url.startsWith(origin) || !(m = url.substring(origin.length).match(/^(\w+)\/([^/]+)\/([^#]+\.html)(#.*)?$/))) {
+  if (!url.startsWith(origin) || !(m = url.substring(origin.length).match(/^(\w+\/[^/]+\/[^#]+\.html)(#.*)?$/))) {
     if (!await env.openExternal(Uri.parse(url, true)))
       window.showErrorMessage('Could not open URL in browser: ' + url);
     return false;
   }
-  const [, locale, version, page, fragment] = m;
+  const [, urlPath, fragment] = m;
   try {
-    await openDocsInTab(locale, version, page, fragment ?? '', null);
-    return !!msg.exitThisPage && !workspace.getConfiguration('godotFiles.apiDocs.webview').get<boolean>('keepTabs')!;
+    const docsPage = await fetchDocsPage(urlPath);
+    docsPageCache.set(urlPath, docsPage);
+    const docUri = docsPageUri('webview', `${urlPath}`, docsPage.title, fragment ?? '');
+    await commands.executeCommand('vscode.openWith', docUri, GodotDocumentationProvider.viewType);
+    return msg.exitThisPage &&
+      !workspace.getConfiguration('godotFiles.documentation.webview').get<boolean>('keepTabs')!;
   } catch (e) {
     console.error(e);
-    window.showErrorMessage('Could not open URL internally: ' + url, 'Open in browser').then(async (btn) => {
+    window.showErrorMessage('Could not open URL in webview: ' + url, 'Open in browser').then(async (btn) => {
       if (btn && !await env.openExternal(Uri.parse(url, true)))
         window.showErrorMessage('Could not open URL in browser: ' + url);
     });
     return false;
   }
 }
-//#endregion Api Docs
+//#endregion Godot Docs
 
 //#region Extension Entry
 async function unlockEarlyAccess() {
@@ -1098,12 +1143,19 @@ export async function activate(context: ExtensionContext) {
   if (ctx.globalState.get('supportKey') == checksum) supported = true;
   ctx.subscriptions.push(commands.registerCommand('godotFiles.unlockEarlyAccess', unlockEarlyAccess));
   // register multi-platform providers
+  ctx.subscriptions.push(
+    window.registerCustomEditorProvider(GodotDocumentationProvider.viewType, new GodotDocumentationProvider(), {
+      webviewOptions: { retainContextWhenHidden: true }
+    }),
+  );
   const provider = new GDAssetProvider();
-  ctx.subscriptions.push(languages.registerDocumentSymbolProvider(GDAssetProvider.docs, provider));
-  ctx.subscriptions.push(languages.registerDefinitionProvider(GDAssetProvider.godotDocs, provider));
-  ctx.subscriptions.push(languages.registerHoverProvider(GDAssetProvider.godotDocs, provider));
-  ctx.subscriptions.push(languages.registerInlayHintsProvider(GDAssetProvider.godotDocs, provider));
-  ctx.subscriptions.push(languages.registerColorProvider(GDAssetProvider.godotDocs, provider));
+  ctx.subscriptions.push(
+    languages.registerDocumentSymbolProvider(GDAssetProvider.docs, provider),
+    languages.registerDefinitionProvider(GDAssetProvider.godotDocs, provider),
+    languages.registerHoverProvider(GDAssetProvider.godotDocs, provider),
+    languages.registerInlayHintsProvider(GDAssetProvider.godotDocs, provider),
+    languages.registerColorProvider(GDAssetProvider.godotDocs, provider),
+  );
 }
 
 /** Runs to cleanup resources when extension is disabled. May not run in browser, and is limited to 5s.
