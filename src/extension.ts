@@ -833,18 +833,18 @@ async function resPathPreview(resPath: string, document: TextDocument, token: Ca
 }
 /** Data URI for the PNG thumbnail of the resource from Godot cache; or null if not found or cancelled. */
 export async function resThumb(resUri: Uri, token: CancellationToken) {
-  if (!process || resUri.scheme != 'file') return null;
+  if (!nodejs || resUri.scheme != 'file') return null;
   // Thumbnail max is 64x64 px = ~16KiB max, far less than the ~74kB MarkdownString base64 limit; ok to embed
   const resPathHash = md5(resUri.fsPath
     .replace(/^[a-z]:/, g0 => g0.toUpperCase()).replaceAll('\\', '/'));
   if (!resPathHash) return null; // in browser, would not be able to access Godot cache files anyway
-  const platform = process.platform;
+  const platform = process!.platform;
   const cachePaths = workspace.getConfiguration('godotFiles')
     .get<{ [platform: string]: string[]; }>('godotCachePath')![platform] ?? [];
   let lastThumbUri = null, lastModifiedTime = -Infinity;
   for (const cachePathString of cachePaths) {
     const cachePath = cachePathString.replace(/^~(?=\/)|\$\{userHome\}/g, g0 => homedir ?? g0)
-      .replace(/\$\{env:(\w+)\}/g, (g0, g1) => process.env[g1] ?? g0)
+      .replace(/\$\{env:(\w+)\}/g, (g0, g1) => process!.env[g1] ?? g0)
       .replace(/\$\{workspaceFolder(?::(.*?))?\}/g, (g0, g1) => !g1
         ? (workspace.getWorkspaceFolder(resUri) ?? workspace.workspaceFolders?.[0])?.uri.fsPath ?? g0
         : workspace.workspaceFolders?.find(f => f.name == g1)?.uri.fsPath ?? g0
@@ -1002,12 +1002,14 @@ async function loadDocsInTab(urlPath: string, urlFragment: string, webviewPanel:
     //const iconName = old ? 'icon_' + snakeCase(className) : className;
     //iconUrl = `https://raw.githubusercontent.com/godotengine/godot/${ghBranch}/editor/icons/${iconName}.svg`;
   }
+  const classLower = className.toLowerCase();
   // Would use a 3rd-party icon. Instead, get a generic docs icon from the extension itself.
   //const iconPath = (iconUrl ? await fetchAsDataUri(iconUrl) : null) ??
   //  Uri.from({ scheme: 'https', authority: onlineDocsHost, path: '/favicon.ico' });
   //if (token?.isCancellationRequested) return;
   const webview = webviewPanel.webview;
   webview.options = { localResourceRoots: [], enableScripts: true };
+  webview.onDidReceiveMessage(onDocsTabMessage, webviewPanel);
   const p = `https://${onlineDocsHost.replace(/^docs\./, '*.')}/${locale}/`;
   const csp = `default-src data: https:; script-src 'unsafe-inline' ${p}; style-src 'unsafe-inline' ${p}`;
   const hideNav = page != 'index.html' &&
@@ -1017,53 +1019,16 @@ body.wy-body-for-nav { margin: unset }
 nav.wy-nav-top, nav.wy-nav-side, div.rst-versions, div.rst-footer-buttons { display: none }
 section.wy-nav-content-wrap, div.wy-nav-content { margin: auto }
 </style>` : '';
-  const finalHtml = html.replace(/(?<=<head>\s*(?:<meta\s+charset\s*=\s*["']utf-8["']\s*\/?>)?)/i, `\
-<base href="${docsUrl}"/>${injectHead}<style>
-body.wy-body-for-nav { padding: 0; font-size: unset }
-div.rst-other-versions > dl:nth-child(1), #rtd-sidebar { display: none !important }
-</style><script>
-location.hash = "${urlFragment}";
-function vscodeSubmitForm(event) { event.preventDefault();
-  const form = event.target, a = document.createElement('a');
-  a.href = form.action + '?' + new URLSearchParams(new FormData(form)).toString();
-  a.target = '_blank'; a.style.display = 'none'; form.append(a); a.click(); a.remove();
-}
-const vscode = acquireVsCodeApi();
-document.addEventListener('click', event => {
-  const a = event.target.closest('a'); if (!a) return;
-  const openInNewTab = a.target && a.target != '_self' || event.ctrlKey || event.metaKey || event.button === 1;
-  if (!openInNewTab && a.href.startsWith(document.baseURI + '#')) return;
-  event.preventDefault(); event.stopPropagation();
-  vscode.postMessage({ navigateTo: a.href, exitThisPage: !openInNewTab });
-});
-document.addEventListener('DOMContentLoaded', () => {
-  const hash = location.hash.replace(/^#/, ''), idPrefix = 'class-${className.toLowerCase()}-property-';
-  if (!document.getElementById(hash) && hash.startsWith(idPrefix)) {
-    const baseClassUrl = document.evaluate(
-      '//h1/following-sibling::p/child::strong[text()="Inherits:"]/following-sibling::a',
-      document, null, XPathResult.FIRST_ORDERED_NODE_TYPE
-    ).singleNodeValue?.href;
-    const idProp = hash.substring(idPrefix.length);
-    if (/\\bclass_\\w+\\.html#class-\\w+$/.test(baseClassUrl)) {
-      const basePropUrl = baseClassUrl + '-property-' + idProp;
-      vscode.postMessage({ navigateTo: basePropUrl, exitThisPage: true }); stop(); return;
-    } else document.getElementsByClassName('admonition-grid')[0]?.insertAdjacentHTML('afterbegin', \`\\
-      <div class="admonition warning not-found">
-        <p class="first admonition-title">Not found</p><p><strong>The property was not found:</strong>
-        <code class="docutils literal notranslate">\${idProp.replaceAll('-', '_')}</code>.</p>
-      </div>\`
-    );
-  }
-  document.forms[0]?.addEventListener('submit', vscodeSubmitForm);
-  for (const a of document.querySelectorAll('div.rst-other-versions > dl:nth-child(2) > dd > a'))
-    a.href = a.title = document.baseURI.replace(/(?<=\\/${locale}\\/)[^/]+(?=\\/)/, a.text);
-});
-</script><meta http-equiv="Content-Security-Policy" content="${csp}"/>
-`);
-  webview.onDidReceiveMessage(onDocsTabMessage, webviewPanel);
+  const template = docsWebviewInjectHtmlTemplate ?? (docsWebviewInjectHtmlTemplate = new TextDecoder().decode(
+    await workspace.fs.readFile(Uri.joinPath(ctx.extensionUri, 'lang.godot-docs/godot-docs-webview.inject.htm'))
+  ));
+  const insertVar: { [key: string]: string; } = { docsUrl, injectHead, urlFragment, classLower, locale, csp };
+  const inject = template.replace(/%\{(\w+)\}/g, (_g0, g1) => insertVar[g1]);
+  const finalHtml = html.replace(/(?<=<head>\s*(?:<meta\s+charset\s*=\s*["']utf-8["']\s*\/?>)?)/i, inject);
   if (webview.html) webview.html = '';
   webview.html = finalHtml;
 }
+let docsWebviewInjectHtmlTemplate: string | undefined;
 
 interface GodotDocsMessage { navigateTo: string; exitThisPage?: boolean; }
 async function onDocsTabMessage(this: WebviewPanel, msg: GodotDocsMessage) {
