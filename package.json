@@ -257,13 +257,6 @@
 			}
 		],
 		"problemMatchers": [],
-		"commands": [
-			{
-				"command": "godotFiles.unlockEarlyAccess",
-				"title": "Godot Files: Unlock features in early access",
-				"enablement": "isWorkspaceTrusted"
-			}
-		],
 		"customEditors": [
 			{
 				"viewType": "godotFiles.documentationBrowser",
@@ -273,7 +266,54 @@
 				]
 			}
 		],
+		"commands": [
+			{
+				"command": "godotFiles.unlockEarlyAccess",
+				"category": "Godot Files",
+				"title": "Unlock features in early access",
+				"icon": "$(key)",
+				"enablement": "isWorkspaceTrusted"
+			},
+			{
+				"command": "godotFiles.activeDocsPage.reload",
+				"category": "Godot Files: Active Documentation Page",
+				"title": "Reload",
+				"icon": "$(refresh)",
+				"enablement": "activeWebviewPanelId == 'godotFiles.documentationBrowser'"
+			},
+			{
+				"command": "godotFiles.activeDocsPage.openInBrowser",
+				"category": "Godot Files: Active Documentation Page",
+				"title": "Open in External Browser",
+				"icon": "$(link-external)",
+				"enablement": "activeWebviewPanelId == 'godotFiles.documentationBrowser'"
+			}
+		],
+		"keybindings": [
+			{
+				"command": "godotFiles.activeDocsPage.reload",
+				"key": "f5",
+				"when": "activeWebviewPanelId == 'godotFiles.documentationBrowser'"
+			},
+			{
+				"command": "godotFiles.activeDocsPage.openInBrowser",
+				"key": "alt+f5",
+				"when": "activeWebviewPanelId == 'godotFiles.documentationBrowser'"
+			}
+		],
 		"menus": {
+			"editor/title": [
+				{
+					"command": "godotFiles.activeDocsPage.reload",
+					"group": "navigation@2",
+					"when": "activeWebviewPanelId == 'godotFiles.documentationBrowser'"
+				},
+				{
+					"command": "godotFiles.activeDocsPage.openInBrowser",
+					"group": "navigation@3",
+					"when": "activeWebviewPanelId == 'godotFiles.documentationBrowser'"
+				}
+			],
 			"extension/context": [
 				{
 					"command": "godotFiles.unlockEarlyAccess",

@@ -3,7 +3,7 @@ import {
   TextDocument, Range, Position, FileSystemError, FileType, Color, TextEdit, MarkdownString,
   DocumentSymbol, SymbolKind, Definition, Location, Hover, ColorInformation, ColorPresentation, InlayHint,
   DocumentFilter, DocumentSymbolProvider, DefinitionProvider, HoverProvider, DocumentColorProvider, InlayHintsProvider,
-  WebviewPanel, CustomDocument, CustomDocumentOpenContext, CustomReadonlyEditorProvider,
+  WebviewPanel, CustomDocument, CustomDocumentOpenContext, CustomReadonlyEditorProvider, TabInputCustom,
 } from 'vscode';
 const nodejs = typeof process != 'undefined' ? process : undefined;
 const createHash = nodejs && require('crypto').createHash;
@@ -889,18 +889,26 @@ const latestApiGodot3 = '3.6';
 class GodotDocumentationProvider implements CustomReadonlyEditorProvider
 {
   static readonly viewType = 'godotFiles.documentationBrowser';
+  static readonly webviewPanels = new Map<string, WebviewPanel>();
+  static parseUri(uri: Uri) {
+    const { path, fragment } = uri;
+    const [, viewer, urlPath, title] = path.match(/^.*?\/godot-documentation\.(\w+)\.ide:\/(.*?)\/([^/]+)$/) ?? [];
+    const urlFragment = fragment ? '#' + fragment : '';
+    return { path, viewer, urlPath, title, fragment, urlFragment };
+  }
   async openCustomDocument(uri: Uri, openContext: CustomDocumentOpenContext, token: CancellationToken
   ): Promise<CustomDocument> {
     return { uri: uri, dispose() {}, };
   }
   async resolveCustomEditor(document: CustomDocument, webviewPanel: WebviewPanel, token: CancellationToken
   ): Promise<void> {
-    const { path, fragment } = document.uri;
-    const [, viewer, urlPath, title] = path.match(/^.*?\/godot-documentation\.(\w+)\.ide:\/(.*?)\/([^/]+)$/) ?? [];
-    const urlFragment = fragment ? '#' + fragment : '';
+    const docsPageUri = document.uri, uriString = docsPageUri.toString();
+    GodotDocumentationProvider.webviewPanels.set(uriString, webviewPanel);
+    webviewPanel.onDidDispose(() => GodotDocumentationProvider.webviewPanels.delete(uriString));
+    const { path, viewer, urlPath, title, urlFragment } = GodotDocumentationProvider.parseUri(docsPageUri);
     if (viewer == 'webview') {
       try {
-        await openDocsInTab(urlPath, urlFragment, webviewPanel, token);
+        await loadDocsInTab(urlPath, urlFragment, webviewPanel, token);
         return;
       } catch (e) { console.error(e); throw e; }
     } else if (viewer == 'browser') {
@@ -957,7 +965,7 @@ function docsPageUri(viewer: string, urlPath: string, title: string, fragment: s
 
 interface GodotDocsPage { docsUrl: string; title: string; html: string; }
 const docsPageCache = new Map<string, GodotDocsPage>();
-async function fetchDocsPage(urlPath: string) {
+async function fetchDocsPage(urlPath: string, token: CancellationToken | null): Promise<GodotDocsPage> {
   const docsUrl = `https://${onlineDocsHost}/${urlPath}`;
   let response; try {
     response = await fetch(docsUrl);
@@ -968,19 +976,19 @@ async function fetchDocsPage(urlPath: string) {
   }
   if (!response.ok)
     throw new Error(`Error fetching Godot docs: ${response.status} (${response.statusText}) ${docsUrl}`);
-  //if (token?.isCancellationRequested) return;
+  if (token?.isCancellationRequested) return { docsUrl, title: '', html: '' };
   const html = await response.text();
   const title = html.match(/<meta\s+property\s*=\s*"og:title"\s+content\s*=\s*"(.*?)"\s*\/?>/i)?.[1] ||
     html.match(/<title>(.*?)(?: &mdash;[^<]*)?<\/title>/i)?.[1] || 'Godot Docs';
-  return { docsUrl, title, html } as GodotDocsPage;
+  return { docsUrl, title, html };
 }
-async function openDocsInTab(urlPath: string, fragment: string, webviewPanel: WebviewPanel | null,
+async function loadDocsInTab(urlPath: string, urlFragment: string, webviewPanel: WebviewPanel,
   token: CancellationToken | null
 ) {
   const cachedPage = docsPageCache.get(urlPath);
   if (cachedPage) docsPageCache.delete(urlPath);
-  const { docsUrl, title, html } = cachedPage ?? await fetchDocsPage(urlPath);
-  console.info('Godot Files :: Fetched in docs webview: ' + docsUrl + fragment);
+  const { docsUrl, title, html } = cachedPage ?? await fetchDocsPage(urlPath, token);
+  console.info('Godot Files :: Fetched in docs webview: ' + docsUrl + urlFragment);
   if (token?.isCancellationRequested) return;
   const [, locale, _version, page] = urlPath.match(/^(\w+)\/([^/]+)\/([^#]+\.html)$/)
     ?? ['', 'en', 'stable', '404.html'];
@@ -997,13 +1005,7 @@ async function openDocsInTab(urlPath: string, fragment: string, webviewPanel: We
   // Would use a 3rd-party icon. Instead, get a generic docs icon from the extension itself.
   //const iconPath = (iconUrl ? await fetchAsDataUri(iconUrl) : null) ??
   //  Uri.from({ scheme: 'https', authority: onlineDocsHost, path: '/favicon.ico' });
-  const iconPath = Uri.joinPath(ctx.extensionUri, 'lang.godot-docs/godot-documentation-webpage.color.svg');
-  if (token?.isCancellationRequested) return;
-  if (webviewPanel) webviewPanel.title = title;
-  else webviewPanel = window.createWebviewPanel(GodotDocumentationProvider.viewType, title, 1, {
-    retainContextWhenHidden: true
-  });
-  webviewPanel.iconPath = iconPath;
+  //if (token?.isCancellationRequested) return;
   const webview = webviewPanel.webview;
   webview.options = { localResourceRoots: [], enableScripts: true };
   const p = `https://${onlineDocsHost.replace(/^docs\./, '*.')}/${locale}/`;
@@ -1020,7 +1022,7 @@ section.wy-nav-content-wrap, div.wy-nav-content { margin: auto }
 body.wy-body-for-nav { padding: 0; font-size: unset }
 div.rst-other-versions > dl:nth-child(1), #rtd-sidebar { display: none !important }
 </style><script>
-location.hash = "${fragment}";
+location.hash = "${urlFragment}";
 function vscodeSubmitForm(event) { event.preventDefault();
   const form = event.target, a = document.createElement('a');
   a.href = form.action + '?' + new URLSearchParams(new FormData(form)).toString();
@@ -1058,12 +1060,17 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script><meta http-equiv="Content-Security-Policy" content="${csp}"/>
 `);
-  webview.onDidReceiveMessage(msg => onDocsTabMessage(msg).then(exit => {
-    if (exit) webviewPanel.dispose();
-  }));
+  webview.onDidReceiveMessage(onDocsTabMessage, webviewPanel);
+  if (webview.html) webview.html = '';
   webview.html = finalHtml;
 }
-async function onDocsTabMessage(msg: { navigateTo: string; exitThisPage?: boolean; }) {
+
+interface GodotDocsMessage { navigateTo: string; exitThisPage?: boolean; }
+async function onDocsTabMessage(this: WebviewPanel, msg: GodotDocsMessage) {
+  const exit = await docsTabMsgNavigate(msg);
+  if (exit) this.dispose();
+}
+async function docsTabMsgNavigate(msg: GodotDocsMessage) {
   const url = msg.navigateTo.replace(/^http:/i, 'https:');
   if (!url.startsWith('https:')) { console.warn('Refusing to navigate to this scheme: ' + url); return false; }
   const origin = `https://${onlineDocsHost}/`;
@@ -1075,7 +1082,7 @@ async function onDocsTabMessage(msg: { navigateTo: string; exitThisPage?: boolea
   }
   const [, urlPath, fragment] = m;
   try {
-    const docsPage = await fetchDocsPage(urlPath);
+    const docsPage = await fetchDocsPage(urlPath, null);
     docsPageCache.set(urlPath, docsPage);
     const docUri = docsPageUri('webview', `${urlPath}`, docsPage.title, fragment ?? '');
     await commands.executeCommand('vscode.openWith', docUri, GodotDocumentationProvider.viewType);
@@ -1089,6 +1096,27 @@ async function onDocsTabMessage(msg: { navigateTo: string; exitThisPage?: boolea
     });
     return false;
   }
+}
+
+function getActiveDocsUri() {
+  const tabInput = window.tabGroups.activeTabGroup.activeTab?.input as TabInputCustom;
+  if (!tabInput || tabInput.viewType != GodotDocumentationProvider.viewType) {
+    window.showErrorMessage('Could not find active Godot Docs Page tab!');
+    throw new Error();
+  } else return tabInput.uri;
+}
+async function activeDocsReload() {
+  const docsTabUri = getActiveDocsUri();
+  const { urlPath, urlFragment } = GodotDocumentationProvider.parseUri(docsTabUri);
+  const webviewPanel = GodotDocumentationProvider.webviewPanels.get(docsTabUri.toString())!;
+  await loadDocsInTab(urlPath, urlFragment, webviewPanel, null);
+}
+async function activeDocsOpenInBrowser() {
+  const docsTabUri = getActiveDocsUri();
+  const { urlPath, fragment } = GodotDocumentationProvider.parseUri(docsTabUri);
+  const url = Uri.from({ scheme: 'https', authority: onlineDocsHost, path: '/' + urlPath, fragment });
+  if (!await env.openExternal(url))
+    window.showErrorMessage('Could not open URL in browser: ' + url);
 }
 //#endregion Godot Docs
 
@@ -1147,6 +1175,8 @@ export async function activate(context: ExtensionContext) {
     window.registerCustomEditorProvider(GodotDocumentationProvider.viewType, new GodotDocumentationProvider(), {
       webviewOptions: { retainContextWhenHidden: true }
     }),
+    commands.registerCommand('godotFiles.activeDocsPage.reload', activeDocsReload),
+    commands.registerCommand('godotFiles.activeDocsPage.openInBrowser', activeDocsOpenInBrowser),
   );
   const provider = new GDAssetProvider();
   ctx.subscriptions.push(
