@@ -20,6 +20,7 @@ document.addEventListener('click', event => {
   if (!a) return;
   const openInNewTab = a.target && a.target != '_self' || event.ctrlKey || event.metaKey || event.button === 1;
   if (!openInNewTab && a.href.startsWith(document.baseURI + '#')) {
+    vscode.postMessage({ newFragment: a.href.substring(document.baseURI.length + 1) });
     return;
   }
   event.preventDefault();

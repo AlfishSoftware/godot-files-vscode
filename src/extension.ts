@@ -1030,12 +1030,17 @@ section.wy-nav-content-wrap, div.wy-nav-content { margin: auto }
 }
 let docsWebviewInjectHtmlTemplate: string | undefined;
 
-interface GodotDocsMessage { navigateTo: string; exitThisPage?: boolean; }
+interface GodotDocsMessage { navigateTo?: string; newFragment?: string; }
 async function onDocsTabMessage(this: WebviewPanel, msg: GodotDocsMessage) {
-  const exit = await docsTabMsgNavigate(msg);
-  if (exit) this.dispose();
+  if (msg.navigateTo != undefined) {
+    const exit = await docsTabMsgNavigate(msg as GodotDocsMessageNavigate);
+    if (exit) this.dispose();
+  } else if (msg.newFragment != undefined) {
+    (this as { _godotFiles_fragment?: string; })._godotFiles_fragment = msg.newFragment;
+  } else console.error('Godot Files :: Unknown message: ', msg);
 }
-async function docsTabMsgNavigate(msg: GodotDocsMessage) {
+interface GodotDocsMessageNavigate { navigateTo: string; exitThisPage?: boolean; }
+async function docsTabMsgNavigate(msg: GodotDocsMessageNavigate) {
   const url = msg.navigateTo.replace(/^http:/i, 'https:');
   if (!url.startsWith('https:')) { console.warn('Refusing to navigate to this scheme: ' + url); return false; }
   const origin = `https://${onlineDocsHost}/`;
@@ -1072,14 +1077,19 @@ function getActiveDocsUri() {
 }
 async function activeDocsReload() {
   const docsTabUri = getActiveDocsUri();
-  const { urlPath, urlFragment } = GodotDocumentationProvider.parseUri(docsTabUri);
   const webviewPanel = GodotDocumentationProvider.webviewPanels.get(docsTabUri.toString())!;
-  await loadDocsInTab(urlPath, urlFragment, webviewPanel, null);
+  const newFragment = (webviewPanel as { _godotFiles_fragment?: string; })._godotFiles_fragment;
+  const { urlPath, urlFragment } = GodotDocumentationProvider.parseUri(docsTabUri);
+  await loadDocsInTab(urlPath, newFragment != undefined ? '#' + newFragment : urlFragment, webviewPanel, null);
 }
 async function activeDocsOpenInBrowser() {
   const docsTabUri = getActiveDocsUri();
+  const webviewPanel = GodotDocumentationProvider.webviewPanels.get(docsTabUri.toString())!;
+  const newFragment = (webviewPanel as { _godotFiles_fragment?: string; })._godotFiles_fragment;
   const { urlPath, fragment } = GodotDocumentationProvider.parseUri(docsTabUri);
-  const url = Uri.from({ scheme: 'https', authority: onlineDocsHost, path: '/' + urlPath, fragment });
+  const url = Uri.from({
+    scheme: 'https', authority: onlineDocsHost, path: '/' + urlPath, fragment: newFragment ?? fragment
+  });
   if (!await env.openExternal(url))
     window.showErrorMessage('Could not open URL in browser: ' + url);
 }
