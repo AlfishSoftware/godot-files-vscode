@@ -4,6 +4,25 @@
 Features currently in [early access](README.md#early-access) are marked with 🔒 as they're restricted to supporters.  
 Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're unlocked for everyone since that version.
 
+## [0.0.8] - 2024-04-26
+### Changed
+- Setting `godotFiles.godotCachePath` variable substitution is now compatible with vscode syntax.  
+	⚠️ **Attention**:  
+	If you had manually set this, make sure to update the setting.  
+	Note that syntaxes `${VAR}` and `%VAR%` are no longer valid, use `${env:VAR}` instead.
+- Using `config-definition` language (same advanced grammar as GDAsset) by default for Git config files.
+### Added
+- GDAsset: Open docs when going to definition of a built-in type in GDAsset.
+- Godot Docs: Add a viewer which delegates documentation handling to the `godot-tools` extension via `gddoc:` URI.
+- 🔒 Godot Docs: Add a simple `browser` viewer, which opens the online docs URL in the external browser.
+- 🔒 Godot Docs: Add an advanced `webview` viewer, which loads the online docs internally within tabs in the IDE.
+### Fixed
+- Fix GDAsset quotes escaping on embedded GDScript for new grammar (from godot-tools v2.0.0).
+- Add the cache paths of flatpak Godot3 and Godot3Sharp to the defaults for `godotCachePath` setting.
+- Fix checking for `file:` URI scheme on project detection and resource thumbnails.
+- Web: Fix resource thumbnails issue in web IDE.
+- Web: Allow unlocking early access on web IDE too.
+
 ## [0.0.7] - 2023-11-25
 ### Fixed
 - Add the `org.godotengine.GodotSharp` flatpak cache path to the defaults for `godotCachePath` setting.
@@ -12,7 +31,7 @@ Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're
 
 ## [0.0.6] - 2023-10-02
 ### Added
-- 🔒 GDAsset: Inline color decorators on `Color(…)` values and within arrays.
+- ***v0.0.8*** 🔓 GDAsset: Inline color decorators on `Color(…)` values and within arrays.
 - 🔒 GDAsset: Inlay hints surrounding items with implied parentheses in packed arrays of vectors or colors.
 ### Fixed
 - GDAsset: Add `.woff2` as a supported font preview format.
