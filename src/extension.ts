@@ -3,7 +3,7 @@ import {
   TextDocument, Range, Position, FileSystemError, FileType, Color, TextEdit, MarkdownString,
   DocumentSymbol, SymbolKind, Definition, Location, Hover, ColorInformation, ColorPresentation, InlayHint,
   DocumentFilter, DocumentSymbolProvider, DefinitionProvider, HoverProvider, DocumentColorProvider, InlayHintsProvider,
-  WebviewPanel, CustomDocument, CustomDocumentOpenContext, CustomReadonlyEditorProvider, TabInputCustom,
+  WebviewPanel, CustomDocument, CustomDocumentOpenContext, CustomReadonlyEditorProvider,
 } from 'vscode';
 const nodejs = typeof process != 'undefined' ? process : undefined;
 const createHash = nodejs && require('crypto').createHash;
@@ -674,12 +674,13 @@ const assetGodotVersionRegex =
    * @param document Text document of the asset.
    * @returns An object with versions (major, and if found, minor too) or null if not found.
    */
-async function godotVersionOfDocument(document: TextDocument) {
-  const projDir = await projectDir(document.uri);
+async function godotVersionOfDocument(document: TextDocument | Uri) {
+  const projDir = await projectDir(document instanceof Uri ? document : document.uri);
   if (projDir) {
     const version = await godotVersionOfProject(projDir);
     if (version) return version;
   }
+  if (document instanceof Uri) return null;
   const m = document.getText().match(assetGodotVersionRegex);
   if (!m || !m[1]) return null;
   const format = +m[1];
@@ -896,6 +897,11 @@ class GodotDocumentationProvider implements CustomReadonlyEditorProvider
     const urlFragment = fragment ? '#' + fragment : '';
     return { path, viewer, urlPath, title, fragment, urlFragment };
   }
+  static parseUrlPath(urlPath: string) {
+    const [, locale, version, page] = urlPath.match(/^(\w+)\/([^/]+)\/([^#]+\.html)$/)
+      ?? ['', 'en', 'stable', '404.html'];
+    return { locale, version, page };
+  }
   async openCustomDocument(uri: Uri, openContext: CustomDocumentOpenContext, token: CancellationToken
   ): Promise<CustomDocument> {
     return { uri: uri, dispose() {}, };
@@ -990,8 +996,7 @@ async function loadDocsInTab(urlPath: string, urlFragment: string, webviewPanel:
   const { docsUrl, title, html } = cachedPage ?? await fetchDocsPage(urlPath, token);
   console.info('Godot Files :: Fetched in docs webview: ' + docsUrl + urlFragment);
   if (token?.isCancellationRequested) return;
-  const [, locale, _version, page] = urlPath.match(/^(\w+)\/([^/]+)\/([^#]+\.html)$/)
-    ?? ['', 'en', 'stable', '404.html'];
+  const { locale, page } = GodotDocumentationProvider.parseUrlPath(urlPath);
   let className = '';
   //let iconUrl = '';
   if (page.match(/^classes\/class_(\w+)\.html(?:\?.*)?$/)?.[1] == title.toLowerCase()) {
@@ -1068,10 +1073,41 @@ async function docsTabMsgNavigate(msg: GodotDocsMessageNavigate) {
   }
 }
 
+interface TabInputUnknown { readonly uri?: Uri; readonly modified?: Uri; readonly viewType?: string; }
+async function openApiDocs() {
+  if (!supported) { window.showErrorMessage('Only available in early access.'); return; }
+  const document = window.activeTextEditor?.document;
+  let configScope, gdVersion;
+  if (document) {
+    configScope = document;
+    gdVersion = await godotVersionOfDocument(document);
+  } else {
+    const tabInput = window.tabGroups.activeTabGroup.activeTab?.input as TabInputUnknown | undefined;
+    const activeTabUri = tabInput && (tabInput.uri ?? tabInput.modified);
+    if (activeTabUri && tabInput.viewType == GodotDocumentationProvider.viewType) {
+      const { locale, version } =
+        GodotDocumentationProvider.parseUrlPath(GodotDocumentationProvider.parseUri(activeTabUri).urlPath);
+      const docUri = docsPageUri('webview', `${locale}/${version}/classes/index.html`, 'All classes', '');
+      commands.executeCommand('vscode.openWith', docUri, GodotDocumentationProvider.viewType);
+      return;
+    }
+    const workspaceFolder = (activeTabUri && workspace.getWorkspaceFolder(activeTabUri))
+      ?? workspace.workspaceFolders?.[0];
+    configScope = activeTabUri ?? workspaceFolder;
+    gdVersion = (activeTabUri && await godotVersionOfDocument(activeTabUri))
+      ?? (workspaceFolder ? await godotVersionOfProject(workspaceFolder.uri) : null);
+  }
+  const viewer = workspace.getConfiguration('godotFiles.documentation', configScope)
+    .get<string>('viewer')! == 'webview' ? 'webview' : 'browser';
+  const locale = 'en';
+  const version = gdVersion?.api || (gdVersion?.major == 3 ? latestApiGodot3 : 'stable');
+  const docUri = docsPageUri(viewer, `${locale}/${version}/classes/index.html`, 'All classes', '');
+  commands.executeCommand('vscode.openWith', docUri, GodotDocumentationProvider.viewType);
+}
 function getActiveDocsUri() {
-  const tabInput = window.tabGroups.activeTabGroup.activeTab?.input as TabInputCustom;
-  if (!tabInput || tabInput.viewType != GodotDocumentationProvider.viewType) {
-    window.showErrorMessage('Could not find active Godot Docs Page tab!');
+  const tabInput = window.tabGroups.activeTabGroup.activeTab?.input as TabInputUnknown | undefined;
+  if (!tabInput || tabInput.viewType != GodotDocumentationProvider.viewType || !tabInput.uri) {
+    window.showErrorMessage('Could not find an URI of an active Godot Docs Page tab!');
     throw new Error();
   } else return tabInput.uri;
 }
@@ -1150,6 +1186,7 @@ export async function activate(context: ExtensionContext) {
     window.registerCustomEditorProvider(GodotDocumentationProvider.viewType, new GodotDocumentationProvider(), {
       webviewOptions: { retainContextWhenHidden: true }
     }),
+    commands.registerCommand('godotFiles.openApiDocs', openApiDocs),
     commands.registerCommand('godotFiles.activeDocsPage.reload', activeDocsReload),
     commands.registerCommand('godotFiles.activeDocsPage.openInBrowser', activeDocsOpenInBrowser),
   );

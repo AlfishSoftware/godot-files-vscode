@@ -13,6 +13,7 @@ Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're
 - Using `config-definition` language (same advanced grammar as GDAsset) by default for Git config files.
 ### Added
 - GDAsset: Open docs when going to definition of a built-in type in GDAsset.
+- Godot Docs: Command to open API docs listing all classes.
 - Godot Docs: Add a viewer which delegates documentation handling to the `godot-tools` extension via `gddoc:` URI.
 - 🔒 Godot Docs: Add a simple `browser` viewer, which opens the online docs URL in the external browser.
 - 🔒 Godot Docs: Add an advanced `webview` viewer, which loads the online docs internally within tabs in the IDE.

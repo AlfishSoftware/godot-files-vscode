@@ -275,6 +275,13 @@
 				"enablement": "isWorkspaceTrusted"
 			},
 			{
+				"command": "godotFiles.openApiDocs",
+				"category": "Godot Files",
+				"title": "Open Godot API Documentation",
+				"icon": "$(book)",
+				"enablement": "isWorkspaceTrusted"
+			},
+			{
 				"command": "godotFiles.activeDocsPage.reload",
 				"category": "Godot Files: Active Documentation Page",
 				"title": "Reload",
