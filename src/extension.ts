@@ -1088,7 +1088,7 @@ async function openApiDocs() {
       const { locale, version } =
         GodotDocumentationProvider.parseUrlPath(GodotDocumentationProvider.parseUri(activeTabUri).urlPath);
       const docUri = docsPageUri('webview', `${locale}/${version}/classes/index.html`, 'All classes', '');
-      commands.executeCommand('vscode.openWith', docUri, GodotDocumentationProvider.viewType);
+      await commands.executeCommand('vscode.openWith', docUri, GodotDocumentationProvider.viewType);
       return;
     }
     const workspaceFolder = (activeTabUri && workspace.getWorkspaceFolder(activeTabUri))
@@ -1102,7 +1102,7 @@ async function openApiDocs() {
   const locale = 'en';
   const version = gdVersion?.api || (gdVersion?.major == 3 ? latestApiGodot3 : 'stable');
   const docUri = docsPageUri(viewer, `${locale}/${version}/classes/index.html`, 'All classes', '');
-  commands.executeCommand('vscode.openWith', docUri, GodotDocumentationProvider.viewType);
+  await commands.executeCommand('vscode.openWith', docUri, GodotDocumentationProvider.viewType);
 }
 function getActiveDocsUri() {
   const tabInput = window.tabGroups.activeTabGroup.activeTab?.input as TabInputUnknown | undefined;
@@ -1128,6 +1128,12 @@ async function activeDocsOpenInBrowser() {
   });
   if (!await env.openExternal(url))
     window.showErrorMessage('Could not open URL in browser: ' + url);
+}
+async function activeDocsFindNext() {
+  await commands.executeCommand('editor.action.webvieweditor.findNext');
+}
+async function activeDocsFindPrevious() {
+  await commands.executeCommand('editor.action.webvieweditor.findPrevious');
 }
 //#endregion Godot Docs
 
@@ -1184,11 +1190,13 @@ export async function activate(context: ExtensionContext) {
   // register multi-platform providers
   ctx.subscriptions.push(
     window.registerCustomEditorProvider(GodotDocumentationProvider.viewType, new GodotDocumentationProvider(), {
-      webviewOptions: { retainContextWhenHidden: true }
+      webviewOptions: { retainContextWhenHidden: true, enableFindWidget: true }
     }),
     commands.registerCommand('godotFiles.openApiDocs', openApiDocs),
     commands.registerCommand('godotFiles.activeDocsPage.reload', activeDocsReload),
     commands.registerCommand('godotFiles.activeDocsPage.openInBrowser', activeDocsOpenInBrowser),
+    commands.registerCommand('godotFiles.activeDocsPage.findNext', activeDocsFindNext),
+    commands.registerCommand('godotFiles.activeDocsPage.findPrevious', activeDocsFindPrevious),
   );
   const provider = new GDAssetProvider();
   ctx.subscriptions.push(

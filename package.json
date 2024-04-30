@@ -294,6 +294,20 @@
 				"title": "Open in External Browser",
 				"icon": "$(link-external)",
 				"enablement": "activeWebviewPanelId == 'godotFiles.documentationBrowser'"
+			},
+			{
+				"command": "godotFiles.activeDocsPage.findNext",
+				"category": "Godot Files: Active Documentation Page: Find",
+				"title": "Next Match",
+				"icon": "$(find-next-match)",
+				"enablement": "webviewFindWidgetEnabled && !editorFocus && activeWebviewPanelId == 'godotFiles.documentationBrowser'"
+			},
+			{
+				"command": "godotFiles.activeDocsPage.findPrevious",
+				"category": "Godot Files: Active Documentation Page: Find",
+				"title": "Previous Match",
+				"icon": "$(find-previous-match)",
+				"enablement": "webviewFindWidgetEnabled && !editorFocus && activeWebviewPanelId == 'godotFiles.documentationBrowser'"
 			}
 		],
 		"keybindings": [
@@ -306,6 +320,18 @@
 				"command": "godotFiles.activeDocsPage.openInBrowser",
 				"key": "alt+f5",
 				"when": "activeWebviewPanelId == 'godotFiles.documentationBrowser'"
+			},
+			{
+				"command": "godotFiles.activeDocsPage.findNext",
+				"key": "f3",
+				"mac": "cmd+g",
+				"when": "webviewFindWidgetEnabled && !editorFocus && activeWebviewPanelId == 'godotFiles.documentationBrowser'"
+			},
+			{
+				"command": "godotFiles.activeDocsPage.findPrevious",
+				"key": "shift+f3",
+				"mac": "shift+cmd+g",
+				"when": "webviewFindWidgetEnabled && !editorFocus && activeWebviewPanelId == 'godotFiles.documentationBrowser'"
 			}
 		],
 		"menus": {
