@@ -4,7 +4,7 @@
 	"version": "0.0.8",
 	"license": "Unlicense",
 	"displayName": "Godot Files",
-	"description": "Provides syntax-coloring for some files supported by Godot Editor.",
+	"description": "Better syntax-coloring and additional features for some files supported by Godot Editor.",
 	"icon": "icon.webp",
 	"repository": {
 		"type": "git",
@@ -156,13 +156,13 @@
 				"configuration": "./lang.gdasset/gdasset.language-configuration.json"
 			},
 			{
-				"id": "godot-documentation-webpage",
+				"id": "godot-docs-webpage",
 				"filenamePatterns": [
-					"**/godot-documentation.*.ide:/**/*.html/*"
+					"**/godot-docs.*.ide:/**/*.html/*"
 				],
 				"icon": {
-					"dark": "./lang.godot-docs/godot-documentation-webpage.color.svg",
-					"light": "./lang.godot-docs/godot-documentation-webpage.color.svg"
+					"dark": "./lang.godot-docs/godot-docs-webpage.color.svg",
+					"light": "./lang.godot-docs/godot-docs-webpage.color.svg"
 				}
 			},
 			{
@@ -259,10 +259,10 @@
 		"problemMatchers": [],
 		"customEditors": [
 			{
-				"viewType": "godotFiles.documentationBrowser",
+				"viewType": "godotFiles.docsBrowser",
 				"displayName": "Godot Documentation Browser",
 				"selector": [
-					{ "filenamePattern": "**/godot-documentation.*.ide:/**/*.html/*" }
+					{ "filenamePattern": "**/godot-docs.*.ide:/**/*.html/*" }
 				]
 			}
 		],
@@ -286,52 +286,52 @@
 				"category": "Godot Files: Active Documentation Page",
 				"title": "Reload",
 				"icon": "$(refresh)",
-				"enablement": "activeWebviewPanelId == 'godotFiles.documentationBrowser'"
+				"enablement": "activeWebviewPanelId == 'godotFiles.docsBrowser'"
 			},
 			{
 				"command": "godotFiles.activeDocsPage.openInBrowser",
 				"category": "Godot Files: Active Documentation Page",
 				"title": "Open in External Browser",
 				"icon": "$(link-external)",
-				"enablement": "activeWebviewPanelId == 'godotFiles.documentationBrowser'"
+				"enablement": "activeWebviewPanelId == 'godotFiles.docsBrowser'"
 			},
 			{
 				"command": "godotFiles.activeDocsPage.findNext",
 				"category": "Godot Files: Active Documentation Page: Find",
 				"title": "Next Match",
 				"icon": "$(find-next-match)",
-				"enablement": "webviewFindWidgetEnabled && !editorFocus && activeWebviewPanelId == 'godotFiles.documentationBrowser'"
+				"enablement": "webviewFindWidgetEnabled && !editorFocus && activeWebviewPanelId == 'godotFiles.docsBrowser'"
 			},
 			{
 				"command": "godotFiles.activeDocsPage.findPrevious",
 				"category": "Godot Files: Active Documentation Page: Find",
 				"title": "Previous Match",
 				"icon": "$(find-previous-match)",
-				"enablement": "webviewFindWidgetEnabled && !editorFocus && activeWebviewPanelId == 'godotFiles.documentationBrowser'"
+				"enablement": "webviewFindWidgetEnabled && !editorFocus && activeWebviewPanelId == 'godotFiles.docsBrowser'"
 			}
 		],
 		"keybindings": [
 			{
 				"command": "godotFiles.activeDocsPage.reload",
 				"key": "f5",
-				"when": "activeWebviewPanelId == 'godotFiles.documentationBrowser'"
+				"when": "activeWebviewPanelId == 'godotFiles.docsBrowser'"
 			},
 			{
 				"command": "godotFiles.activeDocsPage.openInBrowser",
 				"key": "alt+f5",
-				"when": "activeWebviewPanelId == 'godotFiles.documentationBrowser'"
+				"when": "activeWebviewPanelId == 'godotFiles.docsBrowser'"
 			},
 			{
 				"command": "godotFiles.activeDocsPage.findNext",
 				"key": "f3",
 				"mac": "cmd+g",
-				"when": "webviewFindWidgetEnabled && !editorFocus && activeWebviewPanelId == 'godotFiles.documentationBrowser'"
+				"when": "webviewFindWidgetEnabled && !editorFocus && activeWebviewPanelId == 'godotFiles.docsBrowser'"
 			},
 			{
 				"command": "godotFiles.activeDocsPage.findPrevious",
 				"key": "shift+f3",
 				"mac": "shift+cmd+g",
-				"when": "webviewFindWidgetEnabled && !editorFocus && activeWebviewPanelId == 'godotFiles.documentationBrowser'"
+				"when": "webviewFindWidgetEnabled && !editorFocus && activeWebviewPanelId == 'godotFiles.docsBrowser'"
 			}
 		],
 		"menus": {
@@ -339,12 +339,12 @@
 				{
 					"command": "godotFiles.activeDocsPage.reload",
 					"group": "navigation@2",
-					"when": "activeWebviewPanelId == 'godotFiles.documentationBrowser'"
+					"when": "activeWebviewPanelId == 'godotFiles.docsBrowser'"
 				},
 				{
 					"command": "godotFiles.activeDocsPage.openInBrowser",
 					"group": "navigation@3",
-					"when": "activeWebviewPanelId == 'godotFiles.documentationBrowser'"
+					"when": "activeWebviewPanelId == 'godotFiles.docsBrowser'"
 				}
 			],
 			"extension/context": [

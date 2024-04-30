@@ -1,6 +1,6 @@
 # Godot Files
 
-Provides syntax-coloring for some files supported by Godot Editor.  
+Better syntax-coloring and additional features for some files supported by Godot Editor.  
 This is *not* meant to replace the official [godot-tools] extension, but to improve on its supported files. This plugin is designed so it can work alongside it, but it's completely independent. If you're using GDScript, you'll likely want to install godot-tools too.
 
 [godot-tools]: https://github.com/godotengine/godot-vscode-plugin

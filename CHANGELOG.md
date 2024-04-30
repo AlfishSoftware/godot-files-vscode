@@ -4,7 +4,7 @@
 Features currently in [early access](README.md#early-access) are marked with 🔒 as they're restricted to supporters.  
 Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're unlocked for everyone since that version.
 
-## [0.0.8] - 2024-04-26
+## [0.0.8] - 2024-04-30
 ### Changed
 - Setting `godotFiles.godotCachePath` variable substitution is now compatible with vscode syntax.  
 	⚠️ **Attention**:  

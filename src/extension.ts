@@ -889,11 +889,11 @@ const latestApiGodot3 = '3.6';
 // const docsLocales = ['en', 'cs', 'de', 'es', 'fr', 'it', 'ja', 'ko', 'pl', 'pt-br', 'ru', 'uk', 'zh-cn', 'zh-tw'];
 class GodotDocumentationProvider implements CustomReadonlyEditorProvider
 {
-  static readonly viewType = 'godotFiles.documentationBrowser';
+  static readonly viewType = 'godotFiles.docsBrowser';
   static readonly webviewPanels = new Map<string, WebviewPanel>();
   static parseUri(uri: Uri) {
     const { path, fragment } = uri;
-    const [, viewer, urlPath, title] = path.match(/^.*?\/godot-documentation\.(\w+)\.ide:\/(.*?)\/([^/]+)$/) ?? [];
+    const [, viewer, urlPath, title] = path.match(/^.*?\/godot-docs\.(\w+)\.ide:\/(.*?)\/([^/]+)$/) ?? [];
     const urlFragment = fragment ? '#' + fragment : '';
     return { path, viewer, urlPath, title, fragment, urlFragment };
   }
@@ -966,7 +966,7 @@ function apiDocsPageUri(
   return docsPageUri(viewer, `${locale}/${version}/${page}`, className, fragment);
 }
 function docsPageUri(viewer: string, urlPath: string, title: string, fragment: string) {
-  return Uri.parse(`untitled:${ctx.extension.id}/godot-documentation.${viewer}.ide:/${urlPath}/${title}${fragment}`);
+  return Uri.parse(`untitled:${ctx.extension.id}/godot-docs.${viewer}.ide:/${urlPath}/${title}${fragment}`);
 }
 
 interface GodotDocsPage { docsUrl: string; title: string; html: string; }
