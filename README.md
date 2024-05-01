@@ -1,11 +1,11 @@
 # Godot Files
 
-Provides syntax-coloring for some files supported by Godot Editor.  
+Better syntax-coloring and additional features for some files supported by Godot Editor.  
 This is *not* meant to replace the official [godot-tools] extension, but to improve on its supported files. This plugin is designed so it can work alongside it, but it's completely independent. If you're using GDScript, you'll likely want to install godot-tools too.
 
 [godot-tools]: https://github.com/godotengine/godot-vscode-plugin
 
-**Compatibility**: Godot 3.x, 4.x  
+**Compatibility**: Godot 3.x LTS and 4.0 to 4.x  
 This extension also works on browser IDEs ([vscode.dev](https://vscode.dev) and [github.dev](https://github.dev)), with limited functionality.
 
 ![Screenshot of godot-files extension for VSCode on a tscn file, showing syntax-coloring, outline and hover preview feature](docs/showcase-gdasset.webp)
@@ -14,10 +14,12 @@ This extension also works on browser IDEs ([vscode.dev](https://vscode.dev) and 
 
 Includes syntax-coloring for these languages:
 
-- **Godot Shader** files: `.gdshader`, `.gdshaderinc`.
+- **Godot Shader** files: `*.gdshader`, `*.gdshaderinc`.
 - Better (more specific) grammar for the INI-like files used by Godot (called "GDAsset" here):  
-  `.godot`, `.tscn`, `.escn`, `.tres`, `.gdns`, `.gdnlib`, `.import`, `.tet`, `.remap`.
-- The same grammar is reused for `.cfg` and the INI-like XDG Desktop Entry files: `.desktop`, `.directory`. Those fit better because this grammar is "smarter" than regular INI. E.g., it supports sub-properties, `;`-separated lists, apostrophe (single quote) inside unquoted strings like `don't`, etc. Feel free to associate this language (`config-definition` / Configuration Properties) with any other (non-Godot) INI-like formats as well if you notice it fits better.
+	`project.godot`, `*.tscn`, `*.escn`, `*.tres`, `*.gdns`, `*.gdnlib`, `*.import`, `*.tet`, `*.remap`.
+- The same grammar is reused for other INI-like files:  
+	`*.cfg`, Git config files (`.gitconfig`, `.git/config`) and XDG Desktop Entry files (`.desktop`, `.directory`).  
+	It fits better than INI and Properties because this grammar is "smarter" than regular INI. E.g., it supports sub-properties, literals (booleans, numbers, strings), quoted strings in section headers, `;`-separated lists, apostrophe (single quote) inside unquoted strings like `don't`, etc. You might want to associate this language (`config-definition` / Configuration Properties) with any other (non-Godot) INI-like formats as well if you notice it fits better.
 
 **INI-like** files (including GDAsset) also support:
 
@@ -26,32 +28,42 @@ Includes syntax-coloring for these languages:
 **GDAsset** files also support:
 
 - Syntax-coloring of embedded code in asset strings for GDScript and Godot Shader resources (see image above).  
-  😎 It even handles both inner and outer languages' escape sequences gracefully, and colors them differently:  
-  ![Showcasing how embedded code escape sequences are handled gracefully](docs/showcase-embedded-code-escapes.webp)
+	😎 It even handles both inner and outer languages' escape sequences gracefully, and colors them differently:  
+	![Showcasing how embedded code escape sequences are handled gracefully](docs/showcase-embedded-code-escapes.webp)
+
 - Navigate to definition of `SubResource` and `ExtResource` references, and to resource paths.  
-  ![Showcasing navigate to definition](docs/showcase-goto-definition.png)
+	![Showcasing navigate to definition](docs/showcase-goto-definition.png)  
+	**🌟 NEW:** Going to the definition of a built-in engine type (on `type="SomeType"` or `some_field = SomeType(...)`) will open its Godot API Documentation. This will be handled by the *godot-tools* extension, unless you're online and enabled early access (see below).
+
 - Hover resource references or paths to show code for loading in GDScript (`preload(…)`, `load(…)` or `FileAccess.open(…)`).  
-  ![Showcasing code for loading when previewing user path](docs/showcase-user-path-load.webp)
+	![Showcasing code for loading when previewing user path](docs/showcase-user-path-load.webp)
+
 - Hover image and font resource paths or their `ExtResource` references to preview them directly.  
-  🔧 You can disable resource previews when hovering with the setting `godotFiles.hover.previewResource`.
-  
-  ![Showcasing image preview](docs/showcase-image-preview.png)  
-  ✳️ Images supported: SVG, PNG, WebP, JPEG, BMP, GIF.
-  
-  The font preview shows all uppercase and lowercase ASCII letters and helps testing if they're too similar to numbers:  
-  ![Showcasing font preview](docs/showcase-font-preview.webp)  
-  ✳️ Fonts supported: TTF, OTF, WOFF, WOFF2.
+	🔧 You can disable resource previews when hovering with the setting `godotFiles.hover.previewResource`.
+	
+	![Showcasing image preview](docs/showcase-image-preview.png)  
+	✳️ Images supported: SVG, PNG, WebP, JPEG, BMP, GIF.
+	
+	The font preview shows all uppercase and lowercase ASCII letters and helps testing if they're too similar to numbers:  
+	![Showcasing font preview](docs/showcase-font-preview.webp)  
+	✳️ Fonts supported: TTF, OTF, WOFF, WOFF2.
+
+- Hover any resource (except sub-resources) to preview its thumbnail as generated by the Godot Editor.  
+	Godot doesn't need to be running because it updates thumbnail files into the cache whenever a resource is saved.  
+	🔧 The setting `godotFiles.hover.previewResource` also applies here.  
+	⚠️ If you're using Godot in [self-contained mode](https://docs.godotengine.org/en/stable/tutorials/io/data_paths.html#self-contained-mode), this requires adding the cache path with the setting `godotFiles.godotCachePath`.
+	
+	It works for scenes:  
+	![Showcasing thumbnail preview of a scene](docs/showcase-scene-thumb.webp)
+	
+	As well as any other resource files that have a thumbnail in Godot Editor:  
+	![Showcasing thumbnail preview of a material resource](docs/showcase-material-thumb.webp)
+
 - **🌟 NEW FEATURE (NO LONGER RESTRICTED): 🌟**  
-  Hover any resource (except sub-resources) to preview its thumbnail as generated by the Godot Editor.  
-  Godot doesn't need to be running because it updates thumbnail files into the cache whenever a resource is saved.  
-  🔧 The setting `godotFiles.hover.previewResource` also applies here.  
-  ⚠️ If you're using Godot in [self-contained mode](https://docs.godotengine.org/en/stable/tutorials/io/data_paths.html#self-contained-mode), this requires adding the cache path with the setting `godotFiles.godotCachePath`.
-  
-  It works for scenes:  
-  ![Showcasing thumbnail preview of a scene](docs/showcase-scene-thumb.webp)
-  
-  As well as any other resource files that have a thumbnail in Godot Editor:  
-  ![Showcasing thumbnail preview of a material resource](docs/showcase-material-thumb.webp)
+	Inline color decorators on `Color(…)` values and within arrays. Hover to edit the color or see its hex value.  
+	🔧 You can disable this feature with the settings under `godotFiles.inlineColors` (`.single` and `.array`).  
+	![Showcasing inline color decorators](docs/showcase-color-decorators.webp)  
+	✳️ The displayed color (and its hex value) can't consider advanced cases like HDR and color space changes (e.g. between sRGB and linear).
 
 If you want **more features**, check the next section and [potential future development](#potential-future-development) below.
 
@@ -60,17 +72,23 @@ If you want **more features**, check the next section and [potential future deve
 Features in early access are ready for use, but **restricted to supporters** at first.  
 Each feature will usually stay restricted until the next new feature takes its place in a future version.
 
-🔑 To unlock all features as soon as they arrive, please [donate] and copy the password, then use the ***Godot Files: Unlock features in early access*** command (right-click this extension in the panel) and paste it in the prompt. Doing this just once will permanently unlock everything in early access, even across updates.
+🔑 To unlock all features as soon as they arrive, please [donate] and copy the password, then use the ***Unlock features in early access*** command (right-click this extension in the panel) and paste it in the prompt. Doing this just once will permanently unlock everything in early access, even across updates.
 
 🔒 **GDAsset** features currently restricted:
-- Inline color decorators on `Color(…)` values and within arrays. Hover to edit the color or see its hex value.  
-  🔧 You can disable this feature with the settings under `godotFiles.inlineColors` (`.single` and `.array`).  
-  ![Showcasing inline color decorators](docs/showcase-color-decorators.webp)  
-  ✳️ The displayed color (and its hex value) can't consider advanced cases like HDR and color space changes (e.g. between sRGB and linear).
+
 - Inlay hints surrounding items with implied parentheses in packed arrays of vectors or colors.  
-  ✳️ This is *not* supported syntax in asset files! These parentheses are only shown for clarity.  
-  🔧 You can disable this feature with the settings under `godotFiles.clarifyArrays` (`.vector` and `.color`).  
-  ![Showcasing implied parentheses in array items as inlay hints](docs/showcase-parentheses-hint-in-arrays.webp)
+	✳️ This is *not* supported syntax in asset files! These parentheses are only shown for clarity.  
+	🔧 You can toggle this feature with the settings under `godotFiles.clarifyArrays` (`.vector` and `.color`).  
+	![Showcasing implied parentheses in array items as inlay hints](docs/showcase-parentheses-hint-in-arrays.webp)
+
+- Browse the online Godot Documentation directly from the IDE.  
+	⚙️ You can use the command ***Godot Files: Open Godot API Documentation*** to show the page listing all classes.  
+	🔧 The setting `godotFiles.documentation.viewer` lets you choose your preferred viewer for when you're online:
+	- `godot-tools`: Use the *godot-tools* extension to open API docs (offline; requires Godot to be running and connected).
+	- `browser`: Open online documentation URLs in the external browser. Also supports going to the specific Godot version.
+	- `webview`: Load online documentation pages internally within IDE tabs (including tutorials). Searches and external links are opened in your browser. This advanced viewer supports going to the specific Godot version, and redirecting inherited members to locate their definition in a parent class. There's a few settings for it too.
+	
+	![Showcasing a Godot Docs tutorial page on the internal webview](docs/showcase-docs-webview-tutorial.webp)
 
 ## Known Limitations
 
@@ -104,19 +122,26 @@ This software is free and in the [public domain]. It respects your privacy by no
 
 ## Potential Future Development
 
-You might have commercial interest in funding development of this extension or of a **specific feature** that you want. Or maybe you're a kind soul with the means to contribute for the benefit of the community.
+You can fund development of a **specific feature** that you want, contributing for the benefit of the community.
 
-In any case, when you [donate], you get not only the password to unlock **early access** explained [above](#early-access), but also the right to optionally **vote on a new feature**. If there's enough funding from the community, development will start/progress, prioritizing the most voted/funded feature. Any amount helps a lot!
+When you [donate], you get not only the password to unlock **early access** explained [above](#early-access), but also the right to optionally **vote on a new feature**. If there's enough funding from the community, development will progress, prioritizing the most voted feature. Any amount helps a lot!
 
-Each $ below means about a week of work needed to implement the feature. These guesses are very rough estimates, and this list may change.
+The features below are theoretically feasible.  
+Each $ means about a week of work needed to implement it. These are very rough estimates, and this list may change.
 
-### Godot Asset
+### Textual GDAsset
 
 Id | Weeks | Possible Feature
 -|-|-
 aArrayCount | $ | Show array size and element indices
-aGotoDocs | $$$ | Go to Online Docs of built-in Godot types
 aHoverCartesian | $$$$$ | Cartesian hover previews for some coordinate values like vector, quat, basis, etc
+
+### Binary Godot Asset
+
+Id | Weeks | Possible Feature
+-|-|-
+bDecode | $$ | Read-only textual GDAsset code (tres, tscn) for binary resource files (res, scn, etc.)
+bTexView | $$ | Open .stex and .ctex texture files like images
 
 ### Godot Shader
 

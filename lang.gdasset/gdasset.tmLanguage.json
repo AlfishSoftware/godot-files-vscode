@@ -66,6 +66,13 @@
 				"2": { "name": "comment.block.character.escape.gdasset" }
 			}
 		},
+		"characterEscapeInComment": {
+			"match": "(\\\\[bfnrt]|\\\\u[0-9A-Fa-f]{4}|\\\\U[0-9A-Fa-f]{6})|(\\\\)(?:.|$)",
+			"captures": {
+				"1": { "name": "constant.character.escape.gdasset" },
+				"2": { "name": "constant.character.escape.gdasset" }
+			}
+		},
 		"stringQuotedGuid": {
 			"name": "string.quoted.double.guid.gdasset",
 			"match": "(\")([0-9A-Fa-f]{32}|[0-9A-Fa-f]{8}(?:-[0-9A-Fa-f]{4}){3}-[0-9A-Fa-f]{12})(\")",
@@ -424,40 +431,145 @@
 			"patterns": [
 				{
 					"name": "comment.line.number-sign.gdscript",
-					"match": "(\\\\)?(#)(?:\\\\[\"\\\\]|[^\"\\n\\r])*",
+					"match": "(\\\\)?(#)((?:\\\\[\"\\\\]|[^\"\\n\\r])*)",
 					"captures": {
 						"1": { "name": "comment.block.character.escape.gdasset" },
-						"2": { "name": "punctuation.definition.comment.number-sign.gdscript" }
+						"2": { "name": "punctuation.definition.comment.number-sign.gdscript" },
+						"3": {
+							"patterns": [
+								{ "include": "#characterEscapeInComment" }
+							]
+						}
 					}
+				},
+				{
+					"name": "string.quoted.raw.triple.double.gdscript",
+					"captures": {
+						"1": { "name": "punctuation.definition.string.quoted.raw.triple.double.gdscript" },
+						"2": { "name": "comment.block.character.escape.gdasset" },
+						"3": { "name": "punctuation.definition.string.quoted.raw.triple.double.gdscript" },
+						"4": { "name": "comment.block.character.escape.gdasset" },
+						"5": { "name": "punctuation.definition.string.quoted.raw.triple.double.gdscript" },
+						"6": { "name": "comment.block.character.escape.gdasset" },
+						"7": { "name": "punctuation.definition.string.quoted.raw.triple.double.gdscript" }
+					},
+					"begin": "\\b(r)(\\\\)(\")(\\\\)(\")(\\\\)(\")",
+					"patterns": [
+						{ "include": "#characterEscapeGDScriptRaw" },
+						{ "include": "#characterEscape" }
+					],
+					"end": "()(\\\\)(\")(\\\\)(\")(\\\\)(\")|(?=\")"
+				},
+				{
+					"name": "string.quoted.raw.triple.single.gdscript",
+					"captures": {
+						"1": { "name": "punctuation.definition.string.quoted.raw.triple.single.gdscript" },
+						"2": { "name": "comment.block.character.escape.gdasset" },
+						"3": { "name": "punctuation.definition.string.quoted.raw.triple.single.gdscript" },
+						"4": { "name": "comment.block.character.escape.gdasset" },
+						"5": { "name": "punctuation.definition.string.quoted.raw.triple.single.gdscript" },
+						"6": { "name": "comment.block.character.escape.gdasset" },
+						"7": { "name": "punctuation.definition.string.quoted.raw.triple.single.gdscript" }
+					},
+					"begin": "\\b(r)(\\\\)?(')(\\\\)?(')(\\\\)?(')",
+					"patterns": [
+						{ "include": "#characterEscapeGDScriptRaw" },
+						{ "include": "#characterEscape" }
+					],
+					"end": "()(\\\\)?(')(\\\\)?(')(\\\\)?(')|(?=\")"
+				},
+				{
+					"name": "string.quoted.raw.double.gdscript",
+					"captures": {
+						"1": { "name": "punctuation.definition.string.quoted.raw.double.gdscript" },
+						"2": { "name": "comment.block.character.escape.gdasset" },
+						"3": { "name": "punctuation.definition.string.quoted.raw.double.gdscript" }
+					},
+					"begin": "\\b(r)(\\\\)(\")",
+					"patterns": [
+						{ "include": "#characterEscapeGDScriptRaw" },
+						{ "include": "#characterEscape" }
+					],
+					"end": "()(\\\\)(\")|(?=\")"
+				},
+				{
+					"name": "string.quoted.raw.single.gdscript",
+					"captures": {
+						"1": { "name": "punctuation.definition.string.quoted.raw.single.gdscript" },
+						"2": { "name": "comment.block.character.escape.gdasset" },
+						"3": { "name": "punctuation.definition.string.quoted.raw.single.gdscript" }
+					},
+					"begin": "\\b(r)(\\\\)?(')",
+					"patterns": [
+						{ "include": "#characterEscapeGDScriptRaw" },
+						{ "include": "#characterEscape" }
+					],
+					"end": "()(\\\\)?(')|(?=\")"
+				},
+				{
+					"name": "string.quoted.triple.double.gdscript",
+					"captures": {
+						"1": { "name": "comment.block.character.escape.gdasset" },
+						"2": { "name": "punctuation.definition.string.quoted.triple.double.gdscript" },
+						"3": { "name": "comment.block.character.escape.gdasset" },
+						"4": { "name": "punctuation.definition.string.quoted.triple.double.gdscript" },
+						"5": { "name": "comment.block.character.escape.gdasset" },
+						"6": { "name": "punctuation.definition.string.quoted.triple.double.gdscript" }
+					},
+					"begin": "(\\\\)(\")(\\\\)(\")(\\\\)(\")",
+					"patterns": [
+						{ "include": "#characterEscapeGDScript" },
+						{ "include": "#characterEscape" }
+					],
+					"end": "(\\\\)(\")(\\\\)(\")(\\\\)(\")|(?=\")"
+				},
+				{
+					"name": "string.quoted.triple.single.gdscript",
+					"captures": {
+						"1": { "name": "comment.block.character.escape.gdasset" },
+						"2": { "name": "punctuation.definition.string.quoted.triple.single.gdscript" },
+						"3": { "name": "comment.block.character.escape.gdasset" },
+						"4": { "name": "punctuation.definition.string.quoted.triple.single.gdscript" },
+						"5": { "name": "comment.block.character.escape.gdasset" },
+						"6": { "name": "punctuation.definition.string.quoted.triple.single.gdscript" }
+					},
+					"begin": "(\\\\)?(')(\\\\)?(')(\\\\)?(')",
+					"patterns": [
+						{ "include": "#characterEscapeGDScript" },
+						{ "include": "#characterEscape" }
+					],
+					"end": "(\\\\)?(')(\\\\)?(')(\\\\)?(')|(?=\")"
 				},
 				{
 					"name": "string.quoted.double.gdscript",
 					"captures": {
-						"1": { "name": "comment.block.character.escape.gdasset" }
+						"1": { "name": "comment.block.character.escape.gdasset" },
+						"2": { "name": "punctuation.definition.string.quoted.double.gdscript" }
 					},
-					"begin": "(\\\\)\"",
+					"begin": "(\\\\)(\")",
 					"patterns": [
 						{ "include": "#characterEscapeGDScript" },
 						{ "include": "#characterEscape" }
 					],
-					"end": "(\\\\)\"|(?=\")"
+					"end": "(\\\\)(\")|(?=\")"
 				},
 				{
 					"name": "string.quoted.single.gdscript",
 					"captures": {
-						"1": { "name": "comment.block.character.escape.gdasset" }
+						"1": { "name": "comment.block.character.escape.gdasset" },
+						"2": { "name": "punctuation.definition.string.quoted.single.gdscript" }
 					},
-					"begin": "(\\\\)?'",
+					"begin": "(\\\\)?(')",
 					"patterns": [
 						{ "include": "#characterEscapeGDScript" },
 						{ "include": "#characterEscape" }
 					],
-					"end": "(\\\\)?'|(?=\")"
+					"end": "(\\\\)?(')|(?=\")"
 				},
 				{ "include": "#characterEscape" },
 				{
 					"comment": "Break source because it interferes with escaped quote pattern.",
-					"match": "\\s*\\b(?:(?:[a-z]+\\s+)*(?:func|signal)\\s+)?[A-Za-z_]\\w*\\s*[(]",
+					"match": "(?:\\b(?:[a-z]+\\s+)*(?:func|signal)\\s+)?(?:@|\\b)[A-Za-z_]\\w*\\s*[(]|\\bvar\\s+[A-Za-z_]\\w*\\s*:?",
 					"captures": {
 						"0": {
 							"patterns": [
@@ -471,6 +583,14 @@
 			"end": "\"",
 			"endCaptures": {
 				"0": { "name": "punctuation.definition.string.quoted.double.gdasset" }
+			}
+		},
+		"characterEscapeGDScriptRaw": {
+			"match": "(\\\\)(?:\\\\(?:'|(\\\\)[\"'\\\\]|$)|\\\\(\\\\)?[^\"])",
+			"captures": {
+				"1": { "name": "comment.block.character.escape.gdasset" },
+				"2": { "name": "comment.block.character.escape.gdasset" },
+				"3": { "name": "comment.block.character.escape.gdasset" }
 			}
 		},
 		"characterEscapeGDScript": {

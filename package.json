@@ -1,10 +1,10 @@
 {
 	"publisher": "alfish",
 	"name": "godot-files",
-	"version": "0.0.7",
+	"version": "0.0.8",
 	"license": "Unlicense",
 	"displayName": "Godot Files",
-	"description": "Provides syntax-coloring for some files supported by Godot Editor.",
+	"description": "Better syntax-coloring and additional features for some files supported by Godot Editor.",
 	"icon": "icon.webp",
 	"repository": {
 		"type": "git",
@@ -156,6 +156,16 @@
 				"configuration": "./lang.gdasset/gdasset.language-configuration.json"
 			},
 			{
+				"id": "godot-docs-webpage",
+				"filenamePatterns": [
+					"**/godot-docs.*.ide:/**/*.html/*"
+				],
+				"icon": {
+					"dark": "./lang.godot-docs/godot-docs-webpage.color.svg",
+					"light": "./lang.godot-docs/godot-docs-webpage.color.svg"
+				}
+			},
+			{
 				"id": "config-definition",
 				"aliases": [
 					"Configuration Properties",
@@ -165,6 +175,12 @@
 					".cfg",
 					".desktop",
 					".directory"
+				],
+				"filenames": [
+					".gitconfig"
+				],
+				"filenamePatterns": [
+					"**/.git/config"
 				],
 				"icon": {
 					"dark": "./lang.gdasset/godot-asset.dark.svg",
@@ -241,18 +257,100 @@
 			}
 		],
 		"problemMatchers": [],
+		"customEditors": [
+			{
+				"viewType": "godotFiles.docsBrowser",
+				"displayName": "Godot Documentation Browser",
+				"selector": [
+					{ "filenamePattern": "**/godot-docs.*.ide:/**/*.html/*" }
+				]
+			}
+		],
 		"commands": [
 			{
 				"command": "godotFiles.unlockEarlyAccess",
-				"title": "Godot Files: Unlock features in early access",
-				"enablement": "isWorkspaceTrusted && !isWeb"
+				"category": "Godot Files",
+				"title": "Unlock features in early access",
+				"icon": "$(key)",
+				"enablement": "isWorkspaceTrusted"
+			},
+			{
+				"command": "godotFiles.openApiDocs",
+				"category": "Godot Files",
+				"title": "Open Godot API Documentation",
+				"icon": "$(book)",
+				"enablement": "isWorkspaceTrusted"
+			},
+			{
+				"command": "godotFiles.activeDocsPage.reload",
+				"category": "Godot Files: Active Documentation Page",
+				"title": "Reload",
+				"icon": "$(refresh)",
+				"enablement": "activeWebviewPanelId == 'godotFiles.docsBrowser'"
+			},
+			{
+				"command": "godotFiles.activeDocsPage.openInBrowser",
+				"category": "Godot Files: Active Documentation Page",
+				"title": "Open in External Browser",
+				"icon": "$(link-external)",
+				"enablement": "activeWebviewPanelId == 'godotFiles.docsBrowser'"
+			},
+			{
+				"command": "godotFiles.activeDocsPage.findNext",
+				"category": "Godot Files: Active Documentation Page: Find",
+				"title": "Next Match",
+				"icon": "$(find-next-match)",
+				"enablement": "webviewFindWidgetEnabled && !editorFocus && activeWebviewPanelId == 'godotFiles.docsBrowser'"
+			},
+			{
+				"command": "godotFiles.activeDocsPage.findPrevious",
+				"category": "Godot Files: Active Documentation Page: Find",
+				"title": "Previous Match",
+				"icon": "$(find-previous-match)",
+				"enablement": "webviewFindWidgetEnabled && !editorFocus && activeWebviewPanelId == 'godotFiles.docsBrowser'"
+			}
+		],
+		"keybindings": [
+			{
+				"command": "godotFiles.activeDocsPage.reload",
+				"key": "f5",
+				"when": "activeWebviewPanelId == 'godotFiles.docsBrowser'"
+			},
+			{
+				"command": "godotFiles.activeDocsPage.openInBrowser",
+				"key": "alt+f5",
+				"when": "activeWebviewPanelId == 'godotFiles.docsBrowser'"
+			},
+			{
+				"command": "godotFiles.activeDocsPage.findNext",
+				"key": "f3",
+				"mac": "cmd+g",
+				"when": "webviewFindWidgetEnabled && !editorFocus && activeWebviewPanelId == 'godotFiles.docsBrowser'"
+			},
+			{
+				"command": "godotFiles.activeDocsPage.findPrevious",
+				"key": "shift+f3",
+				"mac": "shift+cmd+g",
+				"when": "webviewFindWidgetEnabled && !editorFocus && activeWebviewPanelId == 'godotFiles.docsBrowser'"
 			}
 		],
 		"menus": {
+			"editor/title": [
+				{
+					"command": "godotFiles.activeDocsPage.reload",
+					"group": "navigation@2",
+					"when": "activeWebviewPanelId == 'godotFiles.docsBrowser'"
+				},
+				{
+					"command": "godotFiles.activeDocsPage.openInBrowser",
+					"group": "navigation@3",
+					"when": "activeWebviewPanelId == 'godotFiles.docsBrowser'"
+				}
+			],
 			"extension/context": [
 				{
 					"command": "godotFiles.unlockEarlyAccess",
-					"when": "extension == alfish.godot-files && isWorkspaceTrusted && !isWeb"
+					"when": "extension == alfish.godot-files && isWorkspaceTrusted"
 				}
 			]
 		},
@@ -265,9 +363,9 @@
 						"type": "object",
 						"default": {
 							"win32": [
-								"%LOCALAPPDATA%/Godot/",
+								"${env:LOCALAPPDATA}/Godot/",
 								"~/AppData/Local/Godot/",
-								"%TEMP%/Godot/"
+								"${env:TEMP}/Godot/"
 							],
 							"darwin": [
 								"~/Library/Caches/Godot/"
@@ -275,7 +373,9 @@
 							"linux": [
 								"~/.cache/godot/",
 								"~/.var/app/org.godotengine.GodotSharp/cache/godot/",
-								"~/.var/app/org.godotengine.Godot/cache/godot/"
+								"~/.var/app/org.godotengine.Godot3Sharp/cache/godot/",
+								"~/.var/app/org.godotengine.Godot/cache/godot/",
+								"~/.var/app/org.godotengine.Godot3/cache/godot/"
 							]
 						},
 						"additionalProperties": {
@@ -286,7 +386,38 @@
 								"description": "A path to Godot cache files in this platform."
 							}
 						},
-						"markdownDescription": "Paths to Godot cache files in each platform. The defaults should work in most cases. Add a path when using a Godot installation in [self-contained mode](https://docs.godotengine.org/en/stable/tutorials/io/data_paths.html#self-contained-mode).\n\nThe keys are platform ids as returned by NodeJS: `win32` (Windows), `darwin` (macOS), `linux`.\n\nEach key maps to an array of path strings. A starting `~/` in the path means the user's home directory. Environment variables are replaced using the syntax `%VARIABLE%` in Windows and `${VARIABLE}` in other platforms. Glob patterns are *not* allowed. The order in the array doesn't matter, since all paths are always scanned to get the most recent cache file."
+						"markdownDescription": "Paths to Godot cache files in each platform. The defaults should work in most cases. Add a path when using a Godot installation in [self-contained mode](https://docs.godotengine.org/en/stable/tutorials/io/data_paths.html#self-contained-mode).\n\nThe keys are platform ids as returned by NodeJS: `win32` (Windows), `darwin` (macOS), `linux`.\n\nEach key maps to an array of path strings. A starting `~/` in the path is equivalent to `${userHome}/`. Substitution is also supported for `${workspaceFolder}` and `${env:VARIABLE}`. Glob patterns are *not* allowed. The order in the array doesn't matter, since all paths are always scanned to get the most recent cache file."
+					},
+					"godotFiles.documentation.viewer": {
+						"order": 100,
+						"scope": "machine-overridable",
+						"type": "string",
+						"default": "webview",
+						"markdownDescription": "Specifies how the Godot Documentation is opened when online. The `godot-tools` viewer will be used when you're offline.\n\n⚠ This setting is exclusive to [early access](command:godotFiles.unlockEarlyAccess) (otherwise, only `godot-tools` will be used).",
+						"enum": [
+							"browser",
+							"webview",
+							"godot-tools"
+						],
+						"enumDescriptions": [
+							"Use your browser to open the documentation URL. Supports going to the specific API version.",
+							"Use a tab in the IDE to open the documentation website. Supports going to the specific API version. Supports redirecting inherited members to their definition.\nNote: it's possible that some future website changes could break this, so use the browser instead if you notice issues.",
+							"Use the official godot-tools extension to open a documentation in a tab. Note that this requires the Godot Editor to be running and connected to that extension."
+						]
+					},
+					"godotFiles.documentation.webview.hideSidebar": {
+						"order": 101,
+						"scope": "machine",
+						"type": "boolean",
+						"default": false,
+						"markdownDescription": "Enable to show only the documentation content itself, hiding the navigation sidebar when loading a page (except for the home page).\n\n⚠ Applies only to the `webview` documentation viewer, which is exclusive to [early access](command:godotFiles.unlockEarlyAccess)."
+					},
+					"godotFiles.documentation.webview.keepTabs": {
+						"order": 101,
+						"scope": "machine",
+						"type": "boolean",
+						"default": false,
+						"markdownDescription": "Enable to always open links in a new tab; otherwise you need to hold Ctrl/Cmd when clicking a link to open it in a new tab.\n\n⚠ Applies only to the `webview` documentation viewer, which is exclusive to [early access](command:godotFiles.unlockEarlyAccess)."
 					}
 				}
 			},
@@ -305,39 +436,39 @@
 						"scope": "language-overridable",
 						"type": "boolean",
 						"default": true,
-						"markdownDescription": "Show inline color decorators on `Color(…)` values.  \n⚠ Exclusive to early access."
+						"markdownDescription": "Show inline color decorators on `Color(…)` values."
 					},
 					"godotFiles.inlineColors.array": {
 						"order": 100,
 						"scope": "language-overridable",
 						"type": "boolean",
 						"default": true,
-						"description": "Show inline color decorators on color values within arrays.\n⚠ Exclusive to early access."
+						"description": "Show inline color decorators on color values within arrays."
 					},
 					"godotFiles.clarifyArrays.vector": {
 						"order": 200,
 						"scope": "language-overridable",
 						"type": "boolean",
 						"default": true,
-						"description": "Show implied parentheses around each vector in an array.\n⚠ Exclusive to early access."
+						"markdownDescription": "Show implied parentheses around each vector in a packed array.\n\n⚠ Exclusive to [early access](command:godotFiles.unlockEarlyAccess)."
 					},
 					"godotFiles.clarifyArrays.color": {
 						"order": 200,
 						"scope": "language-overridable",
 						"type": "boolean",
 						"default": false,
-						"description": "Show implied parentheses around each color in an array.\n⚠ Exclusive to early access."
+						"markdownDescription": "Show implied parentheses around each color in a packed array.\n\n⚠ Exclusive to [early access](command:godotFiles.unlockEarlyAccess)."
 					}
 				}
 			}
 		]
 	},
 	"devDependencies": {
-		"@types/vscode": "^1.84.2",
-		"typescript": "^5.3.2"
+		"@types/vscode": "^1.88.0",
+		"typescript": "^5.4.5"
 	},
 	"engines": {
-		"vscode": "^1.84.2"
+		"vscode": "^1.88.0"
 	},
 	"scripts": {
 		"open-in-browser": "npm run compile && vscode-test-web --quality=stable --browser=none --extensionDevelopmentPath=. .",

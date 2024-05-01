@@ -1,0 +1,55 @@
+<base href="%{docsUrl}"/>%{injectHead}<style>
+body.wy-body-for-nav { padding: 0; font-size: unset }
+div.rst-other-versions > dl:nth-child(1), #rtd-sidebar { display: none !important }
+</style><script>
+location.hash = "%{urlFragment}";
+function vscodeSubmitForm(/**@type {SubmitEvent}*/ event) {
+  event.preventDefault();
+  /**@type {HTMLFormElement}*/ const form = event.target;
+  const a = document.createElement('a');
+  a.href = form.action + '?' + new URLSearchParams(new FormData(form)).toString();
+  a.target = '_blank';
+  a.style.display = 'none';
+  form.append(a);
+  a.click();
+  a.remove();
+}
+const vscode = acquireVsCodeApi();
+document.addEventListener('click', event => {
+  /**@type {HTMLAnchorElement}*/ const a = event.target.closest('a');
+  if (!a) return;
+  const openInNewTab = a.target && a.target != '_self' || event.ctrlKey || event.metaKey || event.button === 1;
+  if (!openInNewTab && a.href.startsWith(document.baseURI + '#')) {
+    vscode.postMessage({ newFragment: a.href.substring(document.baseURI.length + 1) });
+    return;
+  }
+  event.preventDefault();
+  event.stopPropagation();
+  vscode.postMessage({ navigateTo: a.href, exitThisPage: !openInNewTab });
+});
+document.addEventListener('DOMContentLoaded', () => {
+  const hash = location.hash.replace(/^#/, ''), idPrefix = 'class-%{classLower}-property-';
+  if (!document.getElementById(hash) && hash.startsWith(idPrefix)) {
+    const baseClassUrl = document.evaluate(
+      '//h1/following-sibling::p/child::strong[text()="Inherits:"]/following-sibling::a',
+      document, null, XPathResult.FIRST_ORDERED_NODE_TYPE
+    ).singleNodeValue?.href;
+    const idProp = hash.substring(idPrefix.length);
+    if (/\bclass_\w+\.html#class-\w+$/.test(baseClassUrl)) {
+      const basePropUrl = baseClassUrl + '-property-' + idProp;
+      vscode.postMessage({ navigateTo: basePropUrl, exitThisPage: true });
+      stop();
+      return;
+    } else document.getElementsByClassName('admonition-grid')[0]?.insertAdjacentHTML('afterbegin', `\
+<div class="admonition warning not-found">
+  <p class="first admonition-title">Not found</p>
+  <p><strong>The property was not found:</strong>
+  <code class="docutils literal notranslate">${idProp.replaceAll('-', '_')}</code>.</p>
+</div>`
+    );
+  }
+  document.forms[0]?.addEventListener('submit', vscodeSubmitForm);
+  for (const a of document.querySelectorAll('div.rst-other-versions > dl:nth-child(2) > dd > a'))
+    a.href = a.title = document.baseURI.replace(/(?<=\/%{locale}\/)[^/]+(?=\/)/, a.text);
+});
+</script><meta http-equiv="Content-Security-Policy" content="%{csp}"/>
