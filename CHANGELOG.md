@@ -18,7 +18,7 @@ Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're
 - 🔒 Godot Docs: Add a simple `browser` viewer, which opens the online docs URL in the external browser.
 - 🔒 Godot Docs: Add an advanced `webview` viewer, which loads the online docs internally within tabs in the IDE.
 ### Fixed
-- Fix GDAsset quotes escaping on embedded GDScript for new grammar (from godot-tools v2.0.0).
+- Fix GDAsset quotes escaping on embedded GDScript for new grammar (from godot-tools v2) and raw/triple-quoted strings.
 - Add the cache paths of flatpak Godot3 and Godot3Sharp to the defaults for `godotCachePath` setting.
 - Fix checking for `file:` URI scheme on project detection and resource thumbnails.
 - Web: Fix resource thumbnails issue in web IDE.
@@ -95,7 +95,8 @@ Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're
 - GDAsset: Image and font previews by hovering references and paths.
 - GDAsset: Hover resource references to show GDScript preload code.
 
-[Unreleased]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.0.7...develop
+[Unreleased]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.0.8...develop
+[0.0.8]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.0.7...v0.0.8
 [0.0.7]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.0.6...v0.0.7
 [0.0.6]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.0.5...v0.0.6
 [0.0.5]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.0.4...v0.0.5
