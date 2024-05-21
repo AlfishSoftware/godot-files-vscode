@@ -1028,8 +1028,14 @@ section.wy-nav-content-wrap, div.wy-nav-content { margin: auto }
     await workspace.fs.readFile(Uri.joinPath(ctx.extensionUri, 'lang.godot-docs/godot-docs-webview.inject.htm'))
   ));
   const insertVar: { [key: string]: string; } = { docsUrl, injectHead, urlFragment, classLower, locale, csp };
-  const inject = template.replace(/%\{(\w+)\}/g, (_g0, g1) => insertVar[g1]);
-  const finalHtml = html.replace(/(?<=<head>\s*(?:<meta\s+charset\s*=\s*["']utf-8["']\s*\/?>)?)/i, inject);
+  const injectedHead = template.replace(/%\{(\w+)\}/g, (_g0, g1) => insertVar[g1]);
+  const pageId = page.replace(/\.html(?:\?.*)?$/, '');
+  const userNotes = `Open this page in your external browser to load comments, or <a href="\
+https://github.com/godotengine/godot-docs-user-notes/discussions/categories/user-contributed-notes?discussions_q=\
+%22${encodeURIComponent(pageId)}%22">find its discussion on GitHub</a> if available.<br/>`;
+  const finalHtml = html
+    .replace(/(?<=<head>\s*(?:<meta\s+charset\s*=\s*["']utf-8["']\s*\/?>)?)/i, injectedHead)
+    .replace(/(?<=<div\s+id\s*=\s*["']godot-giscus["']>\s*<hr\s*\/?>\s*<h2>\s*[\w\s-]*\s*<\/h2>\s*<p>)/i, userNotes);
   if (webview.html) webview.html = '';
   webview.html = finalHtml;
 }
