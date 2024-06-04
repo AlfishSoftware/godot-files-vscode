@@ -514,7 +514,7 @@ class GDAssetProvider implements
     // locate all packed vector arrays using regex, skipping occurrences inside a comment or string
     const reqStart = document.offsetAt(range.start);
     const reqSrc = document.getText(range);
-    for (const m of reqSrc.matchAll(/\b(P(?:acked|ool)(?:Vector([23])|Color)Array)(\s*\(\s*)([\s,\w.+-]*?)\s*\)/g)) {
+    for (const m of reqSrc.matchAll(/\b(P(?:acked|ool)(?:Vector([234])|Color)Array)(\s*\(\s*)([\s,\w.+-]*?)\s*\)/g)) {
       const dim = m[2];
       if (dim && !clarifyVectors || !dim && !clarifyColors) continue;
       const ctorStart = reqStart + m.index!;
@@ -684,8 +684,11 @@ async function godotVersionOfDocument(document: TextDocument | Uri) {
   const m = document.getText().match(assetGodotVersionRegex);
   if (!m || !m[1]) return null;
   const format = +m[1];
-  if (format == 3) return { major: 4 };
-  if (format == 2) return { major: 3 };
+  switch (format) {
+    case 4: case 3: return { major: 4 };
+    case 2: return { major: 3 };
+    case 1: return { major: 2 };
+  }
   return null;
 }
 /** URL schemes where you can get a project dir for an asset. */
@@ -886,6 +889,13 @@ const mdScheme = new Set(['data', 'file', 'https', 'vscode-file', 'vscode-remote
 //#region Godot Docs
 const onlineDocsHost = 'docs.godotengine.org';
 const latestApiGodot3 = '3.6';
+const latestApiGodot2 = '2.1';
+function apiVersion(gdVersion: GodotVersion | null) {
+  if (gdVersion == null) return 'stable';
+  if (gdVersion.api) return gdVersion.api;
+  const major = gdVersion.major;
+  return major <= 2 ? latestApiGodot2 : major == 3 ? latestApiGodot3 : 'stable';
+}
 // const docsLocales = ['en', 'cs', 'de', 'es', 'fr', 'it', 'ja', 'ko', 'pl', 'pt-br', 'ru', 'uk', 'zh-cn', 'zh-tw'];
 class GodotDocumentationProvider implements CustomReadonlyEditorProvider
 {
@@ -958,7 +968,7 @@ async function apiDocs(
 function apiDocsPageUri(
   className: string, memberName: string, gdVersion: GodotVersion | null, locale: string, viewer: string,
 ) {
-  const version = gdVersion?.api || (gdVersion?.major == 3 ? latestApiGodot3 : 'stable');
+  const version = apiVersion(gdVersion);
   const classLower = className.toLowerCase();
   const page = `classes/class_${classLower}.html`;
   const fragment = '#class-' + classLower + (!memberName ? '' :
@@ -1106,7 +1116,7 @@ async function openApiDocs() {
   const viewer = workspace.getConfiguration('godotFiles.documentation', configScope)
     .get<string>('viewer')! == 'webview' ? 'webview' : 'browser';
   const locale = 'en';
-  const version = gdVersion?.api || (gdVersion?.major == 3 ? latestApiGodot3 : 'stable');
+  const version = apiVersion(gdVersion);
   const docUri = docsPageUri(viewer, `${locale}/${version}/classes/index.html`, 'All classes', '');
   await commands.executeCommand('vscode.openWith', docUri, GodotDocumentationProvider.viewType);
 }

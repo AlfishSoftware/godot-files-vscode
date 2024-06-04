@@ -1,7 +1,7 @@
 {
 	"publisher": "alfish",
 	"name": "godot-files",
-	"version": "0.0.8",
+	"version": "0.0.9",
 	"license": "Unlicense",
 	"displayName": "Godot Files",
 	"description": "Better syntax-coloring and additional features for some files supported by Godot Editor.",
@@ -311,6 +311,12 @@
 			}
 		],
 		"keybindings": [
+			{
+				"command": "godotFiles.openApiDocs",
+				"key": "ctrl+f1",
+				"mac": "alt+cmd+d",
+				"when": "isWorkspaceTrusted && (editorLangId =~ /^(?:gd|godot-)(?:script|shader|resource|scene|asset|project)$/ || resource =~ /\\bGodot\\b/i)"
+			},
 			{
 				"command": "godotFiles.activeDocsPage.reload",
 				"key": "f5",
