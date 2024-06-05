@@ -1045,6 +1045,7 @@ https://github.com/godotengine/godot-docs-user-notes/discussions/categories/user
 %22${encodeURIComponent(pageId)}%22">find its discussion on GitHub</a> if available.<br/>`;
   const finalHtml = html
     .replace(/(?<=<head>\s*(?:<meta\s+charset\s*=\s*["']utf-8["']\s*\/?>)?)/i, injectedHead)
+    .replace(/<p\s+class\s*=\s*["']\s*last\s+latest-notice-link\s*["']>[^<]*<\/p>/i, '')
     .replace(/(?<=<div\s+id\s*=\s*["']godot-giscus["']>\s*<hr\s*\/?>\s*<h2>\s*[\w\s-]*\s*<\/h2>\s*<p>)/i, userNotes);
   if (webview.html) webview.html = '';
   webview.html = finalHtml;
@@ -1062,11 +1063,14 @@ async function onDocsTabMessage(this: WebviewPanel, msg: GodotDocsMessage) {
 }
 interface GodotDocsMessageNavigate { navigateTo: string; exitThisPage?: boolean; }
 async function docsTabMsgNavigate(msg: GodotDocsMessageNavigate) {
-  const url = msg.navigateTo.replace(/^http:/i, 'https:');
-  if (!url.startsWith('https:')) { console.warn('Refusing to navigate to this scheme: ' + url); return false; }
   const origin = `https://${onlineDocsHost}/`;
+  const url = msg.navigateTo.replace(/^http:/i, 'https:')
+    .replace(/^vscode-webview:\/\/[^/]*\/index\.html\//, origin + 'en/');
+  if (!url.startsWith('https:')) { console.warn('Refusing to navigate to this scheme: ' + url); return false; }
   let m;
-  if (!url.startsWith(origin) || !(m = url.substring(origin.length).match(/^(\w+\/[^/]+\/[^#]+\.html)(#.*)?$/))) {
+  if (!url.startsWith(origin) || !(m =
+    url.substring(origin.length).replace(/\/(?=(?:#.*)?$)/, '/index.html').match(/^(\w+\/[^/]+\/[^#]+\.html)(#.*)?$/)
+  )) {
     if (!await env.openExternal(Uri.parse(url, true)))
       window.showErrorMessage('Could not open URL in browser: ' + url);
     return false;
