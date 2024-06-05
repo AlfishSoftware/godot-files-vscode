@@ -903,12 +903,12 @@ class GodotDocumentationProvider implements CustomReadonlyEditorProvider
   static readonly webviewPanels = new Map<string, WebviewPanel>();
   static parseUri(uri: Uri) {
     const { path, fragment } = uri;
-    const [, viewer, urlPath, title] = path.match(/^.*?\/godot-docs\.(\w+)\.ide:\/(.*?)\/([^/]+)$/) ?? [];
+    const [, viewer, urlPath, title] = path.match(/^.*?\/godot-docs\.([\w-]+)\.ide:\/(.*?)\/([^/]+)$/) ?? [];
     const urlFragment = fragment ? '#' + fragment : '';
     return { path, viewer, urlPath, title, fragment, urlFragment };
   }
   static parseUrlPath(urlPath: string) {
-    const [, locale, version, page] = urlPath.match(/^(\w+)\/([^/]+)\/([^#]+\.html)$/)
+    const [, locale, version, page] = urlPath.match(/^([\w-]+)\/([^/]+)\/([^#]+\.html)$/)
       ?? ['', 'en', 'stable', '404.html'];
     return { locale, version, page };
   }
@@ -1009,7 +1009,7 @@ async function loadDocsInTab(urlPath: string, urlFragment: string, webviewPanel:
   const { locale, page } = GodotDocumentationProvider.parseUrlPath(urlPath);
   let className = '';
   //let iconUrl = '';
-  if (page.match(/^classes\/class_(\w+)\.html(?:\?.*)?$/)?.[1] == title.toLowerCase()) {
+  if (page.match(/^classes\/class_(@?\w+)\.html(?:\?.*)?$/)?.[1] == title.toLowerCase()) {
     className = title;
     // This would get the same icon for the class used in the Godot Editor.
     //const old = /^[32]\.\w+/.test(version);
@@ -1044,8 +1044,9 @@ section.wy-nav-content-wrap, div.wy-nav-content { margin: auto }
 https://github.com/godotengine/godot-docs-user-notes/discussions/categories/user-contributed-notes?discussions_q=\
 %22${encodeURIComponent(pageId)}%22">find its discussion on GitHub</a> if available.<br/>`;
   const finalHtml = html
+    // Inject HTML file with code and style on head
     .replace(/(?<=<head>\s*(?:<meta\s+charset\s*=\s*["']utf-8["']\s*\/?>)?)/i, injectedHead)
-    .replace(/<p\s+class\s*=\s*["']\s*last\s+latest-notice-link\s*["']>[^<]*<\/p>/i, '')
+    // Insert text on user-submitted notes to explain why it's empty (iframe won't load since it wouldn't work)
     .replace(/(?<=<div\s+id\s*=\s*["']godot-giscus["']>\s*<hr\s*\/?>\s*<h2>\s*[\w\s-]*\s*<\/h2>\s*<p>)/i, userNotes);
   if (webview.html) webview.html = '';
   webview.html = finalHtml;
@@ -1069,7 +1070,7 @@ async function docsTabMsgNavigate(msg: GodotDocsMessageNavigate) {
   if (!url.startsWith('https:')) { console.warn('Refusing to navigate to this scheme: ' + url); return false; }
   let m;
   if (!url.startsWith(origin) || !(m =
-    url.substring(origin.length).replace(/\/(?=(?:#.*)?$)/, '/index.html').match(/^(\w+\/[^/]+\/[^#]+\.html)(#.*)?$/)
+    url.substring(origin.length).replace(/\/(?=(?:#.*)?$)/, '/index.html').match(/^([\w-]+\/[^/]+\/[^#]+\.html)(#.*)?$/)
   )) {
     if (!await env.openExternal(Uri.parse(url, true)))
       window.showErrorMessage('Could not open URL in browser: ' + url);
