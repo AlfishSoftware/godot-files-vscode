@@ -282,6 +282,20 @@
 				"enablement": "isWorkspaceTrusted"
 			},
 			{
+				"command": "godotFiles.activeDocsPage.navigateBack",
+				"category": "Godot Files: Active Documentation Page",
+				"title": "Go Back",
+				"icon": "$(arrow-left)",
+				"enablement": "activeWebviewPanelId == 'godotFiles.docsBrowser' && godotFiles.activeDocsPage.canNavigateBack"
+			},
+			{
+				"command": "godotFiles.activeDocsPage.navigateForward",
+				"category": "Godot Files: Active Documentation Page",
+				"title": "Go Forward",
+				"icon": "$(arrow-right)",
+				"enablement": "activeWebviewPanelId == 'godotFiles.docsBrowser' && godotFiles.activeDocsPage.canNavigateForward"
+			},
+			{
 				"command": "godotFiles.activeDocsPage.reload",
 				"category": "Godot Files: Active Documentation Page",
 				"title": "Reload",
@@ -300,14 +314,14 @@
 				"category": "Godot Files: Active Documentation Page: Find",
 				"title": "Next Match",
 				"icon": "$(find-next-match)",
-				"enablement": "webviewFindWidgetEnabled && !editorFocus && activeWebviewPanelId == 'godotFiles.docsBrowser'"
+				"enablement": "activeWebviewPanelId == 'godotFiles.docsBrowser' && webviewFindWidgetEnabled && !editorFocus"
 			},
 			{
 				"command": "godotFiles.activeDocsPage.findPrevious",
 				"category": "Godot Files: Active Documentation Page: Find",
 				"title": "Previous Match",
 				"icon": "$(find-previous-match)",
-				"enablement": "webviewFindWidgetEnabled && !editorFocus && activeWebviewPanelId == 'godotFiles.docsBrowser'"
+				"enablement": "activeWebviewPanelId == 'godotFiles.docsBrowser' && webviewFindWidgetEnabled && !editorFocus"
 			}
 		],
 		"keybindings": [
@@ -316,6 +330,18 @@
 				"key": "ctrl+f1",
 				"mac": "alt+cmd+d",
 				"when": "isWorkspaceTrusted && (editorLangId =~ /^(?:gd|godot-)(?:script|shader|resource|scene|asset|project)$/ || resource =~ /\\bGodot\\b/i)"
+			},
+			{
+				"command": "godotFiles.activeDocsPage.navigateBack",
+				"key": "ctrl+[",
+				"mac": "cmd+[",
+				"when": "activeWebviewPanelId == 'godotFiles.docsBrowser' && godotFiles.activeDocsPage.canNavigateBack"
+			},
+			{
+				"command": "godotFiles.activeDocsPage.navigateForward",
+				"key": "ctrl+]",
+				"mac": "cmd+]",
+				"when": "activeWebviewPanelId == 'godotFiles.docsBrowser' && godotFiles.activeDocsPage.canNavigateForward"
 			},
 			{
 				"command": "godotFiles.activeDocsPage.reload",
@@ -331,24 +357,30 @@
 				"command": "godotFiles.activeDocsPage.findNext",
 				"key": "f3",
 				"mac": "cmd+g",
-				"when": "webviewFindWidgetEnabled && !editorFocus && activeWebviewPanelId == 'godotFiles.docsBrowser'"
+				"when": "activeWebviewPanelId == 'godotFiles.docsBrowser' && webviewFindWidgetEnabled && !editorFocus"
 			},
 			{
 				"command": "godotFiles.activeDocsPage.findPrevious",
 				"key": "shift+f3",
 				"mac": "shift+cmd+g",
-				"when": "webviewFindWidgetEnabled && !editorFocus && activeWebviewPanelId == 'godotFiles.docsBrowser'"
+				"when": "activeWebviewPanelId == 'godotFiles.docsBrowser' && webviewFindWidgetEnabled && !editorFocus"
 			}
 		],
 		"menus": {
 			"editor/title": [
 				{
-					"command": "godotFiles.activeDocsPage.reload",
-					"group": "navigation@2",
-					"when": "activeWebviewPanelId == 'godotFiles.docsBrowser'"
+					"command": "godotFiles.activeDocsPage.navigateBack",
+					"group": "navigation@1",
+					"when": "activeWebviewPanelId == 'godotFiles.docsBrowser' && godotFiles.activeDocsPage.canNavigateBack"
 				},
 				{
-					"command": "godotFiles.activeDocsPage.openInBrowser",
+					"command": "godotFiles.activeDocsPage.navigateForward",
+					"group": "navigation@2",
+					"when": "activeWebviewPanelId == 'godotFiles.docsBrowser' && godotFiles.activeDocsPage.canNavigateForward"
+				},
+				{
+					"command": "godotFiles.activeDocsPage.reload",
+					"alt": "godotFiles.activeDocsPage.openInBrowser",
 					"group": "navigation@3",
 					"when": "activeWebviewPanelId == 'godotFiles.docsBrowser'"
 				}
@@ -356,7 +388,7 @@
 			"extension/context": [
 				{
 					"command": "godotFiles.unlockEarlyAccess",
-					"when": "extension == alfish.godot-files && isWorkspaceTrusted"
+					"when": "isWorkspaceTrusted && extension == alfish.godot-files"
 				}
 			]
 		},
