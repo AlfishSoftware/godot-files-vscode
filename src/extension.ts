@@ -1009,7 +1009,8 @@ function apiDocsPageUri(
   return docsPageUri(viewer, `${locale}/${version}/${page}`, className, fragment);
 }
 function docsPageUri(viewer: string, urlPath: string, title: string, fragment: string) {
-  return Uri.parse(`untitled:${ctx.extension.id}/godot-docs.${viewer}.ide:/${urlPath}/${title}${fragment}`);
+  const filename = encodeURIComponent(title);
+  return Uri.parse(`untitled:${ctx.extension.id}/godot-docs.${viewer}.ide:/${urlPath}/${filename}${fragment}`);
 }
 
 interface GodotDocsPage { docsUrl: string; title: string; html: string; }
@@ -1027,8 +1028,10 @@ async function fetchDocsPage(urlPath: string, token: CancellationToken | null): 
     throw new Error(`Error fetching Godot docs: ${response.status} (${response.statusText}) ${docsUrl}`);
   if (token?.isCancellationRequested) return { docsUrl, title: '', html: '' };
   const html = await response.text();
-  const title = html.match(/<meta\s+property\s*=\s*"og:title"\s+content\s*=\s*"(.*?)"\s*\/?>/i)?.[1] ||
-    html.match(/<title>(.*?)(?: &mdash;[^<]*)?<\/title>/i)?.[1] || 'Godot Docs';
+  const title = (
+    html.match(/<meta\s+property\s*=\s*"og:title"\s+content\s*=\s*"(.*?)(?: \u2013[^"]*)?"\s*\/?>/i)?.[1] ||
+    html.match(/<title>(.*?)(?: &mdash;[^<]*)?<\/title>/i)?.[1] || 'Godot Docs'
+  ).replaceAll('/', '\u29F8');
   return { docsUrl, title, html };
 }
 async function loadDocsInTab(urlPath: string, urlFragment: string, webviewPanel: BrowserWebviewPanel,
