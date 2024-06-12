@@ -9,6 +9,10 @@ p.latest-notice-link { display: none !important } div.latest-notice > p:nth-last
 /* Hide list of languages, as they don't work the same as english */
 dl.ide-webview-other-languages { display: none !important }
 </style><script>
+// Set default code language tab to C# or GDScript, if preference is detected
+if ('%{codeLang}' && !sessionStorage.getItem('sphinx-tabs-last-selected'))
+  sessionStorage.setItem('sphinx-tabs-last-selected', btoa('%{codeLang}'));
+// Set fragment parameter, scrolling to it
 location.hash = "%{urlFragment}";
 // Fix form submitting by simulating a click on a link to open it externally
 function vscodeSubmitForm(/**@type {SubmitEvent}*/ event) {

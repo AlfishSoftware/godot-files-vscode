@@ -11,12 +11,13 @@ const homedir = nodejs && require('os').homedir();
 const dns = nodejs && require('dns/promises');
 
 //#region Utility Helpers
+const toUTF8 = new TextDecoder(), fromUTF8 = new TextEncoder();
 function md5(s: string) {
   return createHash?.('md5').update(s).digest('hex');
 }
 async function sha512(s: string) {
   if (createHash) return createHash('sha512').update(s).digest('hex');
-  return Array.prototype.map.call(new Uint8Array(await crypto.subtle.digest('SHA-512', new TextEncoder().encode(s))),
+  return Array.prototype.map.call(new Uint8Array(await crypto.subtle.digest('SHA-512', fromUTF8.encode(s))),
     (b: number) => b.toString(16).padStart(2, '0')).join('');
 }
 export function jsHash(s: string, seed = 0) { // 53-bit hash, see https://stackoverflow.com/a/52171480
@@ -644,28 +645,38 @@ export async function projectDir(assetUri: Uri) {
   } while (uri.path);
   return null;
 }
-interface GodotVersion { major: number; minor?: number; api?: string; }
+interface GodotVersion { major: number; minor?: number; api?: string; dotnet: boolean; }
 const projGodotVersionRegex = /^\s*config\/features\s*=\s*PackedStringArray\s*\(\s*(.*?)\s*\)\s*(?:[;#].*)?$/m;
 /** Get the Godot version of the project on the specified folder.
  * @param projectDirUri Uri of the folder containing the project.godot file.
  * @returns An object with versions (major, and if found, minor too) or null if not found.
  */
 async function godotVersionOfProject(projectDirUri: Uri): Promise<GodotVersion | null> {
-  let t: string;
+  let projMeta: string;
   try {
-    t = new TextDecoder().decode(await workspace.fs.readFile(Uri.joinPath(projectDirUri, 'project.godot')));
+    projMeta = toUTF8.decode(await workspace.fs.readFile(Uri.joinPath(projectDirUri, 'project.godot')));
   } catch { return null; }
-  let m = t.match(projGodotVersionRegex);
+  let m = projMeta.match(projGodotVersionRegex), dotnet = false;
   if (m && m[1]) {
-    m = m[1].split(/\s*,\s*/g).map(s => s.match(/^"((\d+)\.(\d+)[^"\\]*)"$/))
-      .find(m => m)!;
-    if (m && m[1]) return { api: m[1], major: +m[2], minor: +m[3] };
+    const features = m[1].split(/\s*,\s*/g).map(s => s.replace(/^"([^"\\]*)"$/, '$1'));
+    if (features.includes('C#')) dotnet = true;
+    m = features.map(s => s.match(/^((\d+)\.(\d+).*)$/)).find(m => m)!;
+    if (m && m[1]) return { api: m[1], major: +m[2], minor: +m[3], dotnet };
   }
-  m = t.match(/^\s*config_version\s*=\s*(\d+)\s*(?:[;#].*)?$/m);
+  if (!dotnet) try {
+    m = projMeta.match(/^\[dotnet\]\s*^\s*project\/assembly_name\s*=\s*"([^"\\]*)"\s*(?:[;#].*)?$/) ??
+      projMeta.match(/^\[application\]\s*^\s*config\/name\s*=\s*"([^"\\]*)"\s*(?:[;#].*)?$/);
+    const csProjName = m![1] + '.csproj';
+    const csProj = toUTF8.decode(await workspace.fs.readFile(Uri.joinPath(projectDirUri, csProjName)));
+    dotnet = true;
+    m = csProj.match(/^<Project\s+Sdk\s*=\s*["']Godot\.NET\.Sdk\/((\d+)\.(\d+))(?:[^"'\\]*?)?["']>/i)!;
+    return { api: m[1], major: +m[2], minor: +m[3], dotnet };
+  } catch { /**/ }
+  m = projMeta.match(/^\s*config_version\s*=\s*(\d+)\s*(?:[;#].*)?$/m);
   if (!m || !m[1]) return null;
   const configVersion = +m[1];
-  if (configVersion == 5) return { major: 4 };
-  if (configVersion == 4) return { major: 3 };
+  if (configVersion == 5) return { major: 4, dotnet };
+  if (configVersion == 4) return { major: 3, dotnet };
   return null;
 }
 const assetGodotVersionRegex =
@@ -674,20 +685,22 @@ const assetGodotVersionRegex =
    * @param document Text document of the asset.
    * @returns An object with versions (major, and if found, minor too) or null if not found.
    */
-async function godotVersionOfDocument(document: TextDocument | Uri) {
+async function godotVersionOfDocument(document: TextDocument | Uri): Promise<GodotVersion | null> {
   const projDir = await projectDir(document instanceof Uri ? document : document.uri);
   if (projDir) {
     const version = await godotVersionOfProject(projDir);
     if (version) return version;
   }
   if (document instanceof Uri) return null;
-  const m = document.getText().match(assetGodotVersionRegex);
+  const text = document.getText();
+  const m = text.match(assetGodotVersionRegex);
   if (!m || !m[1]) return null;
   const format = +m[1];
+  const dotnet = /^\[ext_resource\s+type="Script"\s+path="[^"\\]*\.[cC][sS]".*?\]\s*(?:[;#].*)?$/.test(text);
   switch (format) {
-    case 4: case 3: return { major: 4 };
-    case 2: return { major: 3 };
-    case 1: return { major: 2 };
+    case 4: case 3: return { major: 4, dotnet };
+    case 2: return { major: 3, dotnet };
+    case 1: return { major: 2, dotnet };
   }
   return null;
 }
@@ -827,7 +840,7 @@ async function resPathPreview(resPath: string, document: TextDocument, token: Ca
     try {
       const imgData = await svgFontTest(resUri, type);
       if (token.isCancellationRequested) return null;
-      await workspace.fs.writeFile(imgSrc, new TextEncoder().encode(imgData)); // will auto create dirs
+      await workspace.fs.writeFile(imgSrc, fromUTF8.encode(imgData)); // will auto create dirs
     } catch (err) { // some fs error? give up and just link
       console.error(err);
       return md.appendMarkdown(`[Font file](${resUriStr})`);
@@ -908,6 +921,7 @@ class GodotDocumentationProvider implements CustomReadonlyEditorProvider
   static readonly viewType = 'godotFiles.docsBrowser';
   static readonly webviewPanels = new Map<string, BrowserWebviewPanel>();
   static readonly navigationHistoryBuffer = new Map<string, BrowserHistory>();
+  static readonly detectedDotnetBuffer = new Map<string, boolean>();
   static parseUri(uri: Uri) {
     const { path, fragment } = uri;
     const [, viewer, urlPath, title] = path.match(/^.*?\/godot-docs\.([\w-]+)\.ide:\/(.*?)\/([^/]+)$/) ?? [];
@@ -953,11 +967,13 @@ class GodotDocumentationProvider implements CustomReadonlyEditorProvider
       GodotDocumentationProvider.setCanNavigate(browserWebviewPanel._godotFiles_history);
     });
     GodotDocumentationProvider.webviewPanels.set(uriString, browserWebviewPanel);
+    const dotnet = GodotDocumentationProvider.detectedDotnetBuffer.get(uriString);
+    GodotDocumentationProvider.detectedDotnetBuffer.delete(uriString);
     webviewPanel.onDidDispose(() => GodotDocumentationProvider.webviewPanels.delete(uriString));
     const { path, viewer, urlPath, title, urlFragment } = GodotDocumentationProvider.parseUri(docsPageUri);
     if (viewer == 'webview') {
       try {
-        await loadDocsInTab(urlPath, urlFragment, browserWebviewPanel, token);
+        await loadDocsInTab(urlPath, urlFragment, dotnet, browserWebviewPanel, token);
         return;
       } catch (e) { console.error(e); throw e; }
     } else if (viewer == 'browser') {
@@ -988,7 +1004,10 @@ async function apiDocs(
     const gdVersion = await godotVersionOfDocument(document);
     if (token?.isCancellationRequested) return null;
     try {
-      return new Location(apiDocsPageUri(className, memberName, gdVersion, apiLocale, viewer), pos0);
+      const docUri = apiDocsPageUri(className, memberName, gdVersion, apiLocale, viewer);
+      if (viewer == 'webview')
+        GodotDocumentationProvider.detectedDotnetBuffer.set(docUri.toString(), !!gdVersion?.dotnet);
+      return new Location(docUri, pos0);
     } catch (e) { console.error(e); }
   } else if (extensions.getExtension('geequlim.godot-tools')?.isActive) {
     const uri = Uri.from({ scheme: 'gddoc', path: className + '.gddoc', fragment: memberName || undefined });
@@ -1034,8 +1053,8 @@ async function fetchDocsPage(urlPath: string, token: CancellationToken | null): 
   ).replaceAll('/', '\u29F8');
   return { docsUrl, title, html };
 }
-async function loadDocsInTab(urlPath: string, urlFragment: string, webviewPanel: BrowserWebviewPanel,
-  token: CancellationToken | null
+async function loadDocsInTab(urlPath: string, urlFragment: string, dotnet: boolean | undefined,
+  webviewPanel: BrowserWebviewPanel, token: CancellationToken | null
 ) {
   const cachedPage = docsPageCache.get(urlPath);
   if (cachedPage) docsPageCache.delete(urlPath);
@@ -1070,11 +1089,12 @@ body.wy-body-for-nav { margin: unset }
 nav.wy-nav-top, nav.wy-nav-side, div.rst-versions, div.rst-footer-buttons { display: none }
 section.wy-nav-content-wrap, div.wy-nav-content { margin: auto }
 </style>` : '';
-  const template = docsWebviewInjectHtmlTemplate ?? (docsWebviewInjectHtmlTemplate = new TextDecoder().decode(
+  const codeLang = dotnet ? 'C#' : dotnet == false ? 'GDScript' : '';
+  const template = docsWebviewInjectHtmlTemplate ?? (docsWebviewInjectHtmlTemplate = toUTF8.decode(
     await workspace.fs.readFile(Uri.joinPath(ctx.extensionUri, 'lang.godot-docs/godot-docs-webview.inject.htm'))
   ));
-  const insertVar: { [key: string]: string; } = { docsUrl, injectHead, urlFragment, classLower, locale, csp };
-  const injectedHead = template.replace(/%\{(\w+)\}/g, (_g0, g1) => insertVar[g1]);
+  const insertVar: { [key: string]: string; } = { docsUrl, injectHead, urlFragment, classLower, locale, csp, codeLang };
+  const injectedHead = template.replace(/%\{(\w+)\}/g, (_s, v) => insertVar[v] ?? '');
   const pageId = page.replace(/\.html(?:\?.*)?$/, '');
   const userNotes = `Open this page in your external browser to load comments, or <a href="\
 https://github.com/godotengine/godot-docs-user-notes/discussions/categories/user-contributed-notes?discussions_q=\
@@ -1167,6 +1187,8 @@ async function openApiDocs() {
   const locale = 'en';
   const version = apiVersion(gdVersion);
   const docUri = docsPageUri(viewer, `${locale}/${version}/classes/index.html`, 'All classes', '');
+  if (viewer == 'webview')
+    GodotDocumentationProvider.detectedDotnetBuffer.set(docUri.toString(), !!gdVersion?.dotnet);
   await commands.executeCommand('vscode.openWith', docUri, GodotDocumentationProvider.viewType);
 }
 function getActiveDocsUri() {
@@ -1201,11 +1223,13 @@ async function activeDocsGoForward() {
   webviewPanel.dispose();
 }
 async function activeDocsReload() {
-  const docsTabUri = getActiveDocsUri();
-  const webviewPanel = GodotDocumentationProvider.webviewPanels.get(docsTabUri.toString())!;
+  const docsTabUri = getActiveDocsUri(), uriString = docsTabUri.toString();
+  const webviewPanel = GodotDocumentationProvider.webviewPanels.get(uriString)!;
   const newFragment = webviewPanel._godotFiles_overrideFragment;
   const { urlPath, urlFragment } = GodotDocumentationProvider.parseUri(docsTabUri);
-  await loadDocsInTab(urlPath, newFragment != undefined ? '#' + newFragment : urlFragment, webviewPanel, null);
+  const dotnet = GodotDocumentationProvider.detectedDotnetBuffer.get(uriString);
+  GodotDocumentationProvider.detectedDotnetBuffer.delete(uriString);
+  await loadDocsInTab(urlPath, newFragment != undefined ? '#' + newFragment : urlFragment, dotnet, webviewPanel, null);
 }
 async function activeDocsOpenInBrowser() {
   const docsTabUri = getActiveDocsUri();
