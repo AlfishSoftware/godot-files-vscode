@@ -5,7 +5,10 @@
 			"label": "npm: compile",
 			"type": "npm",
 			"script": "compile",
-			"group": "build",
+			"group": {
+				"kind": "build",
+				"isDefault": true,
+			},
 			"problemMatcher": [
 				"$tsc",
 			],

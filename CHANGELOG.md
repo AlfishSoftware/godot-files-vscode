@@ -4,6 +4,20 @@
 Features currently in [early access](README.md#early-access) are marked with 🔒 as they're restricted to supporters.  
 Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're unlocked for everyone since that version.
 
+## [0.0.9] - 2024-06-13
+### Changed
+- Docs Webview: Join "Open in External Browser" button under reload button, shown when <kbd>Alt</kbd> is held.
+### Added
+- Docs Webview: Back and forward navigation history buttons.
+- Docs Webview: Detect if project has .NET feature and use C# as default code language tab in this case.
+- Docs: Keybinding to open Godot API docs (<kbd>Ctrl</kbd><kbd>F1</kbd> | <kbd>⌥</kbd><kbd>⌘</kbd><kbd>D</kbd>).
+### Fixed
+- GDAsset: Support asset format v4, with parentheses inlay hints for `PackedVector4Array`.
+- Docs Webview: Fix page titles with invalid characters like `/` `#` `?`.
+- Docs Webview: Fix navigation to links added dynamically and hide latest-to-stable links which don't work.
+- Docs Webview: Fix styling more reliably on older versions.
+- Docs Webview: Inject text with link explaining that user-contributed notes can't be loaded on webview.
+
 ## [0.0.8] - 2024-04-30
 ### Changed
 - Setting `godotFiles.godotCachePath` variable substitution is now compatible with vscode syntax.  
@@ -13,10 +27,10 @@ Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're
 - Using `config-definition` language (same advanced grammar as GDAsset) by default for Git config files.
 ### Added
 - GDAsset: Open docs when going to definition of a built-in type in GDAsset.
-- Godot Docs: Command to open API docs listing all classes.
-- Godot Docs: Add a viewer which delegates documentation handling to the `godot-tools` extension via `gddoc:` URI.
-- 🔒 Godot Docs: Add a simple `browser` viewer, which opens the online docs URL in the external browser.
-- 🔒 Godot Docs: Add an advanced `webview` viewer, which loads the online docs internally within tabs in the IDE.
+- Docs: Command to open Godot API docs listing all classes.
+- Docs: Add a viewer which delegates documentation handling to the `godot-tools` extension via `gddoc:` URI.
+- 🔒 Docs: Add a simple `browser` viewer, which opens the online docs URL in the external browser.
+- 🔒 Docs: Add an advanced `webview` viewer, which loads the online docs internally within tabs in the IDE.
 ### Fixed
 - Fix GDAsset quotes escaping on embedded GDScript for new grammar (from godot-tools v2) and raw/triple-quoted strings.
 - Add the cache paths of flatpak Godot3 and Godot3Sharp to the defaults for `godotCachePath` setting.
@@ -95,7 +109,8 @@ Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're
 - GDAsset: Image and font previews by hovering references and paths.
 - GDAsset: Hover resource references to show GDScript preload code.
 
-[Unreleased]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.0.8...develop
+[Unreleased]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.0.9...develop
+[0.0.9]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.0.8...v0.0.9
 [0.0.8]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.0.7...v0.0.8
 [0.0.7]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.0.6...v0.0.7
 [0.0.6]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.0.5...v0.0.6

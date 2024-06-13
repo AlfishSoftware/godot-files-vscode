@@ -1,8 +1,20 @@
 <base href="%{docsUrl}"/>%{injectHead}<style>
+/* Fix incorrect webview styles in IDE, which differs from browser */
 body.wy-body-for-nav { padding: 0; font-size: unset }
-div.rst-other-versions > dl:nth-child(1), #rtd-sidebar { display: none !important }
+html blockquote { background: unset; border-color: unset; }
+/* Would hide ad popup if it were loaded */
+#rtd-sidebar { display: none !important }
+/* Hide incorrect "page does not exist in stable" text, and fix previous text margin */
+p.latest-notice-link { display: none !important } div.latest-notice > p:nth-last-child(2) { margin-bottom: 0; }
+/* Hide list of languages, as they don't work the same as english */
+dl.ide-webview-other-languages { display: none !important }
 </style><script>
+// Set default code language tab to C# or GDScript, if preference is detected
+if ('%{codeLang}' && !sessionStorage.getItem('sphinx-tabs-last-selected'))
+  sessionStorage.setItem('sphinx-tabs-last-selected', btoa('%{codeLang}'));
+// Set fragment parameter, scrolling to it
 location.hash = "%{urlFragment}";
+// Fix form submitting by simulating a click on a link to open it externally
 function vscodeSubmitForm(/**@type {SubmitEvent}*/ event) {
   event.preventDefault();
   /**@type {HTMLFormElement}*/ const form = event.target;
@@ -15,6 +27,7 @@ function vscodeSubmitForm(/**@type {SubmitEvent}*/ event) {
   a.remove();
 }
 const vscode = acquireVsCodeApi();
+// Implement link navigation on webview via message passing, otherwise all links would be opened externally
 document.addEventListener('click', event => {
   /**@type {HTMLAnchorElement}*/ const a = event.target.closest('a');
   if (!a) return;
@@ -30,6 +43,7 @@ document.addEventListener('click', event => {
 document.addEventListener('DOMContentLoaded', () => {
   const hash = location.hash.replace(/^#/, ''), idPrefix = 'class-%{classLower}-property-';
   if (!document.getElementById(hash) && hash.startsWith(idPrefix)) {
+    // Redirect to base class if fragment is a non-existing property
     const baseClassUrl = document.evaluate(
       '//h1/following-sibling::p/child::strong[text()="Inherits:"]/following-sibling::a',
       document, null, XPathResult.FIRST_ORDERED_NODE_TYPE
@@ -48,8 +62,22 @@ document.addEventListener('DOMContentLoaded', () => {
 </div>`
     );
   }
+  // Apply submit fix to first form (search bar) if present
   document.forms[0]?.addEventListener('submit', vscodeSubmitForm);
-  for (const a of document.querySelectorAll('div.rst-other-versions > dl:nth-child(2) > dd > a'))
+  // Fix version links making them point to this specific page instead of home
+  const versionLinksIterator = document.evaluate(
+    '//div[contains(@class, "rst-other-versions")]/dl[./dt[text()="Versions"]]/dd/a',
+    document, null, XPathResult.UNORDERED_NODE_ITERATOR_TYPE
+  );
+  /**@type {HTMLAnchorElement[]}*/ const versionLinks = [];
+  for (let a; a = versionLinksIterator.iterateNext();) versionLinks.push(a);
+  for (const a of versionLinks)
     a.href = a.title = document.baseURI.replace(/(?<=\/%{locale}\/)[^/]+(?=\/)/, a.text);
+  // Identify language links for hiding
+  /**@type {HTMLDListElement | null}*/ const langLinksNode = document.evaluate(
+    '//div[contains(@class, "rst-other-versions")]/dl[./dt[text()="Languages"]]',
+    document, null, XPathResult.FIRST_ORDERED_NODE_TYPE
+  ).singleNodeValue;
+  langLinksNode?.classList.add('ide-webview-other-languages');
 });
 </script><meta http-equiv="Content-Security-Policy" content="%{csp}"/>
