@@ -1192,15 +1192,21 @@ async function openApiDocs() {
   await commands.executeCommand('vscode.openWith', docUri, GodotDocumentationProvider.viewType);
 }
 function getActiveDocsUri() {
+  // check active tab group first, as it should be the one activating the command
   const tabInput = window.tabGroups.activeTabGroup.activeTab?.input as TabInputUnknown | undefined;
-  if (!tabInput || tabInput.viewType != GodotDocumentationProvider.viewType || !tabInput.uri) {
-    window.showErrorMessage('Could not find an URI of an active Godot Docs Page tab!');
-    throw new Error();
-  } else return tabInput.uri;
+  if (tabInput && tabInput.viewType == GodotDocumentationProvider.viewType && tabInput.uri) return tabInput.uri;
+  // weirdly, aux window commands may run without being considered the active tab group (bug?), so check all tab groups
+  for (const tabGroup of window.tabGroups.all) {
+    const tabInput = tabGroup.activeTab?.input as TabInputUnknown | undefined;
+    if (tabInput && tabInput.viewType == GodotDocumentationProvider.viewType && tabInput.uri) return tabInput.uri;
+  }
+  window.showErrorMessage('Could not find an URI of an active Godot Docs Page tab! (Floating window?)');
+  throw new Error();
 }
 async function activeDocsGoBack() {
-  const docsTabUri = getActiveDocsUri();
-  const webviewPanel = GodotDocumentationProvider.webviewPanels.get(docsTabUri.toString())!;
+  const docsTabUri = getActiveDocsUri(), uriString = docsTabUri.toString();
+  const webviewPanel = GodotDocumentationProvider.webviewPanels.get(uriString);
+  if (!webviewPanel) throw new Error('WebviewPanel not found! (Floating Window?) URI: ' + uriString);
   const history = webviewPanel._godotFiles_history;
   const previousUriString = history.back.pop();
   if (!previousUriString) return;
@@ -1211,8 +1217,9 @@ async function activeDocsGoBack() {
   webviewPanel.dispose();
 }
 async function activeDocsGoForward() {
-  const docsTabUri = getActiveDocsUri();
-  const webviewPanel = GodotDocumentationProvider.webviewPanels.get(docsTabUri.toString())!;
+  const docsTabUri = getActiveDocsUri(), uriString = docsTabUri.toString();
+  const webviewPanel = GodotDocumentationProvider.webviewPanels.get(uriString);
+  if (!webviewPanel) throw new Error('WebviewPanel not found! (Floating Window?) URI: ' + uriString);
   const history = webviewPanel._godotFiles_history;
   const nextUriString = history.forward.shift();
   if (!nextUriString) return;
@@ -1224,7 +1231,8 @@ async function activeDocsGoForward() {
 }
 async function activeDocsReload() {
   const docsTabUri = getActiveDocsUri(), uriString = docsTabUri.toString();
-  const webviewPanel = GodotDocumentationProvider.webviewPanels.get(uriString)!;
+  const webviewPanel = GodotDocumentationProvider.webviewPanels.get(uriString);
+  if (!webviewPanel) throw new Error('WebviewPanel not found! (Floating Window?) URI: ' + uriString);
   const newFragment = webviewPanel._godotFiles_overrideFragment;
   const { urlPath, urlFragment } = GodotDocumentationProvider.parseUri(docsTabUri);
   const dotnet = GodotDocumentationProvider.detectedDotnetBuffer.get(uriString);
@@ -1232,9 +1240,9 @@ async function activeDocsReload() {
   await loadDocsInTab(urlPath, newFragment != undefined ? '#' + newFragment : urlFragment, dotnet, webviewPanel, null);
 }
 async function activeDocsOpenInBrowser() {
-  const docsTabUri = getActiveDocsUri();
-  const webviewPanel = GodotDocumentationProvider.webviewPanels.get(docsTabUri.toString())!;
-  const newFragment = webviewPanel._godotFiles_overrideFragment;
+  const docsTabUri = getActiveDocsUri(), uriString = docsTabUri.toString();
+  const webviewPanel = GodotDocumentationProvider.webviewPanels.get(uriString);
+  const newFragment = webviewPanel?._godotFiles_overrideFragment;
   const { urlPath, fragment } = GodotDocumentationProvider.parseUri(docsTabUri);
   const url = Uri.from({
     scheme: 'https', authority: onlineDocsHost, path: '/' + urlPath, fragment: newFragment ?? fragment
