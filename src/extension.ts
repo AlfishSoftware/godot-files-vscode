@@ -933,8 +933,9 @@ class GodotDocumentationProvider implements CustomReadonlyEditorProvider
       ?? ['', 'en', 'stable', '404.html'];
     return { locale, version, page };
   }
-  static setCanNavigate(history: BrowserHistory) {
-    const canGoBack = history.back.length != 0, canGoForward = history.forward.length != 0;
+  static setCanNavigate(history: BrowserHistory | false) {
+    const canGoBack = history && history.back.length != 0;
+    const canGoForward = history && history.forward.length != 0;
     commands.executeCommand('setContext', 'godotFiles.activeDocsPage.canNavigateBack', canGoBack);
     commands.executeCommand('setContext', 'godotFiles.activeDocsPage.canNavigateForward', canGoForward);
   }
@@ -1203,36 +1204,43 @@ function getActiveDocsUri() {
   window.showErrorMessage('Could not find an URI of an active Godot Docs Page tab! (Floating window?)');
   throw new Error();
 }
-async function activeDocsGoBack() {
+async function activeDocsNavigateHistory(delta: -1 | 1) {
   const docsTabUri = getActiveDocsUri(), uriString = docsTabUri.toString();
   const webviewPanel = GodotDocumentationProvider.webviewPanels.get(uriString);
-  if (!webviewPanel) throw new Error('WebviewPanel not found! (Floating Window?) URI: ' + uriString);
+  if (!webviewPanel) {
+    console.error('WebviewPanel not found! (Floating Window?) URI: ' + uriString);
+    GodotDocumentationProvider.setCanNavigate(false);
+    return;
+  }
   const history = webviewPanel._godotFiles_history;
-  const previousUriString = history.back.pop();
-  if (!previousUriString) return;
-  history.forward.unshift(webviewPanel._godotFiles_currentUri);
-  GodotDocumentationProvider.navigationHistoryBuffer.set(previousUriString, history);
-  const previousUri = Uri.parse(previousUriString, true);
-  await commands.executeCommand('vscode.openWith', previousUri, GodotDocumentationProvider.viewType);
+  let destinationUriString;
+  if (delta < 0) {
+    destinationUriString = history.back.pop();
+    if (!destinationUriString) return;
+    history.forward.unshift(webviewPanel._godotFiles_currentUri);
+  } else {
+    destinationUriString = history.forward.shift();
+    if (!destinationUriString) return;
+    history.back.push(webviewPanel._godotFiles_currentUri);
+  }
+  GodotDocumentationProvider.navigationHistoryBuffer.set(destinationUriString, history);
+  const destinationUri = Uri.parse(destinationUriString, true);
+  await commands.executeCommand('vscode.openWith', destinationUri, GodotDocumentationProvider.viewType);
   webviewPanel.dispose();
 }
+async function activeDocsGoBack() {
+  await activeDocsNavigateHistory(-1);
+}
 async function activeDocsGoForward() {
-  const docsTabUri = getActiveDocsUri(), uriString = docsTabUri.toString();
-  const webviewPanel = GodotDocumentationProvider.webviewPanels.get(uriString);
-  if (!webviewPanel) throw new Error('WebviewPanel not found! (Floating Window?) URI: ' + uriString);
-  const history = webviewPanel._godotFiles_history;
-  const nextUriString = history.forward.shift();
-  if (!nextUriString) return;
-  history.back.push(webviewPanel._godotFiles_currentUri);
-  GodotDocumentationProvider.navigationHistoryBuffer.set(nextUriString, history);
-  const nextUri = Uri.parse(nextUriString, true);
-  await commands.executeCommand('vscode.openWith', nextUri, GodotDocumentationProvider.viewType);
-  webviewPanel.dispose();
+  await activeDocsNavigateHistory(1);
 }
 async function activeDocsReload() {
   const docsTabUri = getActiveDocsUri(), uriString = docsTabUri.toString();
   const webviewPanel = GodotDocumentationProvider.webviewPanels.get(uriString);
-  if (!webviewPanel) throw new Error('WebviewPanel not found! (Floating Window?) URI: ' + uriString);
+  if (!webviewPanel) {
+    console.error('WebviewPanel not found! (Floating Window?) URI: ' + uriString);
+    throw new Error('Could not find the tab reference to reload. Please close and reopen it manually.');
+  }
   const newFragment = webviewPanel._godotFiles_overrideFragment;
   const { urlPath, urlFragment } = GodotDocumentationProvider.parseUri(docsTabUri);
   const dotnet = GodotDocumentationProvider.detectedDotnetBuffer.get(uriString);
@@ -1252,9 +1260,11 @@ async function activeDocsOpenInBrowser() {
 }
 async function activeDocsFindNext() {
   await commands.executeCommand('editor.action.webvieweditor.findNext');
+  // NOTE: this is focusing the find field, where it cannot be run again until the page is focused again
 }
 async function activeDocsFindPrevious() {
   await commands.executeCommand('editor.action.webvieweditor.findPrevious');
+  // NOTE: this is focusing the find field, where it cannot be run again until the page is focused again
 }
 //#endregion Godot Docs
 
