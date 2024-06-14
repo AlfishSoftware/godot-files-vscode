@@ -229,9 +229,9 @@ $RECYCLE.BIN/
 *.lnk
 
 ### ===== PROJECT ===== ###
-!dist
+!/dist
 /build/
-*.js
+/dist/**/*.js
 *.js.map
 /.github/RELEASE-NOTES-v*.md
-.vscode-test-web
+/.vscode-test-web

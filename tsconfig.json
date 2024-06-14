@@ -27,6 +27,7 @@
     "out",
     "**/dist",
     "**/node_modules",
+    "**/webpack.config.*",
     ".vscode-test*",
   ],
 }

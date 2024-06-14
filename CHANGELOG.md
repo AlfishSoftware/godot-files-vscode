@@ -10,7 +10,7 @@ Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're
 ### Added
 - Docs Webview: Back and forward navigation history buttons.
 - Docs Webview: Detect if project has .NET feature and use C# as default code language tab in this case.
-- Docs: Keybinding to open Godot API docs (<kbd>Ctrl</kbd><kbd>F1</kbd> | <kbd>⌥</kbd><kbd>⌘</kbd><kbd>D</kbd>).
+- Docs: Keybinding to open Godot API docs (<kbd>Ctrl</kbd> <kbd>F1</kbd> | <kbd>⌥</kbd> <kbd>⌘</kbd> <kbd>D</kbd>).
 ### Fixed
 - GDAsset: Support asset format v4, with parentheses inlay hints for `PackedVector4Array`.
 - Docs Webview: Fix page titles with invalid characters like `/` `#` `?`.

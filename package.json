@@ -1,7 +1,7 @@
 {
 	"publisher": "alfish",
 	"name": "godot-files",
-	"version": "0.0.9",
+	"version": "0.0.10",
 	"license": "Unlicense",
 	"displayName": "Godot Files",
 	"description": "Better syntax-coloring and additional features for some files supported by Godot Editor.",
@@ -34,7 +34,7 @@
 	],
 	"type": "commonjs",
 	"main": "./dist/extension.js",
-	"browser": "./dist/extension.js",
+	"browser": "./dist/extension.web.js",
 	"capabilities": {
 		"untrustedWorkspaces": {
 			"supported": "limited",
@@ -262,7 +262,9 @@
 				"viewType": "godotFiles.docsBrowser",
 				"displayName": "Godot Documentation Browser",
 				"selector": [
-					{ "filenamePattern": "**/godot-docs.*.ide:/**/*.html/*" }
+					{
+						"filenamePattern": "**/godot-docs.*.ide:/**/*.html/*"
+					}
 				]
 			}
 		],
@@ -503,16 +505,21 @@
 	},
 	"devDependencies": {
 		"@types/vscode": "^1.89.0",
-		"typescript": "^5.4.5"
+		"ts-loader": "^9.5.1",
+		"typescript": "^5.4.5",
+		"webpack": "^5.92.0"
 	},
 	"engines": {
 		"vscode": "^1.89.0"
 	},
 	"scripts": {
-		"open-in-browser": "npm run compile && vscode-test-web --quality=stable --browser=none --extensionDevelopmentPath=. .",
-		"compile": "tsc -p ./",
-		"watch": "tsc -watch -p ./",
-		"preproduction": "npm prune --omit=dev --no-audit",
-		"vscode:prepublish": "npm run compile && npm run preproduction"
+		"watch-node": "tsc -watch -p ./",
+		"watch-web": "webpack --watch",
+		"compile-node": "tsc -p ./",
+		"compile-web": "webpack",
+		"package-web": "webpack --mode production --devtool hidden-source-map",
+		"open-in-browser": "npm run compile-web && vscode-test-web --quality=stable --browser=none --extensionDevelopmentPath=. .",
+		"cleanup-production": "npm prune --omit=dev --no-audit",
+		"vscode:prepublish": "npm run compile-node && npm run package-web && npm run cleanup-production"
 	}
 }
