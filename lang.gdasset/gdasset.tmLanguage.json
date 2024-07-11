@@ -19,9 +19,8 @@
 				{ "include": "#literalNumber" },
 				{ "include": "#array" },
 				{ "include": "#dictionary" },
-				{ "include": "#extResourceReference" },
-				{ "include": "#subResourceReference" },
-				{ "include": "#expressionCall" }
+				{ "include": "#resourceReference" },
+				{ "include": "#construction" }
 			]
 		},
 		"comment": {
@@ -177,6 +176,13 @@
 			"name": "constant.numeric.gdasset",
 			"match": "(?<![.])-?\\b[0-9]+(?:\\.[0-9]+)?(?:e[-+]?[0-9]+)?\\b(?=$|[\\s#;,}\\]):=])"
 		},
+		"resourceReference": {
+			"patterns": [
+				{ "include": "#extResourceReference" },
+				{ "include": "#subResourceReference" },
+				{ "include": "#resResourceReference" }
+			]
+		},
 		"extResourceReference": {
 			"name": "meta.reference.resource.ext.gdasset",
 			"match": "\\b(ExtResource)\\s*([(])\\s*(\\d+|(\")\\w+(\"))\\s*([)])",
@@ -201,15 +207,54 @@
 				"6": { "name": "punctuation.parenthesis.resource.sub.gdasset" }
 			}
 		},
-		"identifierType": {
-			"name": "entity.name.type.gdasset",
-			"match": "\\b[A-Za-z_]\\w*\\b(?:\\s*\\[(?:[A-Za-z_]\\w*|,|\\s)*\\])?"
+		"resResourceReference": {
+			"name": "meta.reference.resource.res.gdasset",
+			"match": "\\b(Resource)\\s*([(])\\s*(\"[^\"\\\\]*\")\\s*([)])",
+			"captures": {
+				"1": { "name": "keyword.operator.functionlike.resource.res.gdasset" },
+				"2": { "name": "punctuation.parenthesis.resource.res.gdasset" },
+				"3": { "patterns": [ { "include": "#stringQuoted" } ] },
+				"4": { "name": "punctuation.parenthesis.resource.res.gdasset" }
+			}
 		},
-		"expressionCall": {
-			"name": "meta.function-call.gdasset",
-			"begin": "\\b([A-Za-z_]\\w*(?:\\s*\\[(?:[A-Za-z_]\\w*|,|\\s)*\\])?)\\s*([(])",
+		"nativeType": {
+			"patterns": [
+				{ "include": "#compoundType" },
+				{ "include": "#namedType" }
+			]
+		},
+		"namedType": {
+			"name": "entity.name.type.gdasset",
+			"match": "\\b[A-Za-z_]\\w*\\b"
+		},
+		"compoundType": {
+			"name": "meta.type.compound.gdasset",
+			"begin": "\\b([A-Za-z_]\\w*)\\s*(\\[)",
 			"beginCaptures": {
 				"1": { "name": "entity.name.type.gdasset" },
+				"2": { "name": "punctuation.definition.typeparameters.gdasset" }
+			},
+			"patterns": [
+				{ "include": "#comment" },
+				{ "include": "#literalKeyword" },
+				{ "include": "#resourceReference" },
+				{ "include": "#nativeType" }
+			],
+			"end": "\\]",
+			"endCaptures": {
+				"0": { "name": "punctuation.definition.typeparameters.gdasset" }
+			}
+		},
+		"construction": {
+			"name": "meta.construction.expression.gdasset",
+			"begin": "\\b([A-Za-z_]\\w*(?:\\s*\\[(?:[A-Za-z_]\\w*|,|\\s|(?:Ext|Sub)?Resource\\s*[(]\\s*\"[^\"\\\\]*\"\\s*[)])*\\])?)\\s*([(])",
+			"beginCaptures": {
+				"1": {
+					"name": "meta.construction.type.gdasset",
+					"patterns": [
+						{ "include": "#nativeType" }
+					]
+				},
 				"2": { "name": "punctuation.parenthesis.gdasset" }
 			},
 			"patterns": [
@@ -217,7 +262,7 @@
 				{ "include": "#dictionaryKey" },
 				{ "include": "#dictionaryValue" },
 				{ "include": "#expression" },
-				{ "include": "#identifierType" }
+				{ "include": "#nativeType" }
 			],
 			"end": "[)]",
 			"endCaptures": {
