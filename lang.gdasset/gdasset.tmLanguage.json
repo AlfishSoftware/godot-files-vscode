@@ -658,7 +658,7 @@
 			"patterns": [
 				{ "include": "#comment" },
 				{
-					"match": "\\b(type)\\s*(=)\\s*(\")([\\w\\[\\],\\s():<>-]+)(\")",
+					"match": "\\b(type|script_class)\\s*(=)\\s*(\")([\\w\\[\\],\\s():<>-]+)(\")",
 					"captures": {
 						"1": { "name": "entity.other.attribute-name.type.gdasset" },
 						"2": { "name": "punctuation.separator.key-value.gdasset" },
