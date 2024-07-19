@@ -1020,8 +1020,11 @@ async function fetchDocsPage(urlPath: string, token: CancellationToken | null): 
     if (cause) console.error(cause);
     throw e;
   }
-  if (!response.ok)
-    throw new Error(`Error fetching Godot docs: ${response.status} (${response.statusText}) ${docsUrl}`);
+  if (!response.ok) {
+    const e = new Error(`Error fetching Godot docs: ${response.status} (${response.statusText}) ${docsUrl}`);
+    console.error(e);
+    throw e;
+  }
   if (token?.isCancellationRequested) return { docsUrl, title: '', html: '' };
   const html = await response.text();
   const title = (
@@ -1035,7 +1038,21 @@ async function loadDocsInTab(urlPath: string, urlFragment: string, dotnet: boole
 ) {
   const cachedPage = docsPageCache.get(urlPath);
   if (cachedPage) docsPageCache.delete(urlPath);
-  const { docsUrl, title, html } = cachedPage ?? await fetchDocsPage(urlPath, token);
+  let docsPage;
+  try {
+    docsPage = cachedPage ?? await fetchDocsPage(urlPath, token);
+  } catch (e) {
+    const docsUrlFull = `https://${onlineDocsHost}/${urlPath}${urlFragment}`;
+    console.error('Godot Files :: Failed to fetch in docs webview: ' + docsUrlFull);
+    webviewPanel.webview.html = `<!DOCTYPE html><html lang="en"><head><style>html, body, div { height: 100%; }
+div { display: flex; align-items: center; justify-content: center; text-align: center; }
+</style><meta http-equiv="Content-Security-Policy" content="default-src 'none';"></head><body><div><span>
+<p>Could not open documentation. Are you online?</p>
+<a href="${docsUrlFull.replace(/\\|"/g, '\\$&')}">${docsUrlFull.replaceAll('<', '&lt;')}</a>
+</span></div></body></html>`;
+    return;
+  }
+  const { docsUrl, title, html } = docsPage;
   console.info('Godot Files :: Fetched in docs webview: ' + docsUrl + urlFragment);
   if (token?.isCancellationRequested) return;
   const { locale, page } = GodotDocumentationProvider.parseUrlPath(urlPath);
