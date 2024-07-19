@@ -5,21 +5,9 @@ import {
   DocumentFilter, DocumentSymbolProvider, DefinitionProvider, HoverProvider, DocumentColorProvider, InlayHintsProvider,
   WebviewPanel, CustomDocument, CustomDocumentOpenContext, CustomReadonlyEditorProvider,
 } from 'vscode';
-const nodejs = typeof process != 'undefined' ? process : undefined;
-const createHash = nodejs && require('crypto').createHash;
-const homedir = nodejs && require('os').homedir();
-const dns = nodejs && require('dns/promises');
-
+import { process, homeDir, md5, sha512, base64, isOnline, rmSync } from './pc/compat';
 //#region Utility Helpers
 const toUTF8 = new TextDecoder(), fromUTF8 = new TextEncoder();
-function md5(s: string) {
-  return createHash?.('md5').update(s).digest('hex');
-}
-async function sha512(s: string) {
-  if (createHash) return createHash('sha512').update(s).digest('hex');
-  return Array.prototype.map.call(new Uint8Array(await crypto.subtle.digest('SHA-512', fromUTF8.encode(s))),
-    (b: number) => b.toString(16).padStart(2, '0')).join('');
-}
 export function jsHash(s: string, seed = 0) { // 53-bit hash, see https://stackoverflow.com/a/52171480
   let a = 0xDEADBEEF ^ seed, b = 0x41C6CE57 ^ seed;
   for (let i = 0, c; i < s.length; i++) {
@@ -28,12 +16,6 @@ export function jsHash(s: string, seed = 0) { // 53-bit hash, see https://stacko
   a = Math.imul(a ^ (a >>> 16), 2246822507) ^ Math.imul(b ^ (b >>> 13), 3266489909);
   b = Math.imul(b ^ (b >>> 16), 2246822507) ^ Math.imul(a ^ (a >>> 13), 3266489909);
   return 0x100000000 * (0x1FFFFF & b) + (a >>> 0);
-}
-/** Convert bytes to a base64 string, using either nodejs or web API. */
-export function base64(data: Uint8Array) {
-  if (nodejs) return Buffer.from(data).toString('base64');
-  const url = new FileReaderSync().readAsDataURL(new Blob([data]));
-  return url.substring(url.indexOf(',', 12) + 1); // `data:${mime};base64,${data}`
 }
 /** Encode text that goes after the comma in a `data:` URI. It tries to encode as few characters as possible.
  * To reduce excessive encoding, prefer using single quotes and collapsing newlines and tabs when possible.
@@ -53,12 +35,6 @@ export function byteUnits(numBytes: number) {
   if (g < 1024) return g.toFixed(1) + ' GiB';
   const t = g / 1024;
   return t.toFixed(1) + ' TiB';
-}
-/** Returns false if the user is not online. */
-async function isOnline() {
-  if (typeof navigator != 'undefined') return navigator.onLine;
-  try { return dns ? !!(await dns.lookup(onlineDocsHost)).address : false; }
-  catch (err) { return false; }
 }
 /** Converts a name from "PascalCase" convention to "snake_case". */
 function _snakeCase(pascalCase: string) {
@@ -850,7 +826,7 @@ async function resPathPreview(resPath: string, document: TextDocument, token: Ca
 }
 /** Data URI for the PNG thumbnail of the resource from Godot cache; or null if not found or cancelled. */
 export async function resThumb(resUri: Uri, token: CancellationToken) {
-  if (!nodejs || resUri.scheme != 'file') return null;
+  if (!process || resUri.scheme != 'file') return null;
   // Thumbnail max is 64x64 px = ~16KiB max, far less than the ~74kB MarkdownString base64 limit; ok to embed
   const resPathHash = md5(resUri.fsPath
     .replace(/^[a-z]:/, g0 => g0.toUpperCase()).replaceAll('\\', '/'));
@@ -860,7 +836,7 @@ export async function resThumb(resUri: Uri, token: CancellationToken) {
     .get<{ [platform: string]: string[]; }>('godotCachePath')![platform] ?? [];
   let lastThumbUri = null, lastModifiedTime = -Infinity;
   for (const cachePathString of cachePaths) {
-    const cachePath = cachePathString.replace(/^~(?=\/)|\$\{userHome\}/g, g0 => homedir ?? g0)
+    const cachePath = cachePathString.replace(/^~(?=\/)|\$\{userHome\}/g, g0 => homeDir ?? g0)
       .replace(/\$\{env:(\w+)\}/g, (g0, g1) => process!.env[g1] ?? g0)
       .replace(/\$\{workspaceFolder(?::(.*?))?\}/g, (g0, g1) => !g1
         ? (workspace.getWorkspaceFolder(resUri) ?? workspace.workspaceFolders?.[0])?.uri.fsPath ?? g0
@@ -991,7 +967,7 @@ async function apiDocs(
 ) {
   const config = workspace.getConfiguration('godotFiles', document);
   const viewer = supported ? config.get<string>('documentation.viewer')! : 'godot-tools';
-  if (viewer != 'godot-tools' && await isOnline()) {
+  if (viewer != 'godot-tools' && await isOnline(onlineDocsHost)) {
     // We could get locale properly, but it seems other locales don't support every version consistently.
     // Also the API will probably still be in english even in those locales.
     // const locale = env.language.toLowerCase();
@@ -1350,7 +1326,7 @@ export function deactivate() {
   if (!tmpUri) return;
   // try to delete tmp folder
   if (tmpUri.scheme == 'file') try {
-    nodejs && require('fs').rmSync(tmpUri.fsPath, { force: true, recursive: true });
+    rmSync?.(tmpUri.fsPath, { force: true, recursive: true });
   } catch { /* ignore, logs should be auto-deleted eventually anyway */ }
 }
 //#endregion Extension Entry

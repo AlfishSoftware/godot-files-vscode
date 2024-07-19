@@ -2,9 +2,9 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"label": "npm: compile-node",
+			"label": "npm: compile-pc",
 			"type": "npm",
-			"script": "compile-node",
+			"script": "compile-pc",
 			"group": {
 				"kind": "build",
 				"isDefault": true,

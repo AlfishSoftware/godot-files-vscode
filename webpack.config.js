@@ -6,15 +6,16 @@
   },
   output: {
     filename: '[name].web.js',
-    path: __dirname + '/dist',
+    path: __dirname + '/dist/web/',
     libraryTarget: 'commonjs',
-    devtoolModuleFilenameTemplate: '../[resource-path]',
+    devtoolModuleFilenameTemplate: '../../[resource-path]',
   },
   resolve: {
     mainFields: ['browser', 'module', 'main'], // look for `browser` entry point in imported node modules
     extensions: ['.ts', '.js'], // support ts-files and js-files
     alias: {
       // provides alternate implementation for node module and source files
+      './pc': __dirname + '/src/web/'
     },
     fallback: { // Available polyfills: https://webpack.js.org/configuration/resolve/#resolvefallback
       fs: false,
@@ -31,6 +32,9 @@
         use: [
           {
             loader: 'ts-loader',
+            options: {
+              configFile: '../src/web/tsconfig.json'
+            }
           },
         ],
       },
@@ -42,7 +46,7 @@
     //}),
   ],
   externals: {
-    vscode: 'commonjs vscode', // ignored because it doesn't exist
+    vscode: 'commonjs vscode', // leave it as require vscode
   },
   performance: {
     hints: false,

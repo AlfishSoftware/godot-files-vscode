@@ -1,9 +1,10 @@
 {
   "compilerOptions": {
     "target": "ESNext",
-    "module": "CommonJS",
+    "module": "None",
     "lib": [
       "ESNext",
+      "WebWorker",
     ],
     "noFallthroughCasesInSwitch": true,
     "noImplicitReturns": true,

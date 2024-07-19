@@ -34,7 +34,7 @@
 	],
 	"type": "commonjs",
 	"main": "./dist/extension.js",
-	"browser": "./dist/extension.web.js",
+	"browser": "./dist/web/extension.web.js",
 	"capabilities": {
 		"untrustedWorkspaces": {
 			"supported": "limited",
@@ -513,13 +513,14 @@
 		"vscode": "^1.89.0"
 	},
 	"scripts": {
-		"watch-node": "tsc -watch -p ./",
+		"watch-pc": "tsc -watch -p ./src/",
 		"watch-web": "webpack --watch",
-		"compile-node": "tsc -p ./",
+		"compile": "npm run compile-pc && npm run compile-web",
+		"compile-pc": "tsc -p ./src/",
 		"compile-web": "webpack",
 		"package-web": "webpack --mode production --devtool hidden-source-map",
 		"open-in-browser": "npm run compile-web && vscode-test-web --quality=stable --browser=none --extensionDevelopmentPath=. .",
 		"cleanup-production": "npm prune --omit=dev --no-audit",
-		"vscode:prepublish": "npm run compile-node && npm run package-web && npm run cleanup-production"
+		"vscode:prepublish": "npm run compile-pc && npm run package-web && npm run cleanup-production"
 	}
 }
