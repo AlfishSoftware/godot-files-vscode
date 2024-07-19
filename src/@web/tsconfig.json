@@ -16,13 +16,14 @@
     "checkJs": true,
     "allowJs": true,
     // TS
-    "outDir": "../../dist",
+    "outDir": "../../dist@web",
     "sourceMap": true,
     "removeComments": true,
     "rootDir": "..",
   },
   "exclude": [
-    "../pc/",
+    "../+cross/",
+    "../@pc/",
   ],
   "include": [
     "../**/*.ts",

@@ -1,8 +1,6 @@
+// Cross-platform utility code, implementation on Web/Browser platform
+
 export const process = undefined;
-export const homeDir = null;
-export function md5(s: string): string {
-  throw new Error('Not implemented on web.');
-}
 const fromUTF8 = new TextEncoder();
 export async function sha512(s: string) {
   return Array.prototype.map.call(new Uint8Array(await crypto.subtle.digest('SHA-512', fromUTF8.encode(s))),
@@ -18,4 +16,3 @@ export async function isOnline(host: string) {
   if (typeof navigator != 'undefined') return navigator.onLine;
   return false;
 }
-export const rmSync: undefined | ((...args: unknown[]) => void) = undefined;

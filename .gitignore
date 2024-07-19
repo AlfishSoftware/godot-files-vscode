@@ -232,6 +232,7 @@ $RECYCLE.BIN/
 !/dist
 /build/
 /dist/**/*.[jt]s
+/dist@*/**/*.[jt]s
 *.[jt]s.map
 /.github/RELEASE-NOTES-v*.md
 /.vscode-test-web

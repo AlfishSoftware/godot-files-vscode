@@ -33,8 +33,8 @@
 		"ini"
 	],
 	"type": "commonjs",
-	"main": "./dist/extension.js",
-	"browser": "./dist/web/extension.web.js",
+	"main": "./dist/ExtensionEntry.js",
+	"browser": "./dist@web/extension.js",
 	"capabilities": {
 		"untrustedWorkspaces": {
 			"supported": "limited",
@@ -506,8 +506,8 @@
 	"devDependencies": {
 		"@types/vscode": "^1.89.0",
 		"ts-loader": "^9.5.1",
-		"typescript": "^5.4.5",
-		"webpack": "^5.92.0"
+		"typescript": "^5.5.3",
+		"webpack": "^5.93.0"
 	},
 	"engines": {
 		"vscode": "^1.89.0"

@@ -2,38 +2,40 @@
   mode: 'none', // leave source code as close as possible to the original (when packaging we set this to 'production')
   target: 'webworker', // extensions run in a webworker context
   entry: {
-    extension: './src/extension.ts', // source of the web extension main file
+    extension: './src/ExtensionEntry.ts', // source of the web extension main file
   },
   output: {
-    filename: '[name].web.js',
-    path: __dirname + '/dist/web/',
+    filename: 'extension.js',
+    path: __dirname + '/dist@web/',
     libraryTarget: 'commonjs',
-    devtoolModuleFilenameTemplate: '../../[resource-path]',
+    devtoolModuleFilenameTemplate: '../[resource-path]',
   },
   resolve: {
     mainFields: ['browser', 'module', 'main'], // look for `browser` entry point in imported node modules
     extensions: ['.ts', '.js'], // support ts-files and js-files
     alias: {
       // provides alternate implementation for node module and source files
-      './pc': __dirname + '/src/web/'
+      [__dirname + '/src/+cross']: __dirname + '/src/@web/+cross/',
+      [__dirname + '/src/@pc']: false,
     },
     fallback: { // Available polyfills: https://webpack.js.org/configuration/resolve/#resolvefallback
-      fs: false,
-      crypto: false,
-      os: false,
-      'dns/promises': false,
+      // Should give error if trying to use any of these
+      //fs: false,
+      //crypto: false,
+      //os: false,
+      //'dns/promises': false,
     },
   },
   module: {
     rules: [
       {
         test: /\.ts$/,
-        exclude: /node_modules/,
+        exclude: /\bnode_modules\b/,
         use: [
           {
             loader: 'ts-loader',
             options: {
-              configFile: '../src/web/tsconfig.json'
+              configFile: __dirname + '/src/@web/tsconfig.json'
             }
           },
         ],
@@ -41,9 +43,6 @@
     ],
   },
   plugins: [
-    //new webpack.ProvidePlugin({
-    //  process: 'process/browser', // provide a shim for the global `process` variable
-    //}),
   ],
   externals: {
     vscode: 'commonjs vscode', // leave it as require vscode

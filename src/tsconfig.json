@@ -20,9 +20,10 @@
     "sourceMap": true,
     "removeComments": true,
     "rootDir": ".",
+    "listEmittedFiles": true,
   },
   "exclude": [
-    "./web/",
+    "./@web/",
   ],
   "include": [
     "./**/*.ts",
