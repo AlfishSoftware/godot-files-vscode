@@ -42,23 +42,29 @@ document.addEventListener('click', event => {
 });
 document.addEventListener('DOMContentLoaded', () => {
   const hash = location.hash.replace(/^#/, ''), idPrefix = 'class-%{classLower}-property-';
-  if (!document.getElementById(hash) && hash.startsWith(idPrefix)) {
-    // Redirect to base class if fragment is a non-existing property
-    const baseClassUrl = document.evaluate(
+  if (!document.getElementById(hash) && hash.startsWith(idPrefix)) { // If fragment is a non-existing property
+    const idProp = hash.substring(idPrefix.length);
+    /**@type {HTMLAnchorElement | null}*/ const baseClassLink = document.evaluate(
       '//h1/following-sibling::p/child::strong[text()="Inherits:"]/following-sibling::a',
       document, null, XPathResult.FIRST_ORDERED_NODE_TYPE
-    ).singleNodeValue?.href;
-    const idProp = hash.substring(idPrefix.length);
-    if (/\bclass_\w+\.html#class-\w+$/.test(baseClassUrl)) {
+    ).singleNodeValue;
+    const baseClassUrl = baseClassLink?.getAttribute('href');
+    let tryBaseLink;
+    if (/\bclass_\w+\.html#class-\w+$/.test(baseClassUrl)) { // If a base class exists
+      if ('%{canRedirect}') { // If we're allowed, auto-redirect inherited property to definition in base class
+        const basePropUrl = baseClassLink.href + '-property-' + idProp;
+        vscode.postMessage({ navigateTo: basePropUrl, exitThisPage: true });
+        stop();
+        return;
+      } // Else show link to go manually to base class if desired
       const basePropUrl = baseClassUrl + '-property-' + idProp;
-      vscode.postMessage({ navigateTo: basePropUrl, exitThisPage: true });
-      stop();
-      return;
-    } else document.getElementsByClassName('admonition-grid')[0]?.insertAdjacentHTML('afterbegin', `\
+      tryBaseLink = ` <a href="${basePropUrl}" title="${basePropUrl}">Try at the base class</a>.`;
+    } else tryBaseLink = ''; // Else property was not found in any class in inheritance chain
+    document.getElementsByClassName('admonition-grid')[0]?.insertAdjacentHTML('afterbegin', `\
 <div class="admonition warning not-found">
   <p class="first admonition-title">Not found</p>
   <p><strong>The property was not found:</strong>
-  <code class="docutils literal notranslate">${idProp.replaceAll('-', '_')}</code>.</p>
+  <code class="docutils literal notranslate">${idProp.replaceAll('-', '_')}</code>.${tryBaseLink}</p>
 </div>`
     );
   }

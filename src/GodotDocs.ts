@@ -208,18 +208,21 @@ div { display: flex; align-items: center; justify-content: center; text-align: c
   webview.onDidReceiveMessage(onDocsTabMessage, webviewPanel);
   const p = `https://${onlineDocsHost.replace(/^docs\./, '*.')}/${locale}/`;
   const csp = `default-src data: https:; script-src 'unsafe-inline' ${p}; style-src 'unsafe-inline' ${p}`;
-  const hideNav = page != 'index.html' &&
-    workspace.getConfiguration('godotFiles.documentation.webview').get<boolean>('hideSidebar')!;
+  const docsWebviewSettings = workspace.getConfiguration('godotFiles.documentation.webview');
+  const hideNav = page != 'index.html' && docsWebviewSettings.get<boolean>('hideSidebar')!;
   const injectHead = hideNav ? `<style>
 body.wy-body-for-nav { margin: unset }
 nav.wy-nav-top, nav.wy-nav-side, div.rst-versions, div.rst-footer-buttons { display: none }
 section.wy-nav-content-wrap, div.wy-nav-content { margin: auto }
 </style>` : '';
   const codeLang = dotnet ? 'C#' : dotnet == false ? 'GDScript' : '';
+  const isPast = webviewPanel._godotFiles_history.forward.length != 0;
+  const canRedirect = !isPast && docsWebviewSettings.get<boolean>('redirectInheritedMember')! ? '^' : '';
   const template = docsWebviewInjectHtmlTemplate ?? (docsWebviewInjectHtmlTemplate = toUTF8.decode(
     await workspace.fs.readFile(Uri.joinPath(ctx.extensionUri, 'lang.godot-docs/godot-docs-webview.inject.htm'))
   ));
-  const insertVar: { [key: string]: string; } = { docsUrl, injectHead, urlFragment, classLower, locale, csp, codeLang };
+  const insertVar: { [key: string]: string; } =
+    { docsUrl, injectHead, urlFragment, classLower, locale, csp, codeLang, canRedirect };
   const injectedHead = template.replace(/%\{(\w+)\}/g, (_s, v) => insertVar[v] ?? '');
   const pageId = page.replace(/\.html(?:\?.*)?$/, '');
   const userNotes = `Open this page in your external browser to load comments, or <a href="\
@@ -363,8 +366,11 @@ export async function activeDocsReload() {
   const docsTabUri = getActiveDocsUri(), uriString = docsTabUri.toString();
   const webviewPanel = GodotDocumentationProvider.webviewPanels.get(uriString);
   if (!webviewPanel) {
-    console.error('WebviewPanel not found! (Floating Window?) URI: ' + uriString);
-    throw new Error('Could not find the tab reference to reload. Please close and reopen it manually.');
+    console.error('WebviewPanel not found! URI: ' + uriString);
+    const btn = await window.showErrorMessage(
+      'Cannot find the tab handle to reload. Close it manually, then reopen.', 'Reopen as new tab');
+    if (btn) await commands.executeCommand('vscode.openWith', docsTabUri, GodotDocumentationProvider.viewType);
+    return;
   }
   const newFragment = webviewPanel._godotFiles_overrideFragment;
   const { urlPath, urlFragment } = GodotDocumentationProvider.parseUri(docsTabUri);

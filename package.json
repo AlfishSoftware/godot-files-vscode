@@ -458,6 +458,13 @@
 						"type": "boolean",
 						"default": false,
 						"markdownDescription": "Enable to always open links in a new tab; otherwise you need to hold Ctrl/Cmd when clicking a link to open it in a new tab.\n\n⚠ Applies only to the `webview` documentation viewer, which is exclusive to [early access](command:godotFiles.unlockEarlyAccess)."
+					},
+					"godotFiles.documentation.webview.redirectInheritedMember": {
+						"order": 101,
+						"scope": "machine",
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "When opening a class API page in a specific member, automatically redirect a missing member until its definition is found in a base class. Even when disabled, you can still click a link manually in the warning shown atop each page to try finding the inherited member in the next parent class. Supports only properties currently.\n\n⚠ Applies only to the `webview` documentation viewer, which is exclusive to [early access](command:godotFiles.unlockEarlyAccess)."
 					}
 				}
 			},
