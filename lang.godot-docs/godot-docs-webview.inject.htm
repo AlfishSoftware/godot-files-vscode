@@ -60,7 +60,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const basePropUrl = baseClassUrl + '-property-' + idProp;
       tryBaseLink = ` <a href="${basePropUrl}" title="${basePropUrl}">Try at the base class</a>.`;
     } else tryBaseLink = ''; // Else property was not found in any class in inheritance chain
-    document.getElementsByClassName('admonition-grid')[0]?.insertAdjacentHTML('afterbegin', `\
+    const admonitionContainer = document.getElementsByClassName('admonition-grid')[0] ??
+      document.querySelector('div[itemprop="articleBody"]');
+    admonitionContainer?.insertAdjacentHTML('afterbegin', `\
 <div class="admonition warning not-found">
   <p class="first admonition-title">Not found</p>
   <p><strong>The property was not found:</strong>

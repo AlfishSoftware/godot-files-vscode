@@ -18,17 +18,16 @@ function apiVersion(gdVersion: GodotVersion | null) {
   return major <= 2 ? latestApiGodot2 : major == 3 ? latestApiGodot3 : 'stable';
 }
 // const docsLocales = ['en', 'cs', 'de', 'es', 'fr', 'it', 'ja', 'ko', 'pl', 'pt-br', 'ru', 'uk', 'zh-cn', 'zh-tw'];
-interface BrowserHistory { back: string[]; forward: string[]; }
-interface BrowserWebviewPanel extends WebviewPanel {
-  _godotFiles_overrideFragment?: string;
-  _godotFiles_currentUri: string;
-  _godotFiles_history: BrowserHistory;
+interface BrowserHistory {
+  overrideFragment?: string;
+  currentUri: string;
+  back: string[]; forward: string[];
 }
 export class GodotDocumentationProvider implements CustomReadonlyEditorProvider
 {
   static readonly viewType = 'godotFiles.docsBrowser';
-  static readonly webviewPanels = new Map<string, BrowserWebviewPanel>();
-  static readonly navigationHistoryBuffer = new Map<string, BrowserHistory>();
+  static readonly webviewPanels = new Map<string, WebviewPanel>();
+  private static readonly navigationHistory = new Map<string, BrowserHistory>();
   static readonly detectedDotnetBuffer = new Map<string, boolean>();
   static parseUri(uri: Uri) {
     const { path, fragment } = uri;
@@ -47,6 +46,13 @@ export class GodotDocumentationProvider implements CustomReadonlyEditorProvider
     commands.executeCommand('setContext', 'godotFiles.activeDocsPage.canNavigateBack', canGoBack);
     commands.executeCommand('setContext', 'godotFiles.activeDocsPage.canNavigateForward', canGoForward);
   }
+  static getHistory(uri: string) {
+    // get existing, e.g. from a link navigation; or init history
+    return GodotDocumentationProvider.navigationHistory.get(uri) ?? { currentUri: uri, back: [], forward: [] };
+  }
+  static setHistory(history: BrowserHistory) {
+    GodotDocumentationProvider.navigationHistory.set(history.currentUri, history);
+  }
   async openCustomDocument(uri: Uri, openContext: CustomDocumentOpenContext, token: CancellationToken
   ): Promise<CustomDocument> {
     return { uri: uri, dispose() {}, };
@@ -54,35 +60,30 @@ export class GodotDocumentationProvider implements CustomReadonlyEditorProvider
   async resolveCustomEditor(document: CustomDocument, webviewPanel: WebviewPanel, token: CancellationToken
   ): Promise<void> {
     const docsPageUri = document.uri, uriString = docsPageUri.toString();
-    const browserWebviewPanel = webviewPanel as BrowserWebviewPanel;
     // set history when it opens a new tab from link navigation
-    const history = GodotDocumentationProvider.navigationHistoryBuffer.get(uriString) ??
-      { back: [], forward: [] }; // if not from a link navigation, initialize an empty history
-    GodotDocumentationProvider.navigationHistoryBuffer.delete(uriString);
-    browserWebviewPanel._godotFiles_currentUri = uriString;
-    browserWebviewPanel._godotFiles_history = history;
+    const history = GodotDocumentationProvider.getHistory(uriString);
     GodotDocumentationProvider.setCanNavigate(history);
     webviewPanel.onDidChangeViewState(event => {
       if (!event.webviewPanel.active) return;
-      const history = GodotDocumentationProvider.navigationHistoryBuffer.get(uriString);
-      if (history) {
-        // also append history from link click when it switches back to this tab, when it was already open
-        GodotDocumentationProvider.navigationHistoryBuffer.delete(uriString);
-        if (history.back.length != 0)
-          browserWebviewPanel._godotFiles_history.back.push(uriString, ...history.back);
-        if (history.forward.length != 0)
-          browserWebviewPanel._godotFiles_history.forward.unshift(...history.forward, uriString);
-      }
-      GodotDocumentationProvider.setCanNavigate(browserWebviewPanel._godotFiles_history);
+      const history = GodotDocumentationProvider.getHistory(uriString);
+      // also append history from link click when it switches back to this tab, when it was already open
+      if (history.back.length != 0)
+        history.back.unshift(uriString);
+      if (history.forward.length != 0)
+        history.forward.push(uriString);
+      GodotDocumentationProvider.setCanNavigate(history);
     });
-    GodotDocumentationProvider.webviewPanels.set(uriString, browserWebviewPanel);
+    GodotDocumentationProvider.webviewPanels.set(uriString, webviewPanel);
     const dotnet = GodotDocumentationProvider.detectedDotnetBuffer.get(uriString);
     GodotDocumentationProvider.detectedDotnetBuffer.delete(uriString);
-    webviewPanel.onDidDispose(() => GodotDocumentationProvider.webviewPanels.delete(uriString));
+    webviewPanel.onDidDispose(() => {
+      GodotDocumentationProvider.webviewPanels.delete(uriString);
+      GodotDocumentationProvider.navigationHistory.delete(uriString);
+    });
     const { path, viewer, urlPath, title, urlFragment } = GodotDocumentationProvider.parseUri(docsPageUri);
     if (viewer == 'webview') {
       try {
-        await loadDocsInTab(urlPath, urlFragment, dotnet, browserWebviewPanel, token);
+        await loadDocsInTab(urlPath, urlFragment, dotnet, webviewPanel, history, token);
         return;
       } catch (e) { console.error(e); throw e; }
     } else if (viewer == 'browser') {
@@ -166,7 +167,7 @@ async function fetchDocsPage(urlPath: string, token: CancellationToken | null): 
   return { docsUrl, title, html };
 }
 async function loadDocsInTab(urlPath: string, urlFragment: string, dotnet: boolean | undefined,
-  webviewPanel: BrowserWebviewPanel, token: CancellationToken | null
+  webviewPanel: WebviewPanel, history: BrowserHistory, token: CancellationToken | null
 ) {
   const cachedPage = docsPageCache.get(urlPath);
   if (cachedPage) docsPageCache.delete(urlPath);
@@ -205,7 +206,7 @@ div { display: flex; align-items: center; justify-content: center; text-align: c
   //if (token?.isCancellationRequested) return;
   const webview = webviewPanel.webview;
   webview.options = { localResourceRoots: [], enableScripts: true };
-  webview.onDidReceiveMessage(onDocsTabMessage, webviewPanel);
+  webview.onDidReceiveMessage(msg => onDocsTabMessage(msg, webviewPanel, history));
   const p = `https://${onlineDocsHost.replace(/^docs\./, '*.')}/${locale}/`;
   const csp = `default-src data: https:; script-src 'unsafe-inline' ${p}; style-src 'unsafe-inline' ${p}`;
   const docsWebviewSettings = workspace.getConfiguration('godotFiles.documentation.webview');
@@ -216,7 +217,7 @@ nav.wy-nav-top, nav.wy-nav-side, div.rst-versions, div.rst-footer-buttons { disp
 section.wy-nav-content-wrap, div.wy-nav-content { margin: auto }
 </style>` : '';
   const codeLang = dotnet ? 'C#' : dotnet == false ? 'GDScript' : '';
-  const isPast = webviewPanel._godotFiles_history.forward.length != 0;
+  const isPast = history.forward.length != 0;
   const canRedirect = !isPast && docsWebviewSettings.get<boolean>('redirectInheritedMember')! ? '^' : '';
   const template = docsWebviewInjectHtmlTemplate ?? (docsWebviewInjectHtmlTemplate = toUTF8.decode(
     await workspace.fs.readFile(Uri.joinPath(ctx.extensionUri, 'lang.godot-docs/godot-docs-webview.inject.htm'))
@@ -239,18 +240,20 @@ https://github.com/godotengine/godot-docs-user-notes/discussions/categories/user
 let docsWebviewInjectHtmlTemplate: string | undefined;
 
 interface GodotDocsMessage { navigateTo?: string; newFragment?: string; }
-async function onDocsTabMessage(this: BrowserWebviewPanel, msg: GodotDocsMessage) {
+async function onDocsTabMessage(
+  msg: GodotDocsMessage, webviewPanel: WebviewPanel, history: BrowserHistory) {
   if (msg.navigateTo != undefined) {
     const exitUri = await docsTabMsgNavigate(msg as GodotDocsMessageNavigate);
     if (exitUri) {
       const destination = exitUri.toString();
-      GodotDocumentationProvider.navigationHistoryBuffer.set(destination,
-        { back: this._godotFiles_history.back.concat(this._godotFiles_currentUri), forward: [] });
+      GodotDocumentationProvider.setHistory({
+        currentUri: destination, back: history.back.concat(history.currentUri), forward: []
+      });
       await commands.executeCommand('vscode.openWith', exitUri, GodotDocumentationProvider.viewType);
-      this.dispose();
+      webviewPanel.dispose();
     }
   } else if (msg.newFragment != undefined) {
-    this._godotFiles_overrideFragment = msg.newFragment;
+    history.overrideFragment = msg.newFragment;
   } else console.error('Godot Files :: Unknown message: ', msg);
 }
 interface GodotDocsMessageNavigate { navigateTo: string; exitThisPage?: boolean; }
@@ -287,7 +290,7 @@ async function docsTabMsgNavigate(msg: GodotDocsMessageNavigate) {
   }
 }
 
-interface TabInputUnknown { readonly uri?: Uri; readonly modified?: Uri; readonly viewType?: string; }
+interface TabInputUnknown { readonly ['uri']?: Uri; readonly ['modified']?: Uri; readonly ['viewType']?: string; }
 export async function openApiDocs() {
   if (!supported) { window.showErrorMessage('Only available in early access.'); return; }
   const document = window.activeTextEditor?.document;
@@ -296,9 +299,9 @@ export async function openApiDocs() {
     configScope = document;
     gdVersion = await godotVersionOfDocument(document);
   } else {
-    const tabInput = window.tabGroups.activeTabGroup.activeTab?.input as TabInputUnknown | undefined;
-    const activeTabUri = tabInput && (tabInput.uri ?? tabInput.modified);
-    if (activeTabUri && tabInput.viewType == GodotDocumentationProvider.viewType) {
+    const t = window.tabGroups.activeTabGroup.activeTab?.input as TabInputUnknown | undefined;
+    const activeTabUri = t && (t['uri'] ?? t['modified']);
+    if (activeTabUri && t['viewType'] == GodotDocumentationProvider.viewType) {
       const { locale, version } =
         GodotDocumentationProvider.parseUrlPath(GodotDocumentationProvider.parseUri(activeTabUri).urlPath);
       const docUri = docsPageUri('webview', `${locale}/${version}/classes/index.html`, 'All classes', '');
@@ -322,12 +325,12 @@ export async function openApiDocs() {
 }
 function getActiveDocsUri() {
   // check active tab group first, as it should be the one activating the command
-  const tabInput = window.tabGroups.activeTabGroup.activeTab?.input as TabInputUnknown | undefined;
-  if (tabInput && tabInput.viewType == GodotDocumentationProvider.viewType && tabInput.uri) return tabInput.uri;
+  const t = window.tabGroups.activeTabGroup.activeTab?.input as TabInputUnknown | undefined;
+  if (t && t['viewType'] == GodotDocumentationProvider.viewType && t['uri']) return t['uri'];
   // weirdly, aux window commands may run without being considered the active tab group (bug?), so check all tab groups
   for (const tabGroup of window.tabGroups.all) {
-    const tabInput = tabGroup.activeTab?.input as TabInputUnknown | undefined;
-    if (tabInput && tabInput.viewType == GodotDocumentationProvider.viewType && tabInput.uri) return tabInput.uri;
+    const t = tabGroup.activeTab?.input as TabInputUnknown | undefined;
+    if (t && t['viewType'] == GodotDocumentationProvider.viewType && t['uri']) return t['uri'];
   }
   window.showErrorMessage('Could not find an URI of an active Godot Docs Page tab! (Floating window?)');
   throw new Error();
@@ -335,23 +338,24 @@ function getActiveDocsUri() {
 async function activeDocsNavigateHistory(delta: -1 | 1) {
   const docsTabUri = getActiveDocsUri(), uriString = docsTabUri.toString();
   const webviewPanel = GodotDocumentationProvider.webviewPanels.get(uriString);
+  const history = GodotDocumentationProvider.getHistory(uriString);
   if (!webviewPanel) {
-    console.error('WebviewPanel not found! (Floating Window?) URI: ' + uriString);
+    console.error('WebviewPanel not found! URI: ' + uriString);
     GodotDocumentationProvider.setCanNavigate(false);
     return;
   }
-  const history = webviewPanel._godotFiles_history;
   let destinationUriString;
   if (delta < 0) {
     destinationUriString = history.back.pop();
     if (!destinationUriString) return;
-    history.forward.unshift(webviewPanel._godotFiles_currentUri);
+    history.forward.unshift(history.currentUri);
   } else {
     destinationUriString = history.forward.shift();
     if (!destinationUriString) return;
-    history.back.push(webviewPanel._godotFiles_currentUri);
+    history.back.push(history.currentUri);
   }
-  GodotDocumentationProvider.navigationHistoryBuffer.set(destinationUriString, history);
+  history.currentUri = destinationUriString;
+  GodotDocumentationProvider.setHistory(history);
   const destinationUri = Uri.parse(destinationUriString, true);
   await commands.executeCommand('vscode.openWith', destinationUri, GodotDocumentationProvider.viewType);
   webviewPanel.dispose();
@@ -365,6 +369,7 @@ export async function activeDocsGoForward() {
 export async function activeDocsReload() {
   const docsTabUri = getActiveDocsUri(), uriString = docsTabUri.toString();
   const webviewPanel = GodotDocumentationProvider.webviewPanels.get(uriString);
+  const history = GodotDocumentationProvider.getHistory(uriString);
   if (!webviewPanel) {
     console.error('WebviewPanel not found! URI: ' + uriString);
     const btn = await window.showErrorMessage(
@@ -372,16 +377,17 @@ export async function activeDocsReload() {
     if (btn) await commands.executeCommand('vscode.openWith', docsTabUri, GodotDocumentationProvider.viewType);
     return;
   }
-  const newFragment = webviewPanel._godotFiles_overrideFragment;
+  const newFragment = history.overrideFragment;
   const { urlPath, urlFragment } = GodotDocumentationProvider.parseUri(docsTabUri);
+  const newUrlFragment = newFragment != undefined ? '#' + newFragment : urlFragment;
   const dotnet = GodotDocumentationProvider.detectedDotnetBuffer.get(uriString);
   GodotDocumentationProvider.detectedDotnetBuffer.delete(uriString);
-  await loadDocsInTab(urlPath, newFragment != undefined ? '#' + newFragment : urlFragment, dotnet, webviewPanel, null);
+  await loadDocsInTab(urlPath, newUrlFragment, dotnet, webviewPanel, history, null);
 }
 export async function activeDocsOpenInBrowser() {
   const docsTabUri = getActiveDocsUri(), uriString = docsTabUri.toString();
-  const webviewPanel = GodotDocumentationProvider.webviewPanels.get(uriString);
-  const newFragment = webviewPanel?._godotFiles_overrideFragment;
+  const history = GodotDocumentationProvider.getHistory(uriString);
+  const newFragment = history.overrideFragment;
   const { urlPath, fragment } = GodotDocumentationProvider.parseUri(docsTabUri);
   const url = Uri.from({
     scheme: 'https', authority: onlineDocsHost, path: '/' + urlPath, fragment: newFragment ?? fragment
