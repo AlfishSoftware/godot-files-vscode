@@ -525,7 +525,7 @@
 		"compile": "npm run compile-pc && npm run compile-web",
 		"compile-pc": "tsc -p ./src/",
 		"compile-web": "webpack",
-		"package-web": "webpack --mode production --devtool hidden-source-map",
+		"package-web": "webpack --mode production",
 		"open-in-browser": "npm run compile-web && vscode-test-web --quality=stable --browser=none --extensionDevelopmentPath=. .",
 		"cleanup-production": "npm prune --omit=dev --no-audit",
 		"vscode:prepublish": "npm run compile-pc && npm run package-web && npm run cleanup-production"
