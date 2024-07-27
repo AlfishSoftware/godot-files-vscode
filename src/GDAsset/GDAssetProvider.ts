@@ -267,7 +267,7 @@ export default class GDAssetProvider implements
     }
     const outWord = document.getText(new Range(
       wordRange.start.line, 0, wordRange.end.line, wordRange.end.character + 1));
-    if (outWord.match(/\btype=".*"$|[([\]]$/) && (match = word.match(/^(?:@?[A-Z][A-Za-z0-9]+|float|int|bool)$/)))
+    if (outWord.match(/\btype="[^"\\]*"$|[([\]]$/) && (match = word.match(/^(?:@?[A-Z][A-Za-z0-9]+|float|int|bool)$/)))
       return await apiDocs(document, match[0], '', token);
     const line = document.lineAt(wordRange.start);
     if ((match = line.text.match(/^\s*(\w+)\s*=/)) && match[1] == word) {

@@ -149,12 +149,13 @@ async function fetchDocsPage(urlPath: string, token: CancellationToken | null): 
   let response; try {
     response = await fetch(docsUrl);
   } catch (e) {
-    const cause = (e as { cause: unknown; })?.cause;
+    const cause = (e as Error)?.cause;
     if (cause) console.error(cause);
     throw e;
   }
   if (!response.ok) {
-    const e = new Error(`Error fetching Godot docs: ${response.status} (${response.statusText}) ${docsUrl}`);
+    const s = `${response.status} (${response.statusText})`;
+    const e = new Error(`Error fetching Godot docs: ${s} ${docsUrl}`, { cause: { pageMsg: 'Status: ' + s } });
     console.error(e);
     throw e;
   }
@@ -166,6 +167,7 @@ async function fetchDocsPage(urlPath: string, token: CancellationToken | null): 
   ).replaceAll('/', '\u29F8');
   return { docsUrl, title, html };
 }
+function htmlText(s: string) { return s.replaceAll('<', '&lt;'); }
 async function loadDocsInTab(urlPath: string, urlFragment: string, dotnet: boolean | undefined,
   webviewPanel: WebviewPanel, history: BrowserHistory, token: CancellationToken | null
 ) {
@@ -173,15 +175,20 @@ async function loadDocsInTab(urlPath: string, urlFragment: string, dotnet: boole
   if (cachedPage) docsPageCache.delete(urlPath);
   let docsPage;
   try {
+    if (!supported) throw new Error('No early access.', { cause: { pageMsg: 'Restricted to early access.' } });
     docsPage = cachedPage ?? await fetchDocsPage(urlPath, token);
   } catch (e) {
+    const pageMsg = ((e as Error)?.cause as { pageMsg?: string; })?.pageMsg;
+    const errMsg = pageMsg ? htmlText(pageMsg) : `Are you online?`;
     const docsUrlFull = `https://${onlineDocsHost}/${urlPath}${urlFragment}`;
     console.error('Godot Files :: Failed to fetch in docs webview: ' + docsUrlFull);
-    webviewPanel.webview.html = `<!DOCTYPE html><html lang="en"><head><style>html, body, div { height: 100%; }
+    const webview = webviewPanel.webview;
+    if (webview.html) webview.html = '';
+    webview.html = `<!DOCTYPE html><html lang="en"><head><style>html, body, div { height: 100%; }
 div { display: flex; align-items: center; justify-content: center; text-align: center; }
 </style><meta http-equiv="Content-Security-Policy" content="default-src 'none';"></head><body><div><span>
-<p>Could not open documentation. Are you online?</p>
-<a href="${docsUrlFull.replace(/\\|"/g, '\\$&')}">${docsUrlFull.replaceAll('<', '&lt;')}</a>
+<p>Could not open documentation. ${errMsg}</p>
+<a href="${docsUrlFull.replace(/\\|"/g, '\\$&')}">${htmlText(docsUrlFull)}</a>
 </span></div></body></html>`;
     return;
   }
@@ -292,7 +299,6 @@ async function docsTabMsgNavigate(msg: GodotDocsMessageNavigate) {
 
 interface TabInputUnknown { readonly ['uri']?: Uri; readonly ['modified']?: Uri; readonly ['viewType']?: string; }
 export async function openApiDocs() {
-  if (!supported) { window.showErrorMessage('Only available in early access.'); return; }
   const document = window.activeTextEditor?.document;
   let configScope, gdVersion;
   if (document) {
@@ -314,14 +320,27 @@ export async function openApiDocs() {
     gdVersion = (activeTabUri && await godotVersionOfDocument(activeTabUri))
       ?? (workspaceFolder ? await godotVersionOfProject(workspaceFolder.uri) : null);
   }
-  const viewer = workspace.getConfiguration('godotFiles.documentation', configScope)
-    .get<string>('viewer')! == 'webview' ? 'webview' : 'browser';
+  const viewer = workspace.getConfiguration('godotFiles.documentation', configScope).get<string>('viewer')!;
+  const godotTools = !supported || viewer == 'godot-tools';
+  if (godotTools || !await isOnline(onlineDocsHost)) {
+    if (extensions.getExtension('geequlim.godot-tools')?.isActive)
+      await commands.executeCommand('godotTools.listGodotClasses');
+    else if (godotTools) window.showErrorMessage(`Could not list classes with godot-tools extension. Is it running?`);
+    else window.showErrorMessage(`Could not open API documentation online or from godot-tools extension.`);
+    return;
+  }
   const locale = 'en';
   const version = apiVersion(gdVersion);
-  const docUri = docsPageUri(viewer, `${locale}/${version}/classes/index.html`, 'All classes', '');
-  if (viewer == 'webview')
+  const urlPath = `${locale}/${version}/classes/index.html`, title = 'All classes';
+  const docUri = docsPageUri(viewer, urlPath, title, '');
+  if (viewer == 'webview') {
     GodotDocumentationProvider.detectedDotnetBuffer.set(docUri.toString(), !!gdVersion?.dotnet);
-  await commands.executeCommand('vscode.openWith', docUri, GodotDocumentationProvider.viewType);
+    await commands.executeCommand('vscode.openWith', docUri, GodotDocumentationProvider.viewType);
+  } else if (viewer == 'browser') {
+    const url = `https://${onlineDocsHost}/${urlPath}`;
+    if (!await env.openExternal(Uri.parse(url, true)))
+      window.showErrorMessage(`Could not open documentation for "${title}" in browser. URL: ${url}`);
+  } else window.showErrorMessage('Documentation viewer not supported: ' + viewer);
 }
 function getActiveDocsUri() {
   // check active tab group first, as it should be the one activating the command

@@ -433,7 +433,7 @@
 						"scope": "machine-overridable",
 						"type": "string",
 						"default": "webview",
-						"markdownDescription": "Specifies how the Godot Documentation is opened when online. The `godot-tools` viewer will be used when you're offline.\n\n⚠ This setting is exclusive to [early access](command:godotFiles.unlockEarlyAccess) (otherwise, only `godot-tools` will be used).",
+						"markdownDescription": "Specifies how the [Godot Documentation](command:godotFiles.openApiDocs) is opened when online. The `godot-tools` viewer will be used when you're offline.\n\n🔒 This setting is exclusive to [early access](command:godotFiles.unlockEarlyAccess) (otherwise, only `godot-tools` will be used).",
 						"enum": [
 							"browser",
 							"webview",
@@ -441,8 +441,8 @@
 						],
 						"enumDescriptions": [
 							"Use your browser to open the documentation URL. Supports going to the specific API version.",
-							"Use a tab in the IDE to open the documentation website. Supports going to the specific API version. Supports redirecting inherited members to their definition.\nNote: it's possible that some future website changes could break this, so use the browser instead if you notice issues.",
-							"Use the official godot-tools extension to open a documentation in a tab. Note that this requires the Godot Editor to be running and connected to that extension."
+							"Use a tab in the IDE to open the documentation website. Supports going to the specific API version. Supports redirecting inherited members to their definition.\nNote that any future website changes could potentially break this, so use the browser instead if you notice issues.",
+							"Use the official godot-tools extension to open API documentation in a tab. Note that this requires the Godot Editor to be running and connected to that extension."
 						]
 					},
 					"godotFiles.documentation.webview.hideSidebar": {
@@ -450,21 +450,21 @@
 						"scope": "machine",
 						"type": "boolean",
 						"default": false,
-						"markdownDescription": "Enable to show only the documentation content itself, hiding the navigation sidebar when loading a page (except for the home page).\n\n⚠ Applies only to the `webview` documentation viewer, which is exclusive to [early access](command:godotFiles.unlockEarlyAccess)."
+						"markdownDescription": "Enable to show only the documentation content itself, hiding the navigation sidebar when loading a page (except for the home page).\n\n🔒 Applies only to the `webview` documentation viewer, which is exclusive to [early access](command:godotFiles.unlockEarlyAccess)."
 					},
 					"godotFiles.documentation.webview.keepTabs": {
 						"order": 101,
 						"scope": "machine",
 						"type": "boolean",
 						"default": false,
-						"markdownDescription": "Enable to always open links in a new tab; otherwise you need to hold Ctrl/Cmd when clicking a link to open it in a new tab.\n\n⚠ Applies only to the `webview` documentation viewer, which is exclusive to [early access](command:godotFiles.unlockEarlyAccess)."
+						"markdownDescription": "Enable to always open links in a new tab; otherwise you need to hold Ctrl or ⌘ when clicking a link to open it in a new tab.\n\n🔒 Applies only to the `webview` documentation viewer, which is exclusive to [early access](command:godotFiles.unlockEarlyAccess)."
 					},
 					"godotFiles.documentation.webview.redirectInheritedMember": {
 						"order": 101,
 						"scope": "machine",
 						"type": "boolean",
 						"default": true,
-						"markdownDescription": "When opening a class API page in a specific member, automatically redirect a missing member until its definition is found in a base class. Even when disabled, you can still click a link manually in the warning shown atop each page to try finding the inherited member in the next parent class. Supports only properties currently.\n\n⚠ Applies only to the `webview` documentation viewer, which is exclusive to [early access](command:godotFiles.unlockEarlyAccess)."
+						"markdownDescription": "When opening a class API page in a specific member, automatically redirect a missing member until its definition is found in a base class. Even when disabled, you can still click a link manually in the warning shown atop each page to try finding the inherited member in the next parent class. Supports only properties currently.\n\n🔒 Applies only to the `webview` documentation viewer, which is exclusive to [early access](command:godotFiles.unlockEarlyAccess)."
 					}
 				}
 			},
@@ -497,14 +497,14 @@
 						"scope": "language-overridable",
 						"type": "boolean",
 						"default": true,
-						"markdownDescription": "Show implied parentheses around each vector in a packed array.\n\n⚠ Exclusive to [early access](command:godotFiles.unlockEarlyAccess)."
+						"markdownDescription": "Show implied parentheses around each vector in a packed array.\n\n🔒 Exclusive to [early access](command:godotFiles.unlockEarlyAccess)."
 					},
 					"godotFiles.clarifyArrays.color": {
 						"order": 200,
 						"scope": "language-overridable",
 						"type": "boolean",
 						"default": false,
-						"markdownDescription": "Show implied parentheses around each color in a packed array.\n\n⚠ Exclusive to [early access](command:godotFiles.unlockEarlyAccess)."
+						"markdownDescription": "Show implied parentheses around each color in a packed array.\n\n🔒 Exclusive to [early access](command:godotFiles.unlockEarlyAccess)."
 					}
 				}
 			}
