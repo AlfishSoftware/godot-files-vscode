@@ -15,6 +15,7 @@ Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're
 - GDAsset: Support `Resource("res://path")` syntax.
 - GDAsset: Fix `type="..."` word matching when going to definition.
 - GDAsset: Color the type in a resource's `script_class="T"` like a type.
+- GDAsset: Distinguish types for syntax coloring (basic, engine, user).
 - Docs: "Open API docs" command also uses `godot-tools` fallback (list classes) when preferred or when offline.
 - Docs Webview: Always disable redirection of members to base class page when at a past navigation history point.
 - Docs Webview: Show a page with message and link on network errors like connection timeout and HTTP errors like 404.
