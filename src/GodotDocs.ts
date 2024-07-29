@@ -31,7 +31,9 @@ export class GodotDocumentationProvider implements CustomReadonlyEditorProvider
   static readonly detectedDotnetBuffer = new Map<string, boolean>();
   static parseUri(uri: Uri) {
     const { path, fragment } = uri;
-    const [, viewer, urlPath, title] = path.match(/^.*?\/godot-docs\.([\w-]+)\.ide:\/(.*?)\/([^/]+)$/) ?? [];
+    const [, viewer, urlPath, title] = path.match(/^.*?\/godot\.docs\.([\w-]+):\/(.*?)\/([^/]+)$/)
+      ?? path.match(/^.*?\/godot-docs\.([\w-]+)\.ide:\/(.*?)\/([^/]+)$/) // compatibility: tabs from v0.0.8 ~ v0.0.9
+      ?? [];
     const urlFragment = fragment ? '#' + fragment : '';
     return { path, viewer, urlPath, title, fragment, urlFragment };
   }
@@ -139,7 +141,7 @@ function apiDocsPageUri(
 }
 function docsPageUri(viewer: string, urlPath: string, title: string, fragment: string) {
   const filename = encodeURIComponent(title);
-  return Uri.parse(`untitled:${ctx.extension.id}/godot-docs.${viewer}.ide:/${urlPath}/${filename}${fragment}`);
+  return Uri.parse(`${ctx.extension.id}:/godot.docs.${viewer}:/${urlPath}/${filename}${fragment}`);
 }
 
 interface GodotDocsPage { docsUrl: string; title: string; html: string; }

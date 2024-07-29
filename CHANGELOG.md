@@ -4,6 +4,22 @@
 Features currently in [early access](README.md#early-access) are marked with 🔒 as they're restricted to supporters.  
 Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're unlocked for everyone since that version.
 
+## [Unreleased]
+### Changed
+- Docs: Use a simpler URI in IDE tabs.  
+	Please close any webview documentation tabs that were already open from v0.0.8 ~ v0.0.9 (tabs with wrong icon).
+### Added
+- Docs Webview: Setting to allow disabling redirection of missing members to base class page.
+### Fixed
+- GDAsset: Support resource references as type parameters, for typed arrays of script types.
+- GDAsset: Support `Resource("res://path")` syntax.
+- GDAsset: Fix `type="..."` word matching when going to definition.
+- GDAsset: Color the type in a resource's `script_class="T"` like a type.
+- Docs: "Open API docs" command also uses `godot-tools` fallback (list classes) when preferred or when offline.
+- Docs Webview: Always disable redirection of members to base class page when at a past navigation history point.
+- Docs Webview: Show a page with message and link on network errors like connection timeout and HTTP errors like 404.
+- Docs Webview: Workaround for unreliable history when dragging tabs to other groups.
+
 ## [0.0.9] - 2024-06-13
 ### Changed
 - Docs Webview: Join "Open in External Browser" button under reload button, shown when <kbd>Alt</kbd> is held.

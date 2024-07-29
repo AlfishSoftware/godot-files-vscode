@@ -158,7 +158,7 @@
 			{
 				"id": "godot-docs-webpage",
 				"filenamePatterns": [
-					"**/godot-docs.*.ide:/**/*.html/*"
+					"**/godot.docs.*:/**/*.html/*"
 				],
 				"icon": {
 					"dark": "./lang.godot-docs/godot-docs-webpage.color.svg",
@@ -263,7 +263,7 @@
 				"displayName": "Godot Documentation Browser",
 				"selector": [
 					{
-						"filenamePattern": "**/godot-docs.*.ide:/**/*.html/*"
+						"filenamePattern": "**/godot.docs.*:/**/*.html/*"
 					}
 				]
 			}
