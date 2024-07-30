@@ -2,9 +2,9 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"label": "npm: compile",
+			"label": "npm: compile-pc",
 			"type": "npm",
-			"script": "compile",
+			"script": "compile-pc",
 			"group": {
 				"kind": "build",
 				"isDefault": true,
@@ -12,7 +12,20 @@
 			"problemMatcher": [
 				"$tsc",
 			],
-			"detail": "Compile the source code.",
+			"detail": "Compile the source code for the nodejs environment.",
+			"presentation": {
+				"reveal": "silent",
+			},
+		},
+		{
+			"label": "npm: compile-web",
+			"type": "npm",
+			"script": "compile-web",
+			"group": "build",
+			"problemMatcher": [
+				"$tsc",
+			],
+			"detail": "Compile the source code for the web environment.",
 			"presentation": {
 				"reveal": "silent",
 			},
@@ -25,6 +38,21 @@
 				"$tsc",
 			],
 			"detail": "Compile and run local browser IDE server for this extension.",
+		},
+		{
+			"label": "vsce: package",
+			"type": "shell",
+			"options": {
+				"cwd": "${workspaceFolder}",
+			},
+			"command": "echo 'Only runs on linux (bash).'",
+			"linux": {
+				"command": "bash ${workspaceFolder}/dev/pack.sh",
+			},
+			"problemMatcher": [
+				"$tsc",
+			],
+			"detail": "Compile and package this extension in a vsix.",
 		},
 	],
 }

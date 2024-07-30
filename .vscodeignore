@@ -3,11 +3,12 @@
 .vscode-test-web/
 build/
 out/
+src/
 **/dev/
 **/.gitignore
 **/*.vsix
 **/tsconfig.json
-**/*.ts
+**/webpack.config.*
 **/.eslintrc.*
 **/*.src.svg
 **/._*

@@ -1,4 +1,5 @@
 {
+  "typescript.tsdk": "node_modules/typescript/lib",
   "cSpell.words": [
     "abfnrtv",
     "bfnrt",
@@ -29,6 +30,7 @@
     "resthumb",
     "tropy",
     "tscn",
+    "typeparameters",
     "vsix",
     "webvieweditor"
   ],

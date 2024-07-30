@@ -4,13 +4,31 @@
 Features currently in [early access](README.md#early-access) are marked with 🔒 as they're restricted to supporters.  
 Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're unlocked for everyone since that version.
 
+## [0.0.10] - 2024-07-30
+### Changed
+- Docs: Use a simpler URI in IDE tabs.  
+	Please close any webview documentation tabs that were already open from v0.0.8 ~ v0.0.9 (tabs with wrong icon).
+### Added
+- Docs Webview: Setting to allow disabling redirection of missing members to base class page.
+### Fixed
+- GDAsset: Fix godot-tools grammar breakage on embedded GDScript containing `{...}` or `[...]`.
+- GDAsset: Support resource references as type parameters, for typed arrays of script types.
+- GDAsset: Support `Resource("res://path")` syntax.
+- GDAsset: Fix `type="..."` word matching when going to definition.
+- GDAsset: Color the type in a resource's `script_class="T"` like a type.
+- GDAsset: Distinguish types for syntax coloring (basic, engine, user).
+- Docs: "Open API docs" command also uses `godot-tools` fallback (list classes) when preferred or when offline.
+- Docs Webview: Always disable redirection of members to base class page when at a past navigation history point.
+- Docs Webview: Show a page with message and link on network errors like connection timeout and HTTP errors like 404.
+- Docs Webview: Workaround for unreliable history when dragging tabs to other groups.
+
 ## [0.0.9] - 2024-06-13
 ### Changed
 - Docs Webview: Join "Open in External Browser" button under reload button, shown when <kbd>Alt</kbd> is held.
 ### Added
 - Docs Webview: Back and forward navigation history buttons.
 - Docs Webview: Detect if project has .NET feature and use C# as default code language tab in this case.
-- Docs: Keybinding to open Godot API docs (<kbd>Ctrl</kbd><kbd>F1</kbd> | <kbd>⌥</kbd><kbd>⌘</kbd><kbd>D</kbd>).
+- Docs: Keybinding to open Godot API docs (<kbd>Ctrl</kbd> <kbd>F1</kbd> | <kbd>⌥</kbd> <kbd>⌘</kbd> <kbd>D</kbd>).
 ### Fixed
 - GDAsset: Support asset format v4, with parentheses inlay hints for `PackedVector4Array`.
 - Docs Webview: Fix page titles with invalid characters like `/` `#` `?`.
@@ -109,7 +127,8 @@ Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're
 - GDAsset: Image and font previews by hovering references and paths.
 - GDAsset: Hover resource references to show GDScript preload code.
 
-[Unreleased]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.0.9...develop
+[Unreleased]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.0.10...develop
+[0.0.10]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.0.9...v0.0.10
 [0.0.9]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.0.8...v0.0.9
 [0.0.8]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.0.7...v0.0.8
 [0.0.7]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.0.6...v0.0.7

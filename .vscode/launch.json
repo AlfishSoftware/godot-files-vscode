@@ -8,7 +8,7 @@
       "args": [
         "--extensionDevelopmentPath=${workspaceFolder}",
       ],
-      "preLaunchTask": "npm: compile",
+      "preLaunchTask": "npm: compile-pc",
       "outFiles": [
         "${workspaceFolder}/dist/**/*.js",
       ],
@@ -22,7 +22,7 @@
         "--extensionDevelopmentPath=${workspaceFolder}",
         "--extensionDevelopmentKind=web",
       ],
-      "preLaunchTask": "npm: compile",
+      "preLaunchTask": "npm: compile-web",
       "outFiles": [
         "${workspaceFolder}/dist/**/*.js",
       ],

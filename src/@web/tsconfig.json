@@ -1,32 +1,31 @@
 {
   "compilerOptions": {
     "target": "ESNext",
-    "module": "CommonJS",
+    "module": "None",
     "lib": [
-      "ESNext",
-      "WebWorker",
+      "ESNext", "WebWorker",
     ],
     "noFallthroughCasesInSwitch": true,
-    "noImplicitAny": true,
     "noImplicitReturns": true,
     "noImplicitThis": true,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "strict": true,
+    "noImplicitAny": true,
+    // JS
+    "checkJs": true,
+    "allowJs": true,
     // TS
-    "rootDir": "src",
-    "outDir": "dist",
+    "outDir": "../../dist@web",
     "sourceMap": true,
     "removeComments": true,
-    // JS
-    "allowJs": true,
-    "checkJs": true,
+    "rootDir": "..",
   },
   "exclude": [
-    "build",
-    "out",
-    "**/dist",
-    "**/node_modules",
-    ".vscode-test*",
+    "../+cross/",
+    "../@pc/",
+  ],
+  "include": [
+    "../**/*.ts",
   ],
 }
