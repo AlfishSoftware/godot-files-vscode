@@ -111,6 +111,10 @@ This software is free and in the [public domain]. It respects your privacy by no
 ❤️ [Itch Store] | [ArtStation] | [Unity Assets]  
 🌐 [GitHub] | [Bitbucket] | [Reddit] | [YouTube]
 
+When accessing 3rd-party websites, you may be subject to their privacy policies.
+
+Content from Godot is available under the licenses found in their repositories for [code/API](https://github.com/godotengine/godot) and for [documentation](https://github.com/godotengine/godot-docs).
+
 [donate]: https://alfish.itch.io/godot-files-vscode
 [public domain]: https://unlicense.org/
 [GitHub repo]: https://github.com/AlfishSoftware/godot-files-vscode
