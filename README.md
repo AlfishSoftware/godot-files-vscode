@@ -1,11 +1,14 @@
 # Godot Files
 
 Better syntax-coloring and additional features for some files supported by Godot Editor.  
-This is *not* meant to replace the official [godot-tools] extension, but to improve on its supported files. This plugin is designed so it can work alongside it, but it's completely independent. If you're using GDScript, you'll likely want to install godot-tools too.
+This is *not* meant to replace the official [godot-tools] extension, but to improve on its supported files. This plugin is designed so it can work alongside it, but it's completely independent. If you're using GDScript, you'll likely want to install godot-tools too; if not, just this one is enough.
 
 [godot-tools]: https://github.com/godotengine/godot-vscode-plugin
 
-**Compatibility**: Godot 3.x LTS and 4.0 to 4.x; official and flathub builds  
+**Compatibility**:
+- Godot: 3.x LTS and 4.0 to 4.x; official and flathub builds
+- godot-tools: v2.1.0
+
 This extension also works on browser IDEs ([vscode.dev](https://vscode.dev) and [github.dev](https://github.dev)), with limited functionality.
 
 ![Screenshot of godot-files extension for VSCode on a tscn file, showing syntax-coloring, outline and hover preview feature](docs/showcase-gdasset.webp)

@@ -11,6 +11,7 @@ Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're
 ### Added
 - Docs Webview: Setting to allow disabling redirection of missing members to base class page.
 ### Fixed
+- GDAsset: Fix godot-tools grammar breakage on embedded GDScript containing `{...}` or `[...]`.
 - GDAsset: Support resource references as type parameters, for typed arrays of script types.
 - GDAsset: Support `Resource("res://path")` syntax.
 - GDAsset: Fix `type="..."` word matching when going to definition.
