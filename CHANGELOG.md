@@ -4,7 +4,7 @@
 Features currently in [early access](README.md#early-access) are marked with 🔒 as they're restricted to supporters.  
 Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're unlocked for everyone since that version.
 
-## [Unreleased]
+## [0.0.10] - 2024-07-30
 ### Changed
 - Docs: Use a simpler URI in IDE tabs.  
 	Please close any webview documentation tabs that were already open from v0.0.8 ~ v0.0.9 (tabs with wrong icon).
@@ -127,7 +127,8 @@ Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're
 - GDAsset: Image and font previews by hovering references and paths.
 - GDAsset: Hover resource references to show GDScript preload code.
 
-[Unreleased]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.0.9...develop
+[Unreleased]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.0.10...develop
+[0.0.10]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.0.9...v0.0.10
 [0.0.9]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.0.8...v0.0.9
 [0.0.8]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.0.7...v0.0.8
 [0.0.7]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.0.6...v0.0.7
