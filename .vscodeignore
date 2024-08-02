@@ -13,3 +13,7 @@ src/
 **/*.src.svg
 **/._*
 **/._*/
+
+node_modules/antlr4/
+!node_modules/antlr4/package.json
+!node_modules/antlr4/dist/antlr4.node.cjs

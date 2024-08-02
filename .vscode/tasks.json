@@ -2,6 +2,32 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
+			"label": "npm: compile",
+			"type": "npm",
+			"script": "compile",
+			"group": "build",
+			"problemMatcher": [
+				"$tsc",
+			],
+			"detail": "Fully compile the source code for every environment.",
+			"presentation": {
+				"reveal": "silent",
+			},
+		},
+		{
+			"label": "npm: compile-grammars",
+			"type": "npm",
+			"script": "compile-grammars",
+			"group": "build",
+			"problemMatcher": [
+				"$tsc",
+			],
+			"detail": "Compile the grammars with ANTLR4.",
+			"presentation": {
+				"reveal": "silent",
+			},
+		},
+		{
 			"label": "npm: compile-pc",
 			"type": "npm",
 			"script": "compile-pc",

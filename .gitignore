@@ -236,3 +236,5 @@ $RECYCLE.BIN/
 *.[jt]s.map
 /.github/RELEASE-NOTES-v*.md
 /.vscode-test-web
+/dev/**/*.jar
+**/.antlr/

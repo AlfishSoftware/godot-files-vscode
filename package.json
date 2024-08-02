@@ -1,7 +1,7 @@
 {
 	"publisher": "alfish",
 	"name": "godot-files",
-	"version": "0.0.10",
+	"version": "0.0.11",
 	"license": "Unlicense",
 	"displayName": "Godot Files",
 	"description": "Better syntax-coloring and additional features for some files supported by Godot Editor.",
@@ -517,18 +517,21 @@
 		"webpack": "^5.93.0",
 		"webpack-cli": "^5.1.4"
 	},
+	"dependencies": {
+		"antlr4": "~4.13.2"
+	},
 	"engines": {
 		"vscode": "^1.89.0"
 	},
 	"scripts": {
 		"watch-pc": "tsc -watch -p ./src/",
 		"watch-web": "webpack --watch",
-		"compile": "npm run compile-pc && npm run compile-web",
+		"compile": "npm run compile-grammars && npm run compile-pc && npm run compile-web",
+		"compile-grammars": "node ./dev/antlr4.mjs",
 		"compile-pc": "tsc -p ./src/",
 		"compile-web": "webpack",
 		"package-web": "webpack --mode production",
 		"open-in-browser": "npm run compile-web && vscode-test-web --quality=stable --browser=none --extensionDevelopmentPath=. .",
-		"cleanup-production": "npm prune --omit=dev --no-audit",
-		"vscode:prepublish": "npm run compile-pc && npm run package-web && npm run cleanup-production"
+		"vscode:prepublish": "npm run compile-grammars && npm run compile-pc && npm run package-web"
 	}
 }

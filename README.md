@@ -6,6 +6,7 @@ This is *not* meant to replace the official [godot-tools] extension, but to impr
 [godot-tools]: https://github.com/godotengine/godot-vscode-plugin
 
 **Compatibility**:
+
 - Godot: 3.x LTS and 4.0 to 4.x; official and flathub builds
 - godot-tools: v2.1.0
 
@@ -111,10 +112,6 @@ This software is free and in the [public domain]. It respects your privacy by no
 ❤️ [Itch Store] | [ArtStation] | [Unity Assets]  
 🌐 [GitHub] | [Bitbucket] | [Reddit] | [YouTube]
 
-When accessing 3rd-party websites, you may be subject to their privacy policies.
-
-Content from Godot is available under the licenses found in their repositories for [code/API](https://github.com/godotengine/godot) and for [documentation](https://github.com/godotengine/godot-docs).
-
 [donate]: https://alfish.itch.io/godot-files-vscode
 [public domain]: https://unlicense.org/
 [GitHub repo]: https://github.com/AlfishSoftware/godot-files-vscode
@@ -127,6 +124,15 @@ Content from Godot is available under the licenses found in their repositories f
 [Bitbucket]: https://bitbucket.org/alfish/workspace/repositories
 [Reddit]: https://www.reddit.com/user/AlfishSoftware/
 [YouTube]: https://www.youtube.com/channel/UCMaO6Qb1IcyEBo7AcMlQ78g
+
+## Third-party Notices
+
+When accessing 3rd-party websites, you may be subject to their privacy policies.  
+Also, content may be automatically fetched from GitHub and Godot websites, as necessary.
+
+Content from **Godot** is available under the licenses found in their repositories for [code/API](https://github.com/godotengine/godot) and for [documentation](https://github.com/godotengine/godot-docs).
+
+The included [**ANTLR4 Runtime Library**](https://www.npmjs.com/package/antlr4) is distributed under the **BSD-3-Clause** license, found in [their repository](https://github.com/antlr/antlr4).
 
 ---
 
