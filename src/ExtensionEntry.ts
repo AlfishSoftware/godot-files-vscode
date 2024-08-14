@@ -4,6 +4,7 @@ import { sha512 } from './+cross/Platform';
 import * as pc_Platform from './@pc/Platform';
 const rmSync = pc_Platform.rmSync ?? (() => {});
 import GDAssetProvider from './GDAsset/GDAssetProvider';
+import GDShaderProvider from './GDShader/GDShaderProvider';
 import {
   GodotDocumentationProvider, openApiDocs, activeDocsFindNext, activeDocsFindPrevious,
   activeDocsGoBack, activeDocsGoForward, activeDocsReload, activeDocsOpenInBrowser,
@@ -39,14 +40,15 @@ export async function activate(context: ExtensionContext) {
     commands.registerCommand('godotFiles.activeDocsPage.findNext', activeDocsFindNext),
     commands.registerCommand('godotFiles.activeDocsPage.findPrevious', activeDocsFindPrevious),
   );
-  const provider = new GDAssetProvider();
+  const gdassetProvider = new GDAssetProvider();
   ctx.subscriptions.push(
-    languages.registerDocumentSymbolProvider(GDAssetProvider.docs, provider),
-    languages.registerDefinitionProvider(GDAssetProvider.godotDocs, provider),
-    languages.registerHoverProvider(GDAssetProvider.godotDocs, provider),
-    languages.registerInlayHintsProvider(GDAssetProvider.godotDocs, provider),
-    languages.registerColorProvider(GDAssetProvider.godotDocs, provider),
+    languages.registerDocumentSymbolProvider(GDAssetProvider.docs, gdassetProvider),
+    languages.registerDefinitionProvider(GDAssetProvider.godotDocs, gdassetProvider),
+    languages.registerHoverProvider(GDAssetProvider.godotDocs, gdassetProvider),
+    languages.registerInlayHintsProvider(GDAssetProvider.godotDocs, gdassetProvider),
+    languages.registerColorProvider(GDAssetProvider.godotDocs, gdassetProvider),
   );
+  new GDShaderProvider(ctx);
 }
 
 const deleteRecursive = { recursive: true, useTrash: false };

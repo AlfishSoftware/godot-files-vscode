@@ -28,3 +28,5 @@ async function compileGrammar(grammarDir, ...grammarFiles) {
     process.exitCode = code || 1;
   }
 }
+
+await compileGrammar('GDShader', 'GDShaderLexer.g4', 'GDShaderParser.g4');
