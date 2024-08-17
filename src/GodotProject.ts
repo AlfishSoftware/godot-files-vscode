@@ -95,12 +95,11 @@ const uriRegex = /^[a-zA-Z][a-zA-Z0-9.+-]*:\/\/[^\x00-\x1F "<>\\^`{|}\x7F-\x9F]*
 interface UriFound { uri: Uri; stat: FileStat; }
 /** Locates a resource by path string referenced in an asset document.
  * @param resPath Path of resource to locate. Can be relative to the document or to its project's root.
- * @param document Asset where path is. Its location and project are used as context to resolve the res path.
+ * @param assetUri Location of asset where path is. Its path and project are used as context to resolve the res path.
  * @returns Uri of the resource if it's found, or that URI as a string if file is not found.
  * @throws Error if any error happens other than FileNotFound.
  */
-export async function locateResPath(resPath: string, document: TextDocument): Promise<string | UriFound> {
-  const assetUri = document.uri;
+export async function locateResPath(resPath: string, assetUri: Uri): Promise<string | UriFound> {
   let resUri: Uri;
   resPath = resPath.replace(/::[^:/\\]*$/, '');
   if (resPath.startsWith('res://')) {
@@ -121,7 +120,7 @@ export async function locateResPath(resPath: string, document: TextDocument): Pr
     return { uri: resUri, stat: resStat };
   } catch (err) {
     if ((err as FileSystemError)?.code == 'FileNotFound')
-      return resUri.toString();
+      return resUri.toString(true);
     throw err;
   }
 }

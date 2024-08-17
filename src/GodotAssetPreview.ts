@@ -19,7 +19,7 @@ export async function resPathPreview(resPath: string, document: TextDocument, to
   md.supportHtml = true;
   let resLoc;
   try {
-    resLoc = await locateResPath(resPath, document);
+    resLoc = await locateResPath(resPath, document.uri);
     if (token.isCancellationRequested) return null;
   } catch (err) {
     const errName = (err as Error)?.name ?? 'Error';

@@ -7,6 +7,9 @@ COMMENT_BLOCK: '/*' .*? ('*/'|EOF) -> channel(HIDDEN); //TODO detect documentati
 COMMENT_LINE: '//' ~[\n\r]* -> channel(HIDDEN);
 WHITESPACE: [ \t\n\r]+ -> channel(HIDDEN);
 
+STRING
+: '"' ( '\\' ["\\] | ~[\\"\n\r] )* '"'
+| '"' ( '\\' . | ~[\\"] )* '"' {false}?; // fallback allows invalid chars|escapes to not break token
 FLOAT: (DIGITS EXPONENT | (DIGITS? '.' DIGITS | DIGITS '.') EXPONENT?) [fF]?;
 INTEGER: DIGITS [uU]?;
 HEX: '0' [xX] [0-9A-Fa-f]+ [uU]?;
@@ -81,7 +84,6 @@ KEYWORD_TYPE_NUMERIC
 ;
 KEYWORD_TYPE_SAMPLER: [iu]? 'sampler' ('2D' 'Array'? | '3D') | 'samplerCube' 'Array'?;
 
-KEYWORD_HINT_RANGE: 'hint_range';
 KEYWORD_HINT_SIMPLE
 : 'source_color'
 | 'hint_'
@@ -96,9 +98,10 @@ KEYWORD_HINT_SIMPLE
 | 'repeat_' ('en' | 'dis') 'able'
 | 'instance_index'
 ;
+KEYWORD_HINT_RANGE: 'hint_range';
+KEYWORD_HINT_ENUM: 'hint_enum';
 
 ID: [a-zA-Z_] [a-zA-Z0-9_]*;
 
 fragment DIGITS: [0-9]+;
 fragment EXPONENT: [eE] [-+]? DIGITS;
-fragment NEWLINE: '\n' | '\r\n' | '\r';

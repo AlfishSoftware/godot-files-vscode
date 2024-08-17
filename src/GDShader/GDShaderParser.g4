@@ -59,8 +59,9 @@ aUniformDef: sharing=KEYWORD_SHARING? 'uniform' aAtomicIntrinsicType (aArraySize
 	(':' typeHints+=aTypeHint (',' typeHints+=aTypeHint)*)? ('=' value=aExpression)?
 ;
 aTypeHint
-: hint='hint_range' '(' min=aLiteralNumber ',' max=aLiteralNumber (',' step=aLiteralNumber)? ')'
-| hint=KEYWORD_HINT_SIMPLE
+: hint=KEYWORD_HINT_SIMPLE
+| hint='hint_range' '(' min=aLiteralNumber ',' max=aLiteralNumber (',' step=aLiteralNumber)? ')'
+| hint='hint_enum' '(' (choices+=STRING ',')* choices+=STRING ')'
 ;
 aLiteralNumber: sign='-'? absolute=(FLOAT | INTEGER) | absolute=HEX;
 

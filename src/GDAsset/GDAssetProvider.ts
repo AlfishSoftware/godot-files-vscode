@@ -247,7 +247,7 @@ export default class GDAssetProvider implements
     const word = document.getText(wordRange);
     let match;
     if (isPathWord(word, wordRange, document)) {
-      const resLoc = await locateResPath(word, document);
+      const resLoc = await locateResPath(word, document.uri);
       if (typeof resLoc != 'string')
         return new Location(resLoc.uri, new Position(0, 0));
       return null;

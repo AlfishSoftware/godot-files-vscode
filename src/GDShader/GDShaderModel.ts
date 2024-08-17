@@ -1,4 +1,5 @@
 // GDShader Model
+import { workspace, FileType, TextDocument, Uri } from 'vscode';
 import { CharStream, CommonTokenStream } from 'antlr4';
 import GDShaderLexer from './.antlr/GDShaderLexer';
 import GDShaderParser from './.antlr/GDShaderParser';
@@ -9,11 +10,11 @@ export default class GDShaderModel {
   tree: gds.AShaderCodeContext;
   lexerDiagnostics: LexerDiagnostic[];
   parserDiagnostics: ParserDiagnostic[];
-  constructor(code: string) {
+  constructor(preprocessedCode: string) {
     // VSCode diagnostics positions count UTF-16 units, even though navigation positions count code points.
     // Thus, we need to disable decodeToUnicodeCodePoints to correctly position error squiggles.
     //const chars = new CharStream(code, true); // Unicode code points
-    const chars = new CharStream(code, false); // UTF-16 char units
+    const chars = new CharStream(preprocessedCode, false); // UTF-16 char units
     const lexer = new GDShaderLexer(chars);
     lexer.removeErrorListeners();
     const lexerErrors = new LexerErrorListener();
@@ -26,5 +27,7 @@ export default class GDShaderModel {
     this.tree = parser.aShaderCode();
     this.lexerDiagnostics = lexerErrors.diagnostics;
     this.parserDiagnostics = parserErrors.diagnostics;
+    if (workspace.getConfiguration('godotFiles').get('_debug_.godotShaderLogParseTree', false))
+      console.log(this.tree.toStringTree(null, parser));
   }
 }
