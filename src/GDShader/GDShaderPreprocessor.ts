@@ -4,13 +4,13 @@ type Other = { [_: string]: undefined; };
 
 export interface PreprocessingFile { uri: string; code: string; }
 
-interface CodePosition {
+export interface CodePosition {
   /** The 1-based line position. */
   line: number;
   /** The 0-based character position in the line. */
   column: number;
 }
-interface CodeRange {
+export interface CodeRange {
   /** The start position. */
   start: CodePosition;
   /** The end position. */
@@ -20,6 +20,11 @@ interface CodeLocation extends CodeRange {
   /** The URI of the source. */
   uri: string;
 }
+interface PreprocessorToken extends CodeRange {
+  /** The preprocessed token text. */
+  code: string;
+}
+type TokenString = string | PreprocessorToken;
 export interface PreprocessorDiagnostic {
   /** A code for the type of error. */
   id: '' | keyof typeof preprocessorErrorTypes;
@@ -29,6 +34,15 @@ export interface PreprocessorDiagnostic {
   location: CodeLocation;
   /** Trace of causes until the original source at the end of the list. */
   cause?: PreprocessorDiagnostic;
+}
+
+interface MacroReplacementDefinition {
+  args: null | string[];
+  code: string;
+}
+interface MacroExpansion {
+  identifier: PreprocessorToken;
+  definition: MacroReplacementDefinition;
 }
 
 export interface MappedLocation {
@@ -184,7 +198,7 @@ export default abstract class GDShaderPreprocessorBase {
   /** Initial macro definitions will be updated during preprocessing. It maps macros from a set of identifiers.
    * Occurrences of identifier `args` on `code` will be replaced upon expansion.
    */
-  macros: Map<string, { args?: string[]; code: string; }> = new Map();
+  macros: Map<string, MacroReplacementDefinition> = new Map();
   /** Executes the preprocessor asynchronously.
    * @param input The entry input document to be preprocessed. URI must be empty for code embedded in other files.
    * @param includes Max include depth, to avoid infinite recursion.
@@ -194,14 +208,18 @@ export default abstract class GDShaderPreprocessorBase {
     const { uri, code } = input;
     const chunks: PreprocessedChunk[] = [];
     const diagnostics: PreprocessorDiagnostic[] = [];
-    let inBlockComment = false, inDirective = '';
+    let inBlockComment = false, inDirective = false;
+    let tokens: TokenString[] = [];
+    let expandingMacro: MacroExpansion | null = null;
     let lineStart = 1, columnStart = 0, i0 = 0;
     let line = 1, column = 0;
     for (let i = 0; i < code.length;) {
-      let c = code.substring(i, i + 2), l;
+      let c = code.substring(i, i + 2);
       if (inBlockComment) { // skip this char
         if (c == '*/') { // end block comment
-          i += 2; column += 2; inBlockComment = false; if (inDirective) inDirective += ' '; continue;
+          i += 2; column += 2; inBlockComment = false;
+          if (inDirective) tokens.push(' ');
+          continue;
         }
       } else if (c == '//') { // skip line comment until end of line
         i++; do { i++; c = code[i]; } while (c && c != '\n' && c != '\r'); continue;
@@ -212,24 +230,38 @@ export default abstract class GDShaderPreprocessorBase {
           i++; c = code.substring(i, i + 2); // skip backslash and the line terminator
         } else if (/^\n|^\r/.test(c)) { // end directive
           const location = { uri, start: { line: lineStart, column: columnStart }, end: { line, column } };
-          const replacement = await this.#directive(includes, inDirective, diagnostics, location);
+          const replacement = await this.#directive(includes, tokens, diagnostics, location);
           chunks.push({ inputCode: code.substring(i0, i), replacement });
           i0 = i; // replace directive code until before the ending newline
-          inDirective = ''; // empty means no longer in a directive
+          inDirective = false; tokens = []; // consumed tokens when exiting a directive
         } else if (c[0] == '"') { // gather directive string atomically verbatim
-          inDirective += '"'; i++; column++;
+          const start = { line, column };
+          let tokenCode = '"'; i++; column++;
           let s = countString(code, i);
           while (s < 0) { // flipped (negative) count means it's a line continuation
             s = ~s; // reverse flipped bits to get char count
-            inDirective += code.substring(i, i + s); // append directive line up to before continuation backslash
+            tokenCode += code.substring(i, i + s); // append directive line up to before continuation backslash
             i += s + 1; // advance until after continuation backslash
             c = code.substring(i, i + 2); if (c == '\r\n') i++;
             i++; column = 0; line++; // advance until after newline
             s = countString(code, i);
           }
-          inDirective += code.substring(i, i + s);
-          i += s; column += s; continue;
-        } else inDirective += c[0]; // gather directive line
+          tokenCode += code.substring(i, i + s);
+          i += s; column += s;
+          const end = { line, column };
+          tokens.push({ code: tokenCode, start, end });
+          continue;
+        } else if (/\w/.test(c[0]) && !/\w/.test(code[i - 1] ?? '')) { // gather identifier token atomically verbatim
+          const start = { line, column };
+          let tokenCode = c[0]; i++; column++;
+          while (/\\[\n\r]|^\w/.test(c = code.substring(i, i + 2))) {
+            if (c == '\\\n' || c == '\\\r') { i += 2; column = 0; line++; } // can contain line continuations
+            else { tokenCode += c[0]; i++; column++; } // append char
+          }
+          const end = { line, column };
+          tokens.push({ code: tokenCode, start, end });
+          continue;
+        } else tokens.push(c[0]); // gather directive line
       } else if (c[0] == '#') { // begin directive
         const preColumn = columnOfPreviousTokenInLine(code, i, column);
         if (preColumn >= 0) { // uncommented code cannot appear preceding # on the same line
@@ -241,7 +273,7 @@ export default abstract class GDShaderPreprocessorBase {
         chunks.push({ inputCode: code.substring(i0, i) });
         i0 = i; // pushed chunk of code verbatim up to before # char
         lineStart = line; columnStart = column;
-        inDirective = '#';
+        inDirective = true; tokens.push('#');
         i++; column++; continue;
       } else if (c[0] == '"') { // skip string line atomically
         i++; column++;
@@ -257,50 +289,71 @@ export default abstract class GDShaderPreprocessorBase {
     if (inBlockComment) {
       const position = { line, column }, msg = 'unterminated block comment';
       diagnostics.push({ location: { uri, start: position, end: position }, msg, id: 'PEndComment' });
-      if (inDirective) inDirective += ' ';
+      if (inDirective) tokens.push(' ');
     }
     if (inDirective) {
       const location = { uri, start: { line: lineStart, column: columnStart }, end: { line, column } };
-      const replacement = await this.#directive(includes, inDirective, diagnostics, location);
+      const replacement = await this.#directive(includes, tokens, diagnostics, location);
       chunks.push({ inputCode: code.substring(i0), replacement });
     } else {
       chunks.push({ inputCode: code.substring(i0) });
     }
     return new PreprocessedUnit(input, chunks, diagnostics);
   }
-  async #directive(includes: number, directiveLine: string, diagnostics: PreprocessorDiagnostic[],
-    location: CodeLocation,
+  async #directive(
+    includes: number, tokens: TokenString[], diagnostics: PreprocessorDiagnostic[], location: CodeLocation,
   ): Promise<PreprocessedOutput> {
-    let m;
-    if ((m = /^#include[ \t]+"((?:[^"\\]|\\["\\])+)"[ \t]*$/.exec(directiveLine))) {
-      if (includes <= 0) {
-        const msg = 'include depth is limited to avoid infinite recursion';
-        diagnostics.push({ location, msg, id: 'PIncludeDeep' });
-        return PreprocessorProblem.output(location, directiveLine);
-      }
-      const path = m[1].replaceAll('\\"', '"').replaceAll('\\\\', '\\');
-      let loadedFile; try {
-        loadedFile = await this.loader(path, location.uri);
-      } catch (e) {
-        const msg = typeof e == 'string' ? e : 'some error occurred in the path loader:\n' + e;
-        diagnostics.push({ location, msg, id: 'PIncludePath' });
-        return PreprocessorProblem.output(location, directiveLine);
-      }
-      const subUnit = await this.preprocess(loadedFile, includes - 1);
-      const msg = 'from included file';
-      for (const d of subUnit.diagnostics) {
-        const cause: PreprocessorDiagnostic = { location: d.location, msg, cause: d.cause, id: '' };
-        diagnostics.push({ location, cause, msg: d.msg, id: d.id });
-      }
-      return {
-        code: subUnit.preprocessedCode,
-        construct: new PreprocessorInclude(location, directiveLine, path, subUnit),
-      };
+    const line = tokens.map(t => typeof t == 'string' ? t : t.code).join('');
+    const directiveToken = tokens[1];
+    const directiveKeyword = typeof directiveToken == 'string' ? directiveToken : directiveToken.code;
+    switch (directiveKeyword) {
+      case 'include': return await this.#include(includes, tokens, diagnostics, location, line);
     }
     //TODO #define #if #pragma etc...
-    const msg = `invalid, malformed or unsupported directive: '${directiveLine}'`;
+    const msg = `invalid or unsupported directive '#${directiveKeyword}' in: '${line}'`;
     diagnostics.push({ location, msg, id: 'PDirectiveMiss' });
-    return PreprocessorProblem.output(location, directiveLine);
+    return PreprocessorProblem.output(location, line);
+  }
+  async #include(
+    includes: number, tokens: TokenString[], diagnostics: PreprocessorDiagnostic[], location: CodeLocation,
+    line: string,
+  ): Promise<PreprocessedOutput> {
+    if (includes <= 0) {
+      const msg = 'include depth is limited to avoid infinite recursion';
+      diagnostics.push({ location, msg, id: 'PIncludeDeep' });
+      return PreprocessorProblem.output(location, line);
+    }
+    let stringToken;
+    for (let i = 2, n = tokens.length; i < n; i++) {
+      const token = tokens[i];
+      if (typeof token == 'string') { if (/^[ \t]*$/.test(token)) continue; } // ignore whitespace
+      else if (stringToken == null && /^"(?:[^"\\]|\\["\\])+"$/.test(token.code)) { stringToken = token; continue; }
+      stringToken = undefined; break; // the only token in the directive line after #include must be a string
+    }
+    if (!stringToken) {
+      const msg = `malformed include directive: '${line}'`;
+      diagnostics.push({ location, msg, id: 'PIncludeForm' });
+      return PreprocessorProblem.output(location, line);
+    }
+    const str = stringToken.code;
+    const path = str.substring(1, str.length - 1).replace(/\\(["\\])/g, '$1');
+    let loadedFile; try {
+      loadedFile = await this.loader(path, location.uri);
+    } catch (e) {
+      const msg = typeof e == 'string' ? e : 'some error occurred in the path loader:\n' + e;
+      diagnostics.push({ location, msg, id: 'PIncludePath' });
+      return PreprocessorProblem.output(location, line);
+    }
+    const subUnit = await this.preprocess(loadedFile, includes - 1);
+    const msg = 'from included file';
+    for (const d of subUnit.diagnostics) {
+      const cause: PreprocessorDiagnostic = { location: d.location, msg, cause: d.cause, id: '' };
+      diagnostics.push({ location, cause, msg: d.msg, id: d.id });
+    }
+    return {
+      code: subUnit.preprocessedCode,
+      construct: new PreprocessorInclude(location, stringToken, line, path, subUnit),
+    };
   }
 }
 
@@ -309,23 +362,25 @@ export const preprocessorErrorTypes = {
   PEndComment: docsUrl + '#shader-preprocessor',
   PDirectivePos: docsUrl + '#directives',
   PDirectiveMiss: docsUrl + '#directives',
+  PIncludeForm: docsUrl + '#include',
   PIncludeDeep: docsUrl + '#include',
   PIncludePath: docsUrl + '#include',
 };
 
 /** Represents a parsed preprocessor construct from which code is replaced. */
 export abstract class PreprocessorConstruct {
-  //TODO add optional idRange for just the id part
   location: CodeLocation;
-  constructor(location: CodeLocation) {
+  mainRange: CodeRange;
+  constructor(location: CodeLocation, mainRange: CodeRange) {
     this.location = location;
+    this.mainRange = mainRange;
   }
 }
 /** Represents a parsed preprocessor construct that has a problem. */
 export class PreprocessorProblem extends PreprocessorConstruct {
   directiveLine: string;
   constructor(location: CodeLocation, directiveLine: string) {
-    super(location);
+    super(location, location);
     this.directiveLine = directiveLine;
   }
   static output(location: CodeLocation, directiveLine: string): PreprocessedOutput {
@@ -338,9 +393,9 @@ export abstract class PreprocessorExpansion extends PreprocessorConstruct {
 /** Represents a valid preprocessor `#` directive. */
 export abstract class PreprocessorDirective extends PreprocessorConstruct {
   directiveLine: string;
-  constructor(location: CodeLocation, directiveLine: string) {
-    super(location);
-    this.directiveLine = directiveLine;
+  constructor(location: CodeLocation, mainRange: CodeRange, line: string) {
+    super(location, mainRange);
+    this.directiveLine = line;
   }
 }
 
@@ -348,8 +403,8 @@ export abstract class PreprocessorDirective extends PreprocessorConstruct {
 export class PreprocessorInclude extends PreprocessorDirective {
   path: string;
   unit: PreprocessedUnit;
-  constructor(location: CodeLocation, directiveLine: string, path: string, unit: PreprocessedUnit) {
-    super(location, directiveLine);
+  constructor(location: CodeLocation, mainRange: CodeRange, line: string, path: string, unit: PreprocessedUnit) {
+    super(location, mainRange, line);
     this.path = path;
     this.unit = unit;
   }

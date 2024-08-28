@@ -8,11 +8,15 @@ import { locateResPath } from '../GodotProject';
 import GDShaderModel from './GDShaderModel';
 import LanguageSpec, { ParserRule, DefinitionConstruct, diagnosticsFromGrammar } from '../Parsing/LanguageSpec';
 import GDShaderPreprocessorBase, {
-  PreprocessingFile, PreprocessorDiagnostic, preprocessorErrorTypes, MappedLocation, PreprocessedUnit,
-  PreprocessorDirective, PreprocessorInclude,
+  CodePosition, MappedLocation, preprocessorErrorTypes,
+  PreprocessingFile, PreprocessorDiagnostic, PreprocessedUnit, PreprocessorDirective, PreprocessorInclude,
 } from './GDShaderPreprocessor';
 import * as gds from './.antlr/GDShaderParser';
 const toUTF8 = new TextDecoder();
+
+function ideRange(start: CodePosition, end: CodePosition): Range {
+  return new Range(start.line - 1, start.column, end.line - 1, end.column);
+}
 
 class GDShaderPreprocessor extends GDShaderPreprocessorBase {
   override async loader(loadPath: string, fromUri: string): Promise<PreprocessingFile> {
@@ -29,8 +33,8 @@ class GDShaderPreprocessor extends GDShaderPreprocessorBase {
   pushDiagnostics(diagnostics: PreprocessorDiagnostic[]): Diagnostic[] {
     const documentDiagnostics: Diagnostic[] = [];
     for (const d of diagnostics) {
-      const location = d.location, { start: a, end: b } = location;
-      const range = new Range(a.line - 1, a.column, b.line - 1, b.column);
+      const location = d.location;
+      const range = ideRange(location.start, location.end);
       let msg = 'Preprocessor Error: ' + d.msg;
       const diagnostic = new Diagnostic(range, msg, DiagnosticSeverity.Error);
       diagnostic.source = 'gdshader';
@@ -38,8 +42,8 @@ class GDShaderPreprocessor extends GDShaderPreprocessorBase {
       if (errCode) diagnostic.code = { value: errCode, target: Uri.parse(preprocessorErrorTypes[errCode], true) };
       const info: DiagnosticRelatedInformation[] = [];
       for (let cause = d.cause; cause; cause = cause.cause) {
-        const { location } = cause, { start: a, end: b } = location;
-        const uri = Uri.parse(location.uri, true), range = new Range(a.line - 1, a.column, b.line - 1, b.column);
+        const { location } = cause;
+        const uri = Uri.parse(location.uri, true), range = ideRange(location.start, location.end);
         info.push({ message: cause.msg, location: { uri, range } });
       }
       diagnostic.relatedInformation = info;
@@ -52,7 +56,7 @@ function mapRange(length: number, loc: MappedLocation): Range {
   const { inputPosition, replacement, unit } = loc;
   const a = unit.inputPositionAt(inputPosition);
   const b = unit.inputPositionAt(inputPosition + (replacement ? loc.inputLength : length));
-  return new Range(a.line - 1, a.column, b.line - 1, b.column);
+  return ideRange(a, b);
 }
 
 const languageIdGodotShader = 'godot-shader';
@@ -129,7 +133,7 @@ class GDShaderLanguageSpec extends LanguageSpec {
       const inputEnd = locEnd.inputPosition;
       b = unit.inputPositionAt(locEnd.replacement ? inputEnd + locEnd.inputLength : inputEnd);
     }
-    return new Range(a.line - 1, a.column, b.line - 1, b.column);
+    return ideRange(a, b);
   }
   addPreprocessorSymbols(symbols: DocumentSymbol[]): void {
     for (const chunk of this.unit.chunks) {
@@ -144,9 +148,10 @@ class GDShaderLanguageSpec extends LanguageSpec {
   }
   directiveDefinition(directive: PreprocessorDirective): DocumentSymbol | null {
     if (directive instanceof PreprocessorInclude) {
-      const { start, end } = directive.location;
-      const range = new Range(start.line - 1, start.column, end.line - 1, end.column);
-      return new DocumentSymbol(directive.path, '#include', SymbolKind.File, range, range);
+      const { location, mainRange } = directive;
+      const range = ideRange(location.start, location.end);
+      const selectionRange = ideRange(mainRange.start, mainRange.end);
+      return new DocumentSymbol(directive.path, '#include', SymbolKind.File, range, selectionRange);
     }
     return null;
   }
