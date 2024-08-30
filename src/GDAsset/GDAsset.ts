@@ -39,7 +39,7 @@ export default class GDAsset {
     const match = code.match(/^((?:Ext|Sub)Resource)\s*\(\s*(?:(\d+)|"([^"\\]*)")\s*\)$/);
     if (!match) return null;
     const keyword = match[1] as 'ExtResource' | 'SubResource';
-    const id = match[2] ?? GDAssetProvider.unescapeString(match[3]);
+    const id = match[2] ?? GDAssetProvider.unescapeString(match[3]!);
     const resource = this.refs[keyword][id];
     return { keyword, id, resource };
   }

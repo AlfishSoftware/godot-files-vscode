@@ -135,7 +135,7 @@ function splitLines(code: string): string[] {
 function offsetAt(lines: string[], line: number, column: number) {
   if (line > lines.length) return -1;
   let b = 0, i = 0;
-  for (const l = line - 1; i < l; i++) b += lines[i].length;
+  for (const l = line - 1; i < l; i++) b += lines[i]!.length;
   return b + column;
 }
 /**
@@ -147,7 +147,7 @@ function offsetAt(lines: string[], line: number, column: number) {
 function positionAt(lines: string[], offset: number): CodePosition {
   let i = 0;
   for (const n = lines.length - 1; i < n; i++) {
-    const { length } = lines[i];
+    const { length } = lines[i]!;
     if (offset < length) break;
     offset -= length;
   }
@@ -214,7 +214,7 @@ export default abstract class GDShaderPreprocessorBase {
     let lineStart = 1, columnStart = 0, i0 = 0;
     let line = 1, column = 0;
     for (let i = 0; i < code.length;) {
-      let c = code.substring(i, i + 2);
+      let c: string = code.substring(i, i + 2);
       if (inBlockComment) { // skip this char
         if (c == '*/') { // end block comment
           i += 2; column += 2; inBlockComment = false;
@@ -222,7 +222,7 @@ export default abstract class GDShaderPreprocessorBase {
           continue;
         }
       } else if (c == '//') { // skip line comment until end of line
-        i++; do { i++; c = code[i]; } while (c && c != '\n' && c != '\r'); continue;
+        i++; do { i++; c = code[i] ?? ''; } while (c && c != '\n' && c != '\r'); continue;
       } else if (c == '/*') { // begin block comment
         i += 2; column += 2; inBlockComment = true; continue;
       } else if (inDirective) { // parse directive
@@ -251,18 +251,18 @@ export default abstract class GDShaderPreprocessorBase {
           const end = { line, column };
           tokens.push({ code: tokenCode, start, end });
           continue;
-        } else if (/\w/.test(c[0]) && !/\w/.test(code[i - 1] ?? '')) { // gather identifier token atomically verbatim
+        } else if (/\w/.test(c[0]!) && !/\w/.test(code[i - 1] ?? '')) { // gather identifier token atomically verbatim
           const start = { line, column };
-          let tokenCode = c[0]; i++; column++;
+          let tokenCode = c[0]!; i++; column++;
           while (/\\[\n\r]|^\w/.test(c = code.substring(i, i + 2))) {
             if (c == '\\\n' || c == '\\\r') { i += 2; column = 0; line++; } // can contain line continuations
-            else { tokenCode += c[0]; i++; column++; } // append char
+            else { tokenCode += c[0]!; i++; column++; } // append char
           }
           const end = { line, column };
           tokens.push({ code: tokenCode, start, end });
           continue;
-        } else tokens.push(c[0]); // gather directive line
-      } else if (c[0] == '#') { // begin directive
+        } else tokens.push(c[0]!); // gather directive line
+      } else if (c[0]! == '#') { // begin directive
         const preColumn = columnOfPreviousTokenInLine(code, i, column);
         if (preColumn >= 0) { // uncommented code cannot appear preceding # on the same line
           const start = { line, column: preColumn }, end = { line, column: preColumn + 1 };
@@ -275,7 +275,7 @@ export default abstract class GDShaderPreprocessorBase {
         lineStart = line; columnStart = column;
         inDirective = true; tokens.push('#');
         i++; column++; continue;
-      } else if (c[0] == '"') { // skip string line atomically
+      } else if (c[0]! == '"') { // skip string line atomically
         i++; column++;
         let s = countString(code, i);
         if (s < 0) s = ~s + 1; // line continuation is unsupported; count the backslash too and end string
@@ -304,7 +304,7 @@ export default abstract class GDShaderPreprocessorBase {
     includes: number, tokens: TokenString[], diagnostics: PreprocessorDiagnostic[], location: CodeLocation,
   ): Promise<PreprocessedOutput> {
     const line = tokens.map(t => typeof t == 'string' ? t : t.code).join('');
-    const directiveToken = tokens[1];
+    const directiveToken = tokens[1] ?? '';
     const directiveKeyword = typeof directiveToken == 'string' ? directiveToken : directiveToken.code;
     switch (directiveKeyword) {
       case 'include': return await this.#include(includes, tokens, diagnostics, location, line);
@@ -325,7 +325,7 @@ export default abstract class GDShaderPreprocessorBase {
     }
     let stringToken;
     for (let i = 2, n = tokens.length; i < n; i++) {
-      const token = tokens[i];
+      const token = tokens[i]!;
       if (typeof token == 'string') { if (/^[ \t]*$/.test(token)) continue; } // ignore whitespace
       else if (stringToken == null && /^"(?:[^"\\]|\\["\\])+"$/.test(token.code)) { stringToken = token; continue; }
       stringToken = undefined; break; // the only token in the directive line after #include must be a string

@@ -38,7 +38,7 @@ export async function godotVersionOfProject(projectDirUri: Uri): Promise<GodotVe
     const features = m[1].split(/\s*,\s*/g).map(s => s.replace(/^"([^"\\]*)"$/, '$1'));
     if (features.includes('C#')) dotnet = true;
     m = features.map(s => s.match(/^((\d+)\.(\d+).*)$/)).find(m => m)!;
-    if (m && m[1]) return { api: m[1], major: +m[2], minor: +m[3], dotnet };
+    if (m && m[1]) return { api: m[1], major: +m[2]!, minor: +m[3]!, dotnet };
   }
   if (!dotnet) try {
     m = projMeta.match(/^\[dotnet\]\s*^\s*project\/assembly_name\s*=\s*"([^"\\]*)"\s*(?:[;#].*)?$/) ??
@@ -46,8 +46,8 @@ export async function godotVersionOfProject(projectDirUri: Uri): Promise<GodotVe
     const csProjName = m![1] + '.csproj';
     const csProj = toUTF8.decode(await workspace.fs.readFile(Uri.joinPath(projectDirUri, csProjName)));
     dotnet = true;
-    m = csProj.match(/^<Project\s+Sdk\s*=\s*["']Godot\.NET\.Sdk\/((\d+)\.(\d+))(?:[^"'\\]*?)?["']>/i)!;
-    return { api: m[1], major: +m[2], minor: +m[3], dotnet };
+    if (m = csProj.match(/^<Project\s+Sdk\s*=\s*["']Godot\.NET\.Sdk\/((\d+)\.(\d+))(?:[^"'\\]*?)?["']>/i))
+      return { api: m[1], major: +m[2]!, minor: +m[3]!, dotnet };
   } catch { /**/ }
   m = projMeta.match(/^\s*config_version\s*=\s*(\d+)\s*(?:[;#].*)?$/m);
   if (!m || !m[1]) return null;

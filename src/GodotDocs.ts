@@ -33,13 +33,13 @@ export class GodotDocumentationProvider implements CustomReadonlyEditorProvider
     const { path, fragment } = uri;
     const [, viewer, urlPath, title] = path.match(/^.*?\/godot\.docs\.([\w-]+):\/(.*?)\/([^/]+)$/)
       ?? path.match(/^.*?\/godot-docs\.([\w-]+)\.ide:\/(.*?)\/([^/]+)$/) // compatibility: tabs from v0.0.8 ~ v0.0.9
-      ?? [];
+      ?? [, '', '', ''];
     const urlFragment = fragment ? '#' + fragment : '';
     return { path, viewer, urlPath, title, fragment, urlFragment };
   }
   static parseUrlPath(urlPath: string) {
     const [, locale, version, page] = urlPath.match(/^([\w-]+)\/([^/]+)\/([^#]+\.html)$/)
-      ?? ['', 'en', 'stable', '404.html'];
+      ?? [, 'en', 'stable', '404.html'];
     return { locale, version, page };
   }
   static setCanNavigate(history: BrowserHistory | false) {
@@ -279,7 +279,7 @@ async function docsTabMsgNavigate(msg: GodotDocsMessageNavigate) {
       window.showErrorMessage('Could not open URL in browser: ' + url);
     return null;
   }
-  const [, urlPath, fragment] = m;
+  const urlPath = m[1]!, fragment = m[2];
   try {
     const docsPage = await fetchDocsPage(urlPath, null);
     docsPageCache.set(urlPath, docsPage);
