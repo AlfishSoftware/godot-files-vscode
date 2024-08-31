@@ -21,9 +21,11 @@ function ideRange(start: CodePosition, end: CodePosition): Range {
 class GDShaderPreprocessor extends GDShaderPreprocessorBase {
   override async loader(loadPath: string, fromUri: string): Promise<PreprocessingFile> {
     const toUri = await locateResPath(loadPath, Uri.parse(fromUri, true));
-    if (typeof toUri == 'string') throw `file not found at: "${toUri}"`;
+    if (typeof toUri == 'string')
+      throw `file not found at: "${toUri}";\nloading from "${fromUri}"`;
     const { uri, stat } = toUri;
-    if (stat.type & FileType.Directory) throw `found directory instead of file at: "${uri.toString(true)}"`;
+    if (stat.type & FileType.Directory)
+      throw `found directory instead of file at: "${uri.toString(true)}";\nloading from "${fromUri}"`;
     const uriStr = uri.toString();
     const document = workspace.textDocuments.find(d =>
       d.languageId == languageIdGodotShader && d.uri.toString() == uriStr);
@@ -79,6 +81,13 @@ export default class GDShaderProvider implements
     const entryCode = document.getText();
     // Preprocess code
     const preprocessor = new GDShaderPreprocessor();
+    //FIXME temporary code to set all macros, just to test expansions
+    for (const m of entryCode.matchAll(/^[ \t]*#define +(\w+\b) *(?:\( *((?:\w+ *, *)*\w*) *\))? *(.*?)$/mg)) {
+      const p = m[2];
+      const parameters = p == null ? null : /^\s*$/.test(p) ? [] : p.split(/\s*,\s*/g);
+      preprocessor.macros.set(m[1]!, { parameters, code: m[3]! });
+      console.log(`Using macro def: ${m[1]!} :: ${parameters} :: ${m[3]!}`);
+    }
     const unit = await preprocessor.preprocess({ uri, code: entryCode });
     const { preprocessedCode } = unit;
     // Parse model
