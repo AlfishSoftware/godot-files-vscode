@@ -292,7 +292,8 @@ export default abstract class GDShaderPreprocessorBase {
         } else if (c1 == '"') { // gather single-line string token atomically
           i++; column++; let s = countString(code, i);
           if (s < 0) s = ~s + 1; // line continuation is unsupported; in this case count the '\' too and end string
-          args[iArg]! += '"' + code.substring(i, i + s);
+          if (code[i + s - 1] != '"') expandingMacro = null; // if not properly terminated, cancel expansion
+          else args[iArg]! += '"' + code.substring(i, i + s); // else add the valid single-line string code to args
           i += s; column += s; continue;
         } else { // on any other char, push it to args; code will be processed later
           args[iArg]! += c1;
@@ -367,16 +368,25 @@ export default abstract class GDShaderPreprocessorBase {
   #expansion(
     macro: MacroExpansion, diagnostics: PreprocessorDiagnostic[], location: CodeLocation,
   ): PreprocessedOutput | undefined {
-    //TEST
-    const args = macro.arguments ? '(\n  ' + macro.arguments.join(',\n  ') + '\n)' : 'no';
-    const parameters = macro.definition.parameters;
-    const p = parameters ? '(\n  ' + parameters.join(',\n  ') + '\n)' : 'no';
-    const msg = `TODO: expand macro '${macro.identifier.code}' with ${args} args;
-defined with ${p} params as: '${macro.definition.code}'`;
-    diagnostics.push({ location, msg, id: '' });
-    return undefined;
-    //TODO ensure arity matches, otherwise, raise error and replace with just macro name
-    //TODO apply arguments as per macro definition, then exclude macro name and reapply remaining macros on a loop
+    const args = macro.arguments, { definition } = macro;
+    let expandingCode = definition.code;
+    if (args) { // function-like expansion
+      const nArgs = args.length >= 2 ? args.length : /^\s*$/.test(args[0]!) ? 0 : 1;
+      const { parameters } = definition, nParams = parameters!.length;
+      if (nArgs != nParams) { // ensure arity matches; otherwise, raise error and replace with just macro name
+        const msg = `number of macro expansion arguments (${nArgs}) must match the parameters (${nParams})`;
+        diagnostics.push({ location, msg, id: 'PExpansionArity' });
+        return { code: macro.identifier.code, construct: new PreprocessorExpansion(location, macro) };
+      }
+      if (nArgs) expandingCode = expandingCode.replaceAll(
+        RegExp('"(?:[^"\\\\]|\\\\["\\\\])*"|\\b(?:' + parameters!.join('|') + ')\\b', 'g'),
+        s => s.startsWith('"') ? s : args[parameters!.indexOf(s)] ?? s
+      ); // replaced args into parameters all at once
+    } // else expanding onto an identifier only
+    expandingCode = expandingCode.replace(/(?<=[^#\s])\s*##\s*(?=[^#\s])/g, ''); // handle ## concatenation token
+    //TODO exclude this macro def and reapply remaining defs on a loop until there is none or it causes no changes
+    diagnostics.push({ location, msg: `DEBUG: expands to '${expandingCode}'`, id: '' });
+    return { code: expandingCode, construct: new PreprocessorExpansion(location, macro) };
   }
   async #directive(
     includes: number, tokens: TokenString[], diagnostics: PreprocessorDiagnostic[], location: CodeLocation,
@@ -439,6 +449,7 @@ const docsUrl = 'https://docs.godotengine.org/en/stable/tutorials/shaders/shader
 export const preprocessorErrorTypes = {
   PEndComment: docsUrl + '#shader-preprocessor',
   PEndExpansion: docsUrl + '#shader-preprocessor',
+  PExpansionArity: docsUrl + '#define',
   PDirectivePos: docsUrl + '#directives',
   PDirectiveMiss: docsUrl + '#directives',
   PIncludeForm: docsUrl + '#include',
@@ -457,17 +468,22 @@ export abstract class PreprocessorConstruct {
 }
 /** Represents a parsed preprocessor construct that has a problem. */
 export class PreprocessorProblem extends PreprocessorConstruct {
-  directiveLine: string;
-  constructor(location: CodeLocation, directiveLine: string) {
+  parsedLine: string;
+  constructor(location: CodeLocation, parsedLine: string) {
     super(location, location);
-    this.directiveLine = directiveLine;
+    this.parsedLine = parsedLine;
   }
-  static output(location: CodeLocation, directiveLine: string): PreprocessedOutput {
-    return { code: commentOut(directiveLine), construct: new PreprocessorProblem(location, directiveLine) };
+  static output(location: CodeLocation, parsedLine: string): PreprocessedOutput {
+    return { code: commentOut(parsedLine), construct: new PreprocessorProblem(location, parsedLine) };
   }
 }
 /** Represents a valid preprocessor macro expansion. */
-export abstract class PreprocessorExpansion extends PreprocessorConstruct {
+export class PreprocessorExpansion extends PreprocessorConstruct {
+  macro: MacroExpansion;
+  constructor(location: CodeLocation, macro: MacroExpansion) {
+    super(location, macro.identifier);
+    this.macro = macro;
+  }
 }
 /** Represents a valid preprocessor `#` directive. */
 export abstract class PreprocessorDirective extends PreprocessorConstruct {

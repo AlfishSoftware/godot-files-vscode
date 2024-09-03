@@ -82,7 +82,7 @@ export default class GDShaderProvider implements
     // Preprocess code
     const preprocessor = new GDShaderPreprocessor();
     //FIXME temporary code to set all macros, just to test expansions
-    for (const m of entryCode.matchAll(/^[ \t]*#define +(\w+\b) *(?:\( *((?:\w+ *, *)*\w*) *\))? *(.*?)$/mg)) {
+    for (const m of entryCode.matchAll(/^[ \t]*#define +(\w+\b)(?:\( *((?:\w+ *, *)*\w*) *\))? *(.*?)$/mg)) {
       const p = m[2];
       const parameters = p == null ? null : /^\s*$/.test(p) ? [] : p.split(/\s*,\s*/g);
       preprocessor.macros.set(m[1]!, { parameters, code: m[3]! });
