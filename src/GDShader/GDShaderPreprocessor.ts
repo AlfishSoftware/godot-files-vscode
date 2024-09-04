@@ -2,13 +2,16 @@
 
 type Other = { [_: string]: undefined; };
 
-export interface PreprocessingFile { uri: string; code: string; }
+export interface PreprocessingFile {
+  readonly uri: string;
+  readonly code: string;
+}
 
 export interface CodePosition {
   /** The 1-based line position. */
-  line: number;
+  readonly line: number;
   /** The 0-based character position in the line. */
-  column: number;
+  readonly column: number;
 }
 export interface CodeRange {
   /** The start position. */
@@ -155,6 +158,10 @@ function positionAt(lines: string[], offset: number): CodePosition {
   return { line: i + 1, column: offset };
 }
 
+function commentOut(code: string) {
+  return '//' + code.replace(/\n|\r\n?/g, '$&//');
+}
+
 function countString(code: string, i: number): number {
   const i0 = i;
   let c = code.substring(i, i + 2);
@@ -178,8 +185,203 @@ function columnOfPreviousTokenInLine(code: string, i: number, column: number): n
   return -1; // no previous non-whitespace token in this line outside of comments
 }
 
-function commentOut(code: string) {
-  return '//' + code.replace(/\n|\r\n?/g, '$&//');
+interface PreprocessingStatePosition {
+  line: number; column: number; i: number;
+}
+interface PreprocessingState extends PreprocessingStatePosition {
+  readonly chunks: PreprocessedChunk[];
+  readonly diagnostics: PreprocessorDiagnostic[];
+  expandingMacro: MacroExpansion | null;
+  openedParentheses: number;
+  lineStart: number; columnStart: number; i0: number;
+}
+interface PreprocessingStateFile extends PreprocessingState {
+  inBlockComment: boolean;
+  inDirective: boolean;
+  tokens: TokenString[];
+}
+
+function skipLineComment(code: string, p: PreprocessingStatePosition): void {
+  let c; p.i++; do { p.i++; c = code[p.i] ?? ''; } while (c && c != '\n' && c != '\r');
+}
+function readCommentStart(p: PreprocessingStateFile): void {
+  p.i += 2; p.column += 2; p.inBlockComment = true; // begin block comment
+}
+function readCommentEnd(p: PreprocessingStateFile): void {
+  p.i += 2; p.column += 2; p.inBlockComment = false; // end block comment
+  endComment(p);
+}
+function endComment(p: PreprocessingStateFile): void {
+  if (p.inDirective) p.tokens.push(' ');
+  else if (p.expandingMacro) {
+    const args = p.expandingMacro.arguments!, nArgs = args.length;
+    if (nArgs) args[nArgs - 1] += ' ';
+  }
+}
+
+function readDirectiveStart(input: PreprocessingFile, p: PreprocessingStateFile): void {
+  // begin directive
+  const { uri, code } = input;
+  const preColumn = columnOfPreviousTokenInLine(code, p.i, p.column);
+  if (preColumn >= 0) { // uncommented code cannot appear preceding # on the same line
+    const start = { line: p.line, column: preColumn }, end = { line: p.line, column: preColumn + 1 };
+    const msg = 'code before a directive on the same line is not allowed';
+    p.diagnostics.push({ location: { uri, start, end }, msg, id: 'PDirectivePos' });
+    p.i++; p.column++; return;
+  }
+  p.chunks.push({ inputCode: code.substring(p.i0, p.i) });
+  p.i0 = p.i; // pushed chunk of code verbatim up to before # char
+  p.lineStart = p.line; p.columnStart = p.column;
+  p.inDirective = true; p.tokens.push('#');
+  p.i++; p.column++;
+}
+function readLineContinuationInDirective(code: string, p: PreprocessingStatePosition): void {
+  // line continuation; skip backslash and the line terminator
+  p.i++; if (code.substring(p.i, p.i + 2) == '\r\n') p.i++; p.i++; p.column = 0; p.line++;
+}
+function readCharInDirective(p: PreprocessingStateFile, c2: string, c1: string): void {
+  p.tokens.push(c1); skipChar(p, c2, c1); // gather directive line
+}
+async function readDirectiveEnd(
+  preprocessor: GDShaderPreprocessorBase, input: PreprocessingFile, includes: number,
+  p: PreprocessingStateFile, c2: string, c1: string
+): Promise<void> {
+  // end directive
+  const { uri, code } = input;
+  const replacement = await endDirective(preprocessor, uri, includes, p);
+  p.chunks.push({ inputCode: code.substring(p.i0, p.i), replacement });
+  p.i0 = p.i; // replace directive code until before the ending newline
+  p.inDirective = false; p.tokens = []; // consumed tokens when exiting a directive
+  skipChar(p, c2, c1);
+}
+async function endDirective(
+  preprocessor: GDShaderPreprocessorBase, uri: string, includes: number, p: PreprocessingStateFile
+): Promise<PreprocessedOutput> {
+  const location = {
+    uri, start: { line: p.lineStart, column: p.columnStart }, end: { line: p.line, column: p.column }
+  };
+  return await directive(preprocessor, p.tokens, p.diagnostics, location, includes);
+}
+
+function readMacroExpansionCall(input: PreprocessingFile, p: PreprocessingState, c2: string, c1: string): void {
+  // macro defined as function-like
+  const { uri, code } = input, expandingMacro = p.expandingMacro!;
+  const args = expandingMacro.arguments!, iArg = args.length - 1;
+  if (/\s/.test(c1)) { // on whitespace or newline, push and skip normally below
+    if (iArg >= 0) args[iArg]! += ' ';
+  } else if (c1 == '(') {
+    if (iArg < 0) args.push(''); // if just opened macro parenthesis, add space to collect first arg
+    else args[iArg]! += '(';
+    p.openedParentheses++; // always track parentheses to match; skip normally below
+  } else if (iArg < 0) { // other char when expecting '('
+    p.expandingMacro = null;
+    return; // leave alone as a non-macro identifier with same name
+  } else if (c1 == ')') {
+    if (--p.openedParentheses < 1) { // closed last parenthesis, so process macro expansion
+      p.i++; p.column++;
+      const location = {
+        uri, start: { line: p.lineStart, column: p.columnStart }, end: { line: p.line, column: p.column }
+      };
+      const replacement = expansion(expandingMacro, p.diagnostics, location);
+      p.chunks.push({ inputCode: code.substring(p.i0, p.i), replacement });
+      p.i0 = p.i; // replace expansion code into the macro identifier
+      p.expandingMacro = null;
+      return; // finished macro expansion
+    } else args[iArg]! += ')'; // continue below
+  } else if (c1 == ',' && p.openedParentheses == 1) {
+    args.push(''); // add space to collect next arg
+  } else if (c1 == '"') { // gather single-line string token atomically
+    p.i++; p.column++; let s = countString(code, p.i);
+    if (s < 0) s = ~s + 1; // line continuation is unsupported; in this case count the '\' too and end string
+    if (code[p.i + s - 1] != '"') p.expandingMacro = null; // if not properly terminated, cancel expansion
+    else args[iArg]! += '"' + code.substring(p.i, p.i + s); // else add the valid single-line string code to args
+    p.i += s; p.column += s;
+    return;
+  } else { // on any other char, push it to args; code will be processed later
+    args[iArg]! += c1;
+  }
+  skipChar(p, c2, c1);
+}
+
+function readString(code: string, p: PreprocessingStatePosition): void {
+  // skip single-line string token atomically
+  p.i++; p.column++;
+  let s = countString(code, p.i);
+  if (s < 0) s = ~s + 1; // line continuation is unsupported; in this case count the '\' too and end string
+  p.i += s; p.column += s;
+}
+function readStringInDirective(code: string, p: PreprocessingStateFile): void {
+  // gather directive string atomically verbatim
+  const start = { line: p.line, column: p.column };
+  let tokenCode = '"'; p.i++; p.column++;
+  let s = countString(code, p.i);
+  while (s < 0) { // flipped (negative) count means it's a line continuation
+    s = ~s; // reverse flipped bits to get char count
+    tokenCode += code.substring(p.i, p.i + s); // append directive line up to before continuation backslash
+    p.i += s + 1; // advance until after continuation backslash
+    if (code.substring(p.i, p.i + 2) == '\r\n') p.i++;
+    p.i++; p.column = 0; p.line++; // advance until after newline
+    s = countString(code, p.i);
+  }
+  tokenCode += code.substring(p.i, p.i + s);
+  p.i += s; p.column += s;
+  const end = { line: p.line, column: p.column };
+  p.tokens.push({ code: tokenCode, start, end });
+}
+
+function readIdentifier(
+  macros: Map<string, MacroReplacementDefinition>, input: PreprocessingFile, p: PreprocessingState, c1: string
+): void {
+  // get identifier token atomically verbatim
+  const { uri, code } = input;
+  let tokenCode = c1, l = 1;
+  for (let c; /\w/.test(c = code[p.i + l] ?? '');) { tokenCode += c; l++; } // append chars
+  const definition = macros.get(tokenCode);
+  if (!definition) { // not a macro; just skip the non-macro identifier
+    p.i += l; p.column += l; return;
+  } // else identifier is a macro
+  p.chunks.push({ inputCode: code.substring(p.i0, p.i) });
+  p.i0 = p.i; // pushed chunk of code verbatim up to before macro identifier
+  const start = { line: p.line, column: p.column };
+  p.i += l; p.column += l;
+  const end = { line: p.line, column: p.column }, identifier = { code: tokenCode, start, end };
+  if (definition.parameters) { // macro requires call, keep gathering tokens for it
+    p.expandingMacro = { identifier, definition, arguments: [] };
+    p.lineStart = start.line; p.columnStart = start.column;
+  } else { // already finish macro here on just the identifier
+    const macro = { identifier, definition, arguments: null }, location = { uri, start, end };
+    const replacement = expansion(macro, p.diagnostics, location);
+    p.chunks.push({ inputCode: code.substring(p.i0, p.i), replacement });
+    p.i0 = p.i; // replace expansion code into the macro identifier
+  }
+}
+function readIdentifierInDirective(code: string, p: PreprocessingStateFile, c1: string): void {
+  const start = { line: p.line, column: p.column };
+  let tokenCode = c1; p.i++; p.column++;
+  for (let c; /\\[\n\r]|^\w/.test(c = code.substring(p.i, p.i + 2));) {
+    if (c == '\\\n' || c == '\\\r') { p.i += 2; p.column = 0; p.line++; } // can contain line continuations
+    else { tokenCode += c[0]!; p.i++; p.column++; } // append char
+  }
+  const end = { line: p.line, column: p.column };
+  p.tokens.push({ code: tokenCode, start, end });
+}
+
+function skipChar(p: PreprocessingStatePosition, c2: string, c1: string): void {
+  // advance to next index and to next column or line
+  if (c2 == '\r\n') { p.i += 2; p.column = 0; p.line++; return; }
+  if (c1 == '\n' || c1 == '\r') { p.column = 0; p.line++; } else p.column++;
+  p.i++;
+}
+
+function endCode(input: PreprocessingFile, p: PreprocessingState): void {
+  const { uri, code } = input;
+  if (p.expandingMacro?.arguments!.length) {
+    const location = {
+      uri, start: { line: p.lineStart, column: p.columnStart }, end: { line: p.line, column: p.column }
+    };
+    p.diagnostics.push({ location, msg: 'unterminated macro expansion call', id: 'PEndExpansion' });
+  }
+  p.chunks.push({ inputCode: code.substring(p.i0) });
 }
 
 /** Implementation for a Godot Shader Preprocessor that is suitable for IDEs.
@@ -207,241 +409,42 @@ export default abstract class GDShaderPreprocessorBase {
    */
   async preprocess(input: PreprocessingFile, includes = 25): Promise<PreprocessedUnit> {
     const { uri, code } = input;
-    const chunks: PreprocessedChunk[] = [];
-    const diagnostics: PreprocessorDiagnostic[] = [];
-    let inBlockComment = false, inDirective = false;
-    let tokens: TokenString[] = [];
-    let expandingMacro: MacroExpansion | null = null, openedParentheses = 0;
-    let lineStart = 1, columnStart = 0, i0 = 0;
-    let line = 1, column = 0;
-    //TODO code is too big, try to break into named functions somehow
-    for (let i = 0; i < code.length;) {
-      const c2: string = code.substring(i, i + 2), c1 = c2[0]!;
-      if (inBlockComment) { // skip this char
-        if (c2 == '*/') { // end block comment
-          i += 2; column += 2; inBlockComment = false;
-          if (inDirective) tokens.push(' ');
-          else if (expandingMacro) {
-            const args = expandingMacro.arguments!, nArgs = args.length;
-            if (nArgs) args[nArgs - 1] += ' ';
-          }
-          continue;
-        }
-      } else if (c2 == '//') { // skip line comment until end of line
-        let c; i++; do { i++; c = code[i] ?? ''; } while (c && c != '\n' && c != '\r'); continue;
-      } else if (c2 == '/*') { // begin block comment
-        i += 2; column += 2; inBlockComment = true; continue;
-      } else if (inDirective) { // parse directive
-        if (c2 == '\\\n' || c2 == '\\\r') { // line continuation; skip backslash and the line terminator
-          i++; if (code.substring(i, i + 2) == '\r\n') i++; i++; column = 0; line++; continue;
-        } else if (c1 == '\n' || c1 == '\r') { // end directive
-          const location = { uri, start: { line: lineStart, column: columnStart }, end: { line, column } };
-          const replacement = await this.#directive(includes, tokens, diagnostics, location);
-          chunks.push({ inputCode: code.substring(i0, i), replacement });
-          i0 = i; // replace directive code until before the ending newline
-          inDirective = false; tokens = []; // consumed tokens when exiting a directive
-        } else if (c1 == '"') { // gather directive string atomically verbatim
-          const start = { line, column };
-          let tokenCode = '"'; i++; column++;
-          let s = countString(code, i);
-          while (s < 0) { // flipped (negative) count means it's a line continuation
-            s = ~s; // reverse flipped bits to get char count
-            tokenCode += code.substring(i, i + s); // append directive line up to before continuation backslash
-            i += s + 1; // advance until after continuation backslash
-            if (code.substring(i, i + 2) == '\r\n') i++;
-            i++; column = 0; line++; // advance until after newline
-            s = countString(code, i);
-          }
-          tokenCode += code.substring(i, i + s);
-          i += s; column += s;
-          const end = { line, column };
-          tokens.push({ code: tokenCode, start, end });
-          continue;
-        } else if (/\w/.test(c1) && !/\w/.test(code[i - 1] ?? '')) { // gather identifier token atomically verbatim
-          const start = { line, column };
-          let tokenCode = c1; i++; column++;
-          for (let c; /\\[\n\r]|^\w/.test(c = code.substring(i, i + 2));) {
-            if (c == '\\\n' || c == '\\\r') { i += 2; column = 0; line++; } // can contain line continuations
-            else { tokenCode += c[0]!; i++; column++; } // append char
-          }
-          const end = { line, column };
-          tokens.push({ code: tokenCode, start, end });
-          continue;
-        } else tokens.push(c1); // gather directive line
-      } else if (expandingMacro) { // parse expansion of macro defined as function-like
-        const args = expandingMacro.arguments!, iArg = args.length - 1;
-        if (/\s/.test(c1)) { // on whitespace or newline, push and skip normally below
-          if (iArg >= 0) args[iArg]! += ' ';
-        } else if (c1 == '(') {
-          if (iArg < 0) args.push(''); // if just opened macro parenthesis, add space to collect first arg
-          else args[iArg]! += '(';
-          openedParentheses++; // always track parentheses to match; skip normally below
-        } else if (iArg < 0) { // other char when expecting '('
-          expandingMacro = null; continue; // leave alone as a non-macro identifier with same name
-        } else if (c1 == ')') {
-          if (--openedParentheses < 1) { // closed last parenthesis, so process macro expansion
-            i++; column++;
-            const location = { uri, start: { line: lineStart, column: columnStart }, end: { line, column } };
-            const replacement = this.#expansion(expandingMacro, diagnostics, location);
-            chunks.push({ inputCode: code.substring(i0, i), replacement });
-            i0 = i; // replace expansion code into the macro identifier
-            expandingMacro = null; continue; // finished macro expansion
-          } else args[iArg]! += ')'; // continue below
-        } else if (c1 == ',' && openedParentheses == 1) {
-          args.push(''); // add space to collect next arg
-        } else if (c1 == '"') { // gather single-line string token atomically
-          i++; column++; let s = countString(code, i);
-          if (s < 0) s = ~s + 1; // line continuation is unsupported; in this case count the '\' too and end string
-          if (code[i + s - 1] != '"') expandingMacro = null; // if not properly terminated, cancel expansion
-          else args[iArg]! += '"' + code.substring(i, i + s); // else add the valid single-line string code to args
-          i += s; column += s; continue;
-        } else { // on any other char, push it to args; code will be processed later
-          args[iArg]! += c1;
-        }
-      } else if (c1 == '#') { // begin directive
-        const preColumn = columnOfPreviousTokenInLine(code, i, column);
-        if (preColumn >= 0) { // uncommented code cannot appear preceding # on the same line
-          const start = { line, column: preColumn }, end = { line, column: preColumn + 1 };
-          const msg = 'code before a directive on the same line is not allowed';
-          diagnostics.push({ location: { uri, start, end }, msg, id: 'PDirectivePos' });
-          i++; column++; continue;
-        }
-        chunks.push({ inputCode: code.substring(i0, i) });
-        i0 = i; // pushed chunk of code verbatim up to before # char
-        lineStart = line; columnStart = column;
-        inDirective = true; tokens.push('#');
-        i++; column++; continue;
-      } else if (c1 == '"') { // skip single-line string token atomically
-        i++; column++; let s = countString(code, i);
-        if (s < 0) s = ~s + 1; // line continuation is unsupported; in this case count the '\' too and end string
-        i += s; column += s; continue;
-      } else if (/\w/.test(c1) && !/\w/.test(code[i - 1] ?? '')) { // get identifier token atomically verbatim
-        let tokenCode = c1, l = 1;
-        for (let c; /\w/.test(c = code[i + l] ?? '');) { tokenCode += c; l++; } // append chars
-        const definition = this.macros.get(tokenCode);
-        if (!definition) { // not a macro; just skip the non-macro identifier
-          i += l; column += l; continue;
-        } // else identifier is a macro
-        chunks.push({ inputCode: code.substring(i0, i) });
-        i0 = i; // pushed chunk of code verbatim up to before macro identifier
-        const start = { line, column };
-        i += l; column += l;
-        const end = { line, column }, identifier = { code: tokenCode, start, end };
-        if (definition.parameters) { // macro requires call, keep gathering tokens for it
-          expandingMacro = { identifier, definition, arguments: [] };
-          lineStart = start.line; columnStart = start.column;
-        } else { // already finish macro here on just the identifier
-          const macro = { identifier, definition, arguments: null }, location = { uri, start, end };
-          const replacement = this.#expansion(macro, diagnostics, location);
-          chunks.push({ inputCode: code.substring(i0, i), replacement });
-          i0 = i; // replace expansion code into the macro identifier
-        }
-        continue;
-      } // else do nothing special, just skip keeping text as is until this chunk is handled
-      // advance to next index and to next column or line
-      if (c2 == '\r\n') { i += 2; column = 0; line++; }
-      else if (c1 == '\n' || c1 == '\r') { i++; column = 0; line++; }
-      else { i++; column++; }
-    }
-    if (inBlockComment) {
-      const position = { line, column }, msg = 'unterminated block comment';
-      diagnostics.push({ location: { uri, start: position, end: position }, msg, id: 'PEndComment' });
-      if (inDirective) tokens.push(' ');
-      else if (expandingMacro) {
-        const args = expandingMacro.arguments!, nArgs = args.length;
-        if (nArgs) args[nArgs - 1] += ' ';
-      }
-    }
-    if (inDirective) {
-      const location = { uri, start: { line: lineStart, column: columnStart }, end: { line, column } };
-      const replacement = await this.#directive(includes, tokens, diagnostics, location);
-      chunks.push({ inputCode: code.substring(i0), replacement });
-    } else {
-      if (expandingMacro?.arguments!.length) {
-        const location = { uri, start: { line: lineStart, column: columnStart }, end: { line, column } };
-        diagnostics.push({ location, msg: 'unterminated macro expansion call', id: 'PEndExpansion' });
-      }
-      chunks.push({ inputCode: code.substring(i0) });
-    }
-    return new PreprocessedUnit(input, chunks, diagnostics);
-  }
-  #expansion(
-    macro: MacroExpansion, diagnostics: PreprocessorDiagnostic[], location: CodeLocation,
-  ): PreprocessedOutput | undefined {
-    const args = macro.arguments, { definition } = macro;
-    let expandingCode = definition.code;
-    if (args) { // function-like expansion
-      const nArgs = args.length >= 2 ? args.length : /^\s*$/.test(args[0]!) ? 0 : 1;
-      const { parameters } = definition, nParams = parameters!.length;
-      if (nArgs != nParams) { // ensure arity matches; otherwise, raise error and replace with just macro name
-        const msg = `number of macro expansion arguments (${nArgs}) must match the parameters (${nParams})`;
-        diagnostics.push({ location, msg, id: 'PExpansionArity' });
-        return { code: macro.identifier.code, construct: new PreprocessorExpansion(location, macro) };
-      }
-      if (nArgs) expandingCode = expandingCode.replaceAll(
-        RegExp('"(?:[^"\\\\]|\\\\["\\\\])*"|\\b(?:' + parameters!.join('|') + ')\\b', 'g'),
-        s => s.startsWith('"') ? s : args[parameters!.indexOf(s)] ?? s
-      ); // replaced args into parameters all at once
-    } // else expanding onto an identifier only
-    expandingCode = expandingCode.replace(/(?<=[^#\s])\s*##\s*(?=[^#\s])/g, ''); // handle ## concatenation token
-    //TODO exclude this macro def and reapply remaining defs on a loop until there is none or it causes no changes
-    diagnostics.push({ location, msg: `DEBUG: expands to '${expandingCode}'`, id: '' });
-    return { code: expandingCode, construct: new PreprocessorExpansion(location, macro) };
-  }
-  async #directive(
-    includes: number, tokens: TokenString[], diagnostics: PreprocessorDiagnostic[], location: CodeLocation,
-  ): Promise<PreprocessedOutput> {
-    const line = tokens.map(t => typeof t == 'string' ? t : t.code).join('');
-    const directiveToken = tokens[1] ?? '';
-    const directiveKeyword = typeof directiveToken == 'string' ? directiveToken : directiveToken.code;
-    switch (directiveKeyword) {
-      case 'include': return await this.#include(includes, tokens, diagnostics, location, line);
-    }
-    //TODO #define #if #pragma etc...
-    const msg = `invalid or unsupported directive '#${directiveKeyword}' in: '${line}'`;
-    diagnostics.push({ location, msg, id: 'PDirectiveMiss' });
-    return PreprocessorProblem.output(location, line);
-  }
-  async #include(
-    includes: number, tokens: TokenString[], diagnostics: PreprocessorDiagnostic[], location: CodeLocation,
-    line: string,
-  ): Promise<PreprocessedOutput> {
-    if (includes <= 0) {
-      const msg = 'include depth is limited to avoid infinite recursion';
-      diagnostics.push({ location, msg, id: 'PIncludeDeep' });
-      return PreprocessorProblem.output(location, line);
-    }
-    let stringToken;
-    for (let i = 2, n = tokens.length; i < n; i++) {
-      const token = tokens[i]!;
-      if (typeof token == 'string') { if (/^[ \t]*$/.test(token)) continue; } // ignore whitespace
-      else if (stringToken == null && /^"(?:[^"\\]|\\["\\])+"$/.test(token.code)) { stringToken = token; continue; }
-      stringToken = undefined; break; // the only token in the directive line after #include must be a string
-    }
-    if (!stringToken) {
-      const msg = `malformed include directive: '${line}'`;
-      diagnostics.push({ location, msg, id: 'PIncludeForm' });
-      return PreprocessorProblem.output(location, line);
-    }
-    const str = stringToken.code;
-    const path = str.substring(1, str.length - 1).replace(/\\(["\\])/g, '$1');
-    let loadedFile; try {
-      loadedFile = await this.loader(path, location.uri);
-    } catch (e) {
-      const msg = typeof e == 'string' ? e : 'some error occurred in the path loader:\n' + e;
-      diagnostics.push({ location, msg, id: 'PIncludePath' });
-      return PreprocessorProblem.output(location, line);
-    }
-    const subUnit = await this.preprocess(loadedFile, includes - 1);
-    const msg = 'from included file';
-    for (const d of subUnit.diagnostics) {
-      const cause: PreprocessorDiagnostic = { location: d.location, msg, cause: d.cause, id: '' };
-      diagnostics.push({ location, cause, msg: d.msg, id: d.id });
-    }
-    return {
-      code: subUnit.preprocessedCode,
-      construct: new PreprocessorInclude(location, stringToken, line, path, subUnit),
+    const p: PreprocessingStateFile = {
+      inBlockComment: false, inDirective: false, tokens: [],
+      chunks: [],
+      diagnostics: [],
+      expandingMacro: null, openedParentheses: 0,
+      lineStart: 1, columnStart: 0, i0: 0,
+      line: 1, column: 0, i: 0,
     };
+    while (p.i < code.length) {
+      const c2: string = code.substring(p.i, p.i + 2), c1 = c2[0]!;
+      if (p.inBlockComment) // skip this char
+        if (c2 == '*/') readCommentEnd(p);
+        else skipChar(p, c2, c1);
+      else if (c2 == '//') skipLineComment(code, p); // skip line comment until end of line
+      else if (c2 == '/*') readCommentStart(p);
+      else if (p.inDirective) // parse directive
+        if (c2 == '\\\n' || c2 == '\\\r') readLineContinuationInDirective(code, p);
+        else if (c1 == '\n' || c1 == '\r') await readDirectiveEnd(this, input, includes, p, c2, c1);
+        else if (c1 == '"') readStringInDirective(code, p);
+        else if (/\w/.test(c1) && !/\w/.test(code[p.i - 1] ?? '')) readIdentifierInDirective(code, p, c1);
+        else readCharInDirective(p, c2, c1);
+      else if (p.expandingMacro) readMacroExpansionCall(input, p, c2, c1);
+      else if (c1 == '#') readDirectiveStart(input, p);
+      else if (c1 == '"') readString(code, p);
+      else if (/\w/.test(c1) && !/\w/.test(code[p.i - 1] ?? '')) readIdentifier(this.macros, input, p, c1);
+      else skipChar(p, c2, c1); // do nothing special, just skip keeping text as is until this chunk is handled
+    }
+    if (p.inBlockComment) {
+      const position = { line: p.line, column: p.column }, msg = 'unterminated block comment';
+      p.diagnostics.push({ location: { uri, start: position, end: position }, msg, id: 'PEndComment' });
+      endComment(p);
+    }
+    if (p.inDirective) {
+      p.chunks.push({ inputCode: code.substring(p.i0), replacement: await endDirective(this, uri, includes, p) });
+    } else endCode(input, p);
+    return new PreprocessedUnit(input, p.chunks, p.diagnostics);
   }
 }
 
@@ -477,6 +480,7 @@ export class PreprocessorProblem extends PreprocessorConstruct {
     return { code: commentOut(parsedLine), construct: new PreprocessorProblem(location, parsedLine) };
   }
 }
+
 /** Represents a valid preprocessor macro expansion. */
 export class PreprocessorExpansion extends PreprocessorConstruct {
   macro: MacroExpansion;
@@ -485,6 +489,31 @@ export class PreprocessorExpansion extends PreprocessorConstruct {
     this.macro = macro;
   }
 }
+function expansion(
+  macro: MacroExpansion, diagnostics: PreprocessorDiagnostic[], location: CodeLocation,
+): PreprocessedOutput | undefined {
+  const args = macro.arguments, { definition } = macro;
+  const macroIdentifier = macro.identifier.code;
+  let expandingCode = definition.code;
+  if (args) { // function-like expansion
+    const nArgs = args.length >= 2 ? args.length : /^\s*$/.test(args[0]!) ? 0 : 1;
+    const { parameters } = definition, nParams = parameters!.length;
+    if (nArgs != nParams) { // ensure arity matches; otherwise, raise error and replace with just macro name
+      const msg = `number of macro expansion arguments (${nArgs}) must match the parameters (${nParams})`;
+      diagnostics.push({ location, msg, id: 'PExpansionArity' });
+      return { code: macroIdentifier, construct: new PreprocessorExpansion(location, macro) };
+    }
+    if (nArgs) expandingCode = expandingCode.replaceAll(
+      RegExp('"(?:[^"\\\\]|\\\\["\\\\])*"|\\b(?:' + parameters!.join('|') + ')\\b', 'g'),
+      s => s.startsWith('"') ? s : args[parameters!.indexOf(s)] ?? s
+    ); // replaced args into parameters all at once
+  } // else expanding onto an identifier only
+  expandingCode = expandingCode.replace(/(?<=[^#\s])\s*##\s*(?=[^#\s])/g, ''); // handle ## concatenation token
+  //TODO exclude this macro def and reapply remaining defs on a loop until there is none or it causes no changes
+  diagnostics.push({ location, msg: `DEBUG: expands to '${expandingCode}'`, id: '' });
+  return { code: expandingCode, construct: new PreprocessorExpansion(location, macro) };
+}
+
 /** Represents a valid preprocessor `#` directive. */
 export abstract class PreprocessorDirective extends PreprocessorConstruct {
   directiveLine: string;
@@ -492,6 +521,21 @@ export abstract class PreprocessorDirective extends PreprocessorConstruct {
     super(location, mainRange);
     this.directiveLine = line;
   }
+}
+async function directive(
+  preprocessor: GDShaderPreprocessorBase, tokens: readonly TokenString[], diagnostics: PreprocessorDiagnostic[],
+  location: CodeLocation, includes: number,
+): Promise<PreprocessedOutput> {
+  const line = tokens.map(t => typeof t == 'string' ? t : t.code).join('');
+  const directiveToken = tokens[1] ?? '';
+  const directiveKeyword = typeof directiveToken == 'string' ? directiveToken : directiveToken.code;
+  switch (directiveKeyword) {
+    case 'include': return await include(preprocessor, tokens, diagnostics, location, includes, line);
+  }
+  //TODO #define #if #pragma etc...
+  const msg = `invalid or unsupported directive '#${directiveKeyword}' in: '${line}'`;
+  diagnostics.push({ location, msg, id: 'PDirectiveMiss' });
+  return PreprocessorProblem.output(location, line);
 }
 
 /** Represents a valid preprocessor `#include` directive. */
@@ -503,4 +547,45 @@ export class PreprocessorInclude extends PreprocessorDirective {
     this.path = path;
     this.unit = unit;
   }
+}
+async function include(
+  preprocessor: GDShaderPreprocessorBase, tokens: readonly TokenString[], diagnostics: PreprocessorDiagnostic[],
+  location: CodeLocation, includes: number, line: string,
+): Promise<PreprocessedOutput> {
+  if (includes <= 0) {
+    const msg = 'include depth is limited to avoid infinite recursion';
+    diagnostics.push({ location, msg, id: 'PIncludeDeep' });
+    return PreprocessorProblem.output(location, line);
+  }
+  let stringToken;
+  for (let i = 2, n = tokens.length; i < n; i++) {
+    const token = tokens[i]!;
+    if (typeof token == 'string') { if (/^[ \t]*$/.test(token)) continue; } // ignore whitespace
+    else if (stringToken == null && /^"(?:[^"\\]|\\["\\])+"$/.test(token.code)) { stringToken = token; continue; }
+    stringToken = undefined; break; // the only token in the directive line after #include must be a string
+  }
+  if (!stringToken) {
+    const msg = `malformed include directive: '${line}'`;
+    diagnostics.push({ location, msg, id: 'PIncludeForm' });
+    return PreprocessorProblem.output(location, line);
+  }
+  const str = stringToken.code;
+  const path = str.substring(1, str.length - 1).replace(/\\(["\\])/g, '$1');
+  let loadedFile; try {
+    loadedFile = await preprocessor.loader(path, location.uri);
+  } catch (e) {
+    const msg = typeof e == 'string' ? e : 'some error occurred in the path loader:\n' + e;
+    diagnostics.push({ location, msg, id: 'PIncludePath' });
+    return PreprocessorProblem.output(location, line);
+  }
+  const subUnit = await preprocessor.preprocess(loadedFile, includes - 1);
+  const msg = 'from included file';
+  for (const d of subUnit.diagnostics) {
+    const cause: PreprocessorDiagnostic = { location: d.location, msg, cause: d.cause, id: '' };
+    diagnostics.push({ location, cause, msg: d.msg, id: d.id });
+  }
+  return {
+    code: subUnit.preprocessedCode,
+    construct: new PreprocessorInclude(location, stringToken, line, path, subUnit),
+  };
 }
