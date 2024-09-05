@@ -263,7 +263,10 @@ async function endDirective(
   return await directive(preprocessor, p.tokens, p.diagnostics, location, includes);
 }
 
-function readMacroExpansionCall(input: PreprocessingFile, p: PreprocessingState, c2: string, c1: string): void {
+function readMacroExpansionCall(
+  macros: ReadonlyMap<string, MacroReplacementDefinition>,
+  input: PreprocessingFile, p: PreprocessingState, c2: string, c1: string
+): void {
   // macro defined as function-like
   const { uri, code } = input, expandingMacro = p.expandingMacro!;
   const args = expandingMacro.arguments!, iArg = args.length - 1;
@@ -282,7 +285,7 @@ function readMacroExpansionCall(input: PreprocessingFile, p: PreprocessingState,
       const location = {
         uri, start: { line: p.lineStart, column: p.columnStart }, end: { line: p.line, column: p.column }
       };
-      const replacement = expansion(expandingMacro, p.diagnostics, location);
+      const replacement = expansion(expandingMacro, macros, p.diagnostics, location);
       p.chunks.push({ inputCode: code.substring(p.i0, p.i), replacement });
       p.i0 = p.i; // replace expansion code into the macro identifier
       p.expandingMacro = null;
@@ -330,7 +333,7 @@ function readStringInDirective(code: string, p: PreprocessingStateFile): void {
 }
 
 function readIdentifier(
-  macros: Map<string, MacroReplacementDefinition>, input: PreprocessingFile, p: PreprocessingState, c1: string
+  macros: ReadonlyMap<string, MacroReplacementDefinition>, input: PreprocessingFile, p: PreprocessingState, c1: string
 ): void {
   // get identifier token atomically verbatim
   const { uri, code } = input;
@@ -350,7 +353,7 @@ function readIdentifier(
     p.lineStart = start.line; p.columnStart = start.column;
   } else { // already finish macro here on just the identifier
     const macro = { identifier, definition, arguments: null }, location = { uri, start, end };
-    const replacement = expansion(macro, p.diagnostics, location);
+    const replacement = expansion(macro, macros, p.diagnostics, location);
     p.chunks.push({ inputCode: code.substring(p.i0, p.i), replacement });
     p.i0 = p.i; // replace expansion code into the macro identifier
   }
@@ -430,7 +433,7 @@ export default abstract class GDShaderPreprocessorBase {
         else if (c1 == '"') readStringInDirective(code, p);
         else if (/\w/.test(c1) && !/\w/.test(code[p.i - 1] ?? '')) readIdentifierInDirective(code, p, c1);
         else readCharInDirective(p, c2, c1);
-      else if (p.expandingMacro) readMacroExpansionCall(input, p, c2, c1);
+      else if (p.expandingMacro) readMacroExpansionCall(this.macros, input, p, c2, c1);
       else if (c1 == '#') readDirectiveStart(input, p);
       else if (c1 == '"') readString(code, p);
       else if (/\w/.test(c1) && !/\w/.test(code[p.i - 1] ?? '')) readIdentifier(this.macros, input, p, c1);
@@ -490,11 +493,12 @@ export class PreprocessorExpansion extends PreprocessorConstruct {
   }
 }
 function expansion(
-  macro: MacroExpansion, diagnostics: PreprocessorDiagnostic[], location: CodeLocation,
+  macro: MacroExpansion, macros: ReadonlyMap<string, MacroReplacementDefinition>,
+  diagnostics: PreprocessorDiagnostic[], location: CodeLocation,
 ): PreprocessedOutput | undefined {
   const args = macro.arguments, { definition } = macro;
   const macroIdentifier = macro.identifier.code;
-  let expandingCode = definition.code;
+  let { code } = definition;
   if (args) { // function-like expansion
     const nArgs = args.length >= 2 ? args.length : /^\s*$/.test(args[0]!) ? 0 : 1;
     const { parameters } = definition, nParams = parameters!.length;
@@ -503,15 +507,37 @@ function expansion(
       diagnostics.push({ location, msg, id: 'PExpansionArity' });
       return { code: macroIdentifier, construct: new PreprocessorExpansion(location, macro) };
     }
-    if (nArgs) expandingCode = expandingCode.replaceAll(
+    if (nArgs) code = code.replaceAll(
       RegExp('"(?:[^"\\\\]|\\\\["\\\\])*"|\\b(?:' + parameters!.join('|') + ')\\b', 'g'),
       s => s.startsWith('"') ? s : args[parameters!.indexOf(s)] ?? s
     ); // replaced args into parameters all at once
   } // else expanding onto an identifier only
-  expandingCode = expandingCode.replace(/(?<=[^#\s])\s*##\s*(?=[^#\s])/g, ''); // handle ## concatenation token
-  //TODO exclude this macro def and reapply remaining defs on a loop until there is none or it causes no changes
-  diagnostics.push({ location, msg: `DEBUG: expands to '${expandingCode}'`, id: '' });
-  return { code: expandingCode, construct: new PreprocessorExpansion(location, macro) };
+  code = code.replace(/(?<=[^#\s])\s*##\s*(?=[^#\s])/g, ''); // handle ## concatenation token
+  code = ` ${code} `; // always surround expansion with spaces to avoid gluing tokens
+  // exclude this macro def and reapply expansion on the output code for the remaining defs recursively
+  const subMacros = new Map(macros);
+  subMacros.delete(macroIdentifier);
+  if (subMacros.size) {
+    const uri = location.uri, input = { uri, code };
+    const p: PreprocessingState = {
+      chunks: [],
+      diagnostics: [],
+      expandingMacro: null, openedParentheses: 0,
+      lineStart: 1, columnStart: 0, i0: 0,
+      line: 1, column: 0, i: 0,
+    };
+    while (p.i < code.length) {
+      const c2: string = code.substring(p.i, p.i + 2), c1 = c2[0]!;
+      if (p.expandingMacro) readMacroExpansionCall(subMacros, input, p, c2, c1);
+      else if (c1 == '"') readString(code, p);
+      else if (/\w/.test(c1) && !/\w/.test(code[p.i - 1] ?? '')) readIdentifier(subMacros, input, p, c1);
+      else skipChar(p, c2, c1); // do nothing special, just skip keeping text as is until this chunk is handled
+    }
+    endCode(input, p);
+    code = p.chunks.map(c => c.replacement?.code ?? c.inputCode).join('');
+  }
+  diagnostics.push({ location, msg: `DEBUG: expands to '${code}'`, id: '' });
+  return { code, construct: new PreprocessorExpansion(location, macro) };
 }
 
 /** Represents a valid preprocessor `#` directive. */
