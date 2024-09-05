@@ -461,6 +461,10 @@ export const preprocessorErrorTypes = {
   PIncludeForm: docsUrl + '#include',
   PIncludeDeep: docsUrl + '#include',
   PIncludePath: docsUrl + '#include',
+  PDefineWho: docsUrl + '#define',
+  PDefineClash: docsUrl + '#define',
+  PDefineParams: docsUrl + '#define',
+  PDefineTouchy: docsUrl + '#define',
 };
 
 /** Represents a parsed preprocessor construct from which code is replaced. */
@@ -557,8 +561,9 @@ async function directive(
   const directiveKeyword = typeof directiveToken == 'string' ? directiveToken : directiveToken.code;
   switch (directiveKeyword) {
     case 'include': return await include(preprocessor, tokens, diagnostics, location, includes, line);
+    case 'define': return define(preprocessor, tokens, diagnostics, location, line)
   }
-  //TODO #define #if #pragma etc...
+  //TODO #undef #ifdef #if #pragma etc...
   const msg = `invalid or unsupported directive '#${directiveKeyword}' in: '${line}'`;
   diagnostics.push({ location, msg, id: 'PDirectiveMiss' });
   return PreprocessorProblem.output(location, line);
@@ -614,4 +619,89 @@ async function include(
     code: subUnit.preprocessedCode,
     construct: new PreprocessorInclude(location, stringToken, line, path, subUnit),
   };
+}
+
+/** Represents a valid preprocessor `#define` directive. */
+export class PreprocessorDefine extends PreprocessorDirective {
+  identifier: PreprocessorToken;
+  definition: MacroReplacementDefinition;
+  constructor(
+    location: CodeLocation, line: string, identifier: PreprocessorToken, definition: MacroReplacementDefinition
+  ) {
+    super(location, identifier, line);
+    this.identifier = identifier;
+    this.definition = definition;
+  }
+}
+function define(
+  preprocessor: GDShaderPreprocessorBase, tokens: readonly TokenString[], diagnostics: PreprocessorDiagnostic[],
+  location: CodeLocation, line: string,
+): PreprocessedOutput {
+  let identifier: PreprocessorToken | null = null, i = 2;
+  const n = tokens.length;
+  for (; i < n; i++) {
+    const token = tokens[i]!;
+    if (typeof token == 'string') { if (/^[ \t]*$/.test(token)) continue; } // ignore whitespace
+    else if (/^[A-Z_a-z]\w*$/.test(token.code)) { identifier = token; } // we want an identifier
+    break; // stop at first non-space token
+  }
+  if (!identifier) {
+    const msg = `expected identifier after '#define' in: '${line}'`;
+    diagnostics.push({ location, msg, id: 'PDefineWho' });
+    return PreprocessorProblem.output(location, line);
+  }
+  const macroIdentifier = identifier.code;
+  if (preprocessor.macros.has(macroIdentifier)) {
+    const msg = `redefinition of macro '${macroIdentifier}'`;
+    const loc = { uri: location.uri, start: identifier.start, end: identifier.end };
+    //TODO we can add cause 'previously defined here' by adding constructs with locations to map of macros
+    diagnostics.push({ location: loc, msg, id: 'PDefineClash' });
+    return PreprocessorProblem.output(loc, line);
+  }
+  let parameters: string[] | null, code = '';
+  const openToken = tokens[++i] ?? '';
+  if (openToken == '(') {
+    parameters = []; // parse parameter identifiers
+    let last: '(' | 'x' | ',' | ')' = '('; // '('=atStart; 'x'=afterIdentifier; ','=afterComma; ')'=endedOk;
+    for (i++; i < n; i++) {
+      const token = tokens[i]!;
+      if (typeof token == 'string') {
+        if (token == ')') { if (last != ',') last = ')'; break; } // end here or when no more tokens
+        if (/^[ \t]*$/.test(token)) continue; // ignore whitespace
+        if (last == 'x' && token == ',') { last = ','; continue; }
+      } else if (last != 'x' && /^[A-Z_a-z]\w*$/.test(token.code)) {
+        parameters.push(token.code); last = 'x'; continue;
+      }
+      break; // unexpected token
+    }
+    if (last != ')') { // did not end as expected
+      const expected: string = last == 'x' ? "',' or ')'" : last == ',' ? 'identifier' : "identifier or ')'";
+      const msg = `expected ${expected} in the parameter list of: '${line}'`;
+      diagnostics.push({ location, msg, id: 'PDefineParams' });
+      return PreprocessorProblem.output(location, line);
+    }
+  } else if (typeof openToken == 'string' && /^[ \t]*$/.test(openToken)) {
+    parameters = null; // no parameters, just start code definition
+  } else { // identifier is touching some non-whitespace token
+    const msg = `missing whitespace after macro name in: '${line}'`;
+    diagnostics.push({ location, msg, id: 'PDefineTouchy' });
+    return PreprocessorProblem.output(location, line);
+  }
+  // skip leading whitespace
+  for (i++; i < n; i++) {
+    const token = tokens[i]!;
+    if (typeof token != 'string' || !/^[ \t]*$/.test(token)) break;
+  }
+  let spaceBuffer = '';
+  for (; i < n; i++) {
+    const token = tokens[i]!;
+    if (typeof token == 'string') {
+      if (/^[ \t]*$/.test(token)) { spaceBuffer += token; continue; } // skip trailing whitespace
+      else code += spaceBuffer + token;
+    } else code += spaceBuffer + token.code; // could also add code tokens for identifiers into a construct field
+    spaceBuffer = ''; // added non-trailing whitespace, so clean buffer
+  }
+  const definition = { parameters, code };
+  preprocessor.macros.set(macroIdentifier, definition);
+  return { code: commentOut(line), construct: new PreprocessorDefine(location, line, identifier, definition) };
 }

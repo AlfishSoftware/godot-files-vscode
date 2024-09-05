@@ -19,6 +19,7 @@
     "text": {
       "patterns": [
         { "include": "#commentLine" },
+        { "include": "#commentBlockDocumentation" },
         { "include": "#commentBlock" },
         { "include": "#string" }
       ]
@@ -39,6 +40,11 @@
       "name": "comment.line.double-slash.gdshader",
       "begin": "//",
       "end": "$"
+    },
+    "commentBlockDocumentation": {
+      "name": "comment.block.documentation.gdshader",
+      "begin": "/\\*\\*(?!/)",
+      "end": "\\*/"
     },
     "commentBlock": {
       "name": "comment.block.gdshader",
@@ -95,7 +101,7 @@
       "match": "\\\\$"
     },
     "tokenConcatenation": {
-      "name": "comment.block.token-concatenation.preprocessor.gdshader",
+      "name": "keyword.operator.token-concatenation.preprocessor.gdshader",
       "match": "(?<!\\#)\\#\\#(?!\\#)"
     },
     "directive": {
