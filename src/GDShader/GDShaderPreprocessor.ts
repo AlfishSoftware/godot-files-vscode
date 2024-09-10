@@ -465,6 +465,8 @@ export const preprocessorErrorTypes = {
   PDefineClash: docsUrl + '#define',
   PDefineParams: docsUrl + '#define',
   PDefineTouchy: docsUrl + '#define',
+  PUndefWho: docsUrl + '#undef',
+  PUndefExtra: docsUrl + '#undef',
 };
 
 /** Represents a parsed preprocessor construct from which code is replaced. */
@@ -561,9 +563,10 @@ async function directive(
   const directiveKeyword = typeof directiveToken == 'string' ? directiveToken : directiveToken.code;
   switch (directiveKeyword) {
     case 'include': return await include(preprocessor, tokens, diagnostics, location, includes, line);
-    case 'define': return define(preprocessor, tokens, diagnostics, location, line)
+    case 'define': return define(preprocessor, tokens, diagnostics, location, line);
+    case 'undef': return undef(preprocessor, tokens, diagnostics, location, line);
   }
-  //TODO #undef #ifdef #if #pragma etc...
+  //TODO #ifdef #if #pragma etc...
   const msg = `invalid or unsupported directive '#${directiveKeyword}' in: '${line}'`;
   diagnostics.push({ location, msg, id: 'PDirectiveMiss' });
   return PreprocessorProblem.output(location, line);
@@ -704,4 +707,45 @@ function define(
   const definition = { parameters, code };
   preprocessor.macros.set(macroIdentifier, definition);
   return { code: commentOut(line), construct: new PreprocessorDefine(location, line, identifier, definition) };
+}
+
+/** Represents a valid preprocessor `#undef` directive. */
+export class PreprocessorUndef extends PreprocessorDirective {
+  identifier: PreprocessorToken;
+  constructor(
+    location: CodeLocation, line: string, identifier: PreprocessorToken
+  ) {
+    super(location, identifier, line);
+    this.identifier = identifier;
+  }
+}
+function undef(
+  preprocessor: GDShaderPreprocessorBase, tokens: readonly TokenString[], diagnostics: PreprocessorDiagnostic[],
+  location: CodeLocation, line: string,
+): PreprocessedOutput {
+  let identifier: PreprocessorToken | null = null, i = 2;
+  const n = tokens.length;
+  for (; i < n; i++) {
+    const token = tokens[i]!;
+    if (typeof token == 'string') { if (/^[ \t]*$/.test(token)) continue; } // ignore whitespace
+    else if (/^[A-Z_a-z]\w*$/.test(token.code)) { identifier = token; } // we want an identifier
+    break; // stop at first non-space token
+  }
+  if (!identifier) {
+    const msg = `expected identifier after '#undef' in: '${line}'`;
+    diagnostics.push({ location, msg, id: 'PUndefWho' });
+    return PreprocessorProblem.output(location, line);
+  }
+  // allow only whitespace after identifier
+  for (i++; i < n; i++) {
+    const token = tokens[i]!;
+    if (typeof token != 'string' || !/^[ \t]*$/.test(token)) {
+      const msg = `unexpected code after '#undef' identifier in: '${line}'`;
+      diagnostics.push({ location, msg, id: 'PUndefExtra' });
+      return PreprocessorProblem.output(location, line);
+    }
+  }
+  const macroIdentifier = identifier.code;
+  preprocessor.macros.delete(macroIdentifier);
+  return { code: commentOut(line), construct: new PreprocessorUndef(location, line, identifier) };
 }
