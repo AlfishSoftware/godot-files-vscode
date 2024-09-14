@@ -511,17 +511,17 @@
 		]
 	},
 	"devDependencies": {
-		"@types/vscode": "^1.89.0",
+		"@types/vscode": "^1.93.0",
 		"ts-loader": "^9.5.1",
-		"typescript": "^5.5.4",
-		"webpack": "^5.93.0",
+		"typescript": "^5.6.2",
+		"webpack": "^5.94.0",
 		"webpack-cli": "^5.1.4"
 	},
 	"dependencies": {
 		"antlr4": "~4.13.2"
 	},
 	"engines": {
-		"vscode": "^1.89.0"
+		"vscode": "^1.93.0"
 	},
 	"scripts": {
 		"watch-pc": "tsc -watch -p ./src/",
