@@ -15,55 +15,58 @@ export interface CodePosition {
 }
 export interface CodeRange {
   /** The start position. */
-  start: CodePosition;
+  readonly start: CodePosition;
   /** The end position. */
-  end: CodePosition;
+  readonly end: CodePosition;
 }
 interface CodeLocation extends CodeRange {
   /** The URI of the source. */
-  uri: string;
+  readonly uri: string;
 }
 interface PreprocessorToken extends CodeRange {
   /** The preprocessed token text. */
-  code: string;
+  readonly code: string;
 }
 type TokenString = string | PreprocessorToken;
 export interface PreprocessorDiagnostic {
   /** A code for the type of error. */
-  id: '' | keyof typeof preprocessorErrorTypes;
+  readonly id: '' | keyof typeof preprocessorErrorTypes;
   /** The error message. */
-  msg: string;
+  readonly msg: string;
   /** Target location in code. */
-  location: CodeLocation;
+  readonly location: CodeLocation;
   /** Trace of causes until the original source at the end of the list. */
-  cause?: PreprocessorDiagnostic;
+  readonly cause?: PreprocessorDiagnostic;
 }
 
-interface MacroReplacementDefinition {
-  parameters: null | string[];
-  code: string;
+/** Definition code associated with a macro name. */
+interface MacroDefinition {
+  readonly parameterNames: null | readonly string[];
+  readonly body: string;
 }
 interface MacroExpansion {
-  identifier: PreprocessorToken;
-  definition: MacroReplacementDefinition;
-  arguments: null | string[];
+  readonly identifier: PreprocessorToken;
+  readonly definition: MacroDefinition;
+  readonly arguments: null | string[];
 }
+type MacrosAvailable = ReadonlyMap<string, MacroDefinition>;
+export type MacrosDefined = Map<string, MacroDefinition>;
 
 export interface MappedLocation {
-  unit: PreprocessedUnit;
-  inputPosition: number;
-  inputLength: number;
-  chunkIndex: number;
-  replacement?: PreprocessedOutput;
-  original?: MappedLocation;
+  readonly unit: PreprocessedUnit;
+  readonly inputPosition: number;
+  readonly inputLength: number;
+  readonly chunkIndex: number;
+  readonly replacement?: PreprocessedOutput;
+  readonly original?: MappedLocation;
 }
 interface PreprocessedChunk {
-  inputCode: string;
-  replacement?: PreprocessedOutput;
+  readonly inputCode: string;
+  readonly replacement?: PreprocessedOutput;
 }
 interface PreprocessedOutput {
-  code: string;
-  construct: PreprocessorConstruct;
+  readonly code: string;
+  readonly construct: PreprocessorConstruct;
 }
 
 export class PreprocessedUnit {
@@ -196,6 +199,7 @@ interface PreprocessingState extends PreprocessingStatePosition {
   lineStart: number; columnStart: number; i0: number;
 }
 interface PreprocessingStateFile extends PreprocessingState {
+  readonly macros: MacrosDefined;
   inBlockComment: boolean;
   inDirective: boolean;
   tokens: TokenString[];
@@ -260,12 +264,11 @@ async function endDirective(
   const location = {
     uri, start: { line: p.lineStart, column: p.columnStart }, end: { line: p.line, column: p.column }
   };
-  return await directive(preprocessor, p.tokens, p.diagnostics, location, includes);
+  return await directive(preprocessor, p.tokens, p.diagnostics, location, p.macros, includes);
 }
 
 function readMacroExpansionCall(
-  macros: ReadonlyMap<string, MacroReplacementDefinition>,
-  input: PreprocessingFile, p: PreprocessingState, c2: string, c1: string
+  macros: MacrosAvailable, input: PreprocessingFile, p: PreprocessingState, c2: string, c1: string
 ): void {
   // macro defined as function-like
   const { uri, code } = input, expandingMacro = p.expandingMacro!;
@@ -333,7 +336,7 @@ function readStringInDirective(code: string, p: PreprocessingStateFile): void {
 }
 
 function readIdentifier(
-  macros: ReadonlyMap<string, MacroReplacementDefinition>, input: PreprocessingFile, p: PreprocessingState, c1: string
+  macros: MacrosAvailable, input: PreprocessingFile, p: PreprocessingState, c1: string
 ): void {
   // get identifier token atomically verbatim
   const { uri, code } = input;
@@ -348,7 +351,7 @@ function readIdentifier(
   const start = { line: p.line, column: p.column };
   p.i += l; p.column += l;
   const end = { line: p.line, column: p.column }, identifier = { code: tokenCode, start, end };
-  if (definition.parameters) { // macro requires call, keep gathering tokens for it
+  if (definition.parameterNames) { // macro requires call, keep gathering tokens for it
     p.expandingMacro = { identifier, definition, arguments: [] };
     p.lineStart = start.line; p.columnStart = start.column;
   } else { // already finish macro here on just the identifier
@@ -388,7 +391,6 @@ function endCode(input: PreprocessingFile, p: PreprocessingState): void {
 }
 
 /** Implementation for a Godot Shader Preprocessor that is suitable for IDEs.
- * Construct a new instance every time preprocessing is executed.
  */
 export default abstract class GDShaderPreprocessorBase {
   /** Implement this to make `#include` directives load a file from its path.
@@ -401,18 +403,19 @@ export default abstract class GDShaderPreprocessorBase {
    * @throws {string | Error} Used as an error diagnostic message on the directive without aborting the preprocessor.
    */
   abstract loader(loadPath: string, fromUri: string): Promise<PreprocessingFile>;
-  /** Initial macro definitions will be updated during preprocessing. It maps macros from a set of identifiers.
-   * Occurrences of identifier `parameters` on `code` will be replaced upon expansion.
-   */
-  macros: Map<string, MacroReplacementDefinition> = new Map();
   /** Executes the preprocessor asynchronously.
    * @param input The entry input document to be preprocessed. URI must be empty for code embedded in other files.
-   * @param includes Max include depth, to avoid infinite recursion.
+   * @param macros Maps macro names to definitions. Will be updated as `#define`|`#undef` directives appear in the code.
+   * Can be used to set initial external macros that don't come from code `#define` directives.
+   * @param includes Max `#include` depth, to avoid infinite recursion.
    * @returns The resulting unit with diagnostics and chunks mapping input code to outputs.
    */
-  async preprocess(input: PreprocessingFile, includes = 25): Promise<PreprocessedUnit> {
+  async preprocess(
+    input: PreprocessingFile, macros: MacrosDefined = new Map(), includes = 25
+  ): Promise<PreprocessedUnit> {
     const { uri, code } = input;
     const p: PreprocessingStateFile = {
+      macros,
       inBlockComment: false, inDirective: false, tokens: [],
       chunks: [],
       diagnostics: [],
@@ -433,10 +436,10 @@ export default abstract class GDShaderPreprocessorBase {
         else if (c1 == '"') readStringInDirective(code, p);
         else if (/\w/.test(c1) && !/\w/.test(code[p.i - 1] ?? '')) readIdentifierInDirective(code, p, c1);
         else readCharInDirective(p, c2, c1);
-      else if (p.expandingMacro) readMacroExpansionCall(this.macros, input, p, c2, c1);
+      else if (p.expandingMacro) readMacroExpansionCall(macros, input, p, c2, c1);
       else if (c1 == '#') readDirectiveStart(input, p);
       else if (c1 == '"') readString(code, p);
-      else if (/\w/.test(c1) && !/\w/.test(code[p.i - 1] ?? '')) readIdentifier(this.macros, input, p, c1);
+      else if (/\w/.test(c1) && !/\w/.test(code[p.i - 1] ?? '')) readIdentifier(macros, input, p, c1);
       else skipChar(p, c2, c1); // do nothing special, just skip keeping text as is until this chunk is handled
     }
     if (p.inBlockComment) {
@@ -458,6 +461,7 @@ export const preprocessorErrorTypes = {
   PExpansionArity: docsUrl + '#define',
   PDirectivePos: docsUrl + '#directives',
   PDirectiveMiss: docsUrl + '#directives',
+  PDefinedMisnomer: docsUrl + '#if',
   PIncludeForm: docsUrl + '#include',
   PIncludeDeep: docsUrl + '#include',
   PIncludePath: docsUrl + '#include',
@@ -471,19 +475,18 @@ export const preprocessorErrorTypes = {
 
 /** Represents a parsed preprocessor construct from which code is replaced. */
 export abstract class PreprocessorConstruct {
-  location: CodeLocation;
-  mainRange: CodeRange;
-  constructor(location: CodeLocation, mainRange: CodeRange) {
-    this.location = location;
-    this.mainRange = mainRange;
+  constructor(
+    readonly location: CodeLocation,
+    readonly mainRange: CodeRange,
+  ) {
   }
 }
 /** Represents a parsed preprocessor construct that has a problem. */
 export class PreprocessorProblem extends PreprocessorConstruct {
-  parsedLine: string;
-  constructor(location: CodeLocation, parsedLine: string) {
+  constructor(location: CodeLocation,
+    readonly parsedLine: string,
+  ) {
     super(location, location);
-    this.parsedLine = parsedLine;
   }
   static output(location: CodeLocation, parsedLine: string): PreprocessedOutput {
     return { code: commentOut(parsedLine), construct: new PreprocessorProblem(location, parsedLine) };
@@ -492,30 +495,29 @@ export class PreprocessorProblem extends PreprocessorConstruct {
 
 /** Represents a valid preprocessor macro expansion. */
 export class PreprocessorExpansion extends PreprocessorConstruct {
-  macro: MacroExpansion;
-  constructor(location: CodeLocation, macro: MacroExpansion) {
+  constructor(location: CodeLocation,
+    readonly macro: MacroExpansion,
+  ) {
     super(location, macro.identifier);
-    this.macro = macro;
   }
 }
 function expansion(
-  macro: MacroExpansion, macros: ReadonlyMap<string, MacroReplacementDefinition>,
-  diagnostics: PreprocessorDiagnostic[], location: CodeLocation,
+  macro: MacroExpansion, macros: MacrosAvailable, diagnostics: PreprocessorDiagnostic[], location: CodeLocation,
 ): PreprocessedOutput | undefined {
   const args = macro.arguments, { definition } = macro;
   const macroIdentifier = macro.identifier.code;
-  let { code } = definition;
+  let code = definition.body;
   if (args) { // function-like expansion
     const nArgs = args.length >= 2 ? args.length : /^\s*$/.test(args[0]!) ? 0 : 1;
-    const { parameters } = definition, nParams = parameters!.length;
+    const parameterNames = definition.parameterNames!, nParams = parameterNames.length;
     if (nArgs != nParams) { // ensure arity matches; otherwise, raise error and replace with just macro name
       const msg = `number of macro expansion arguments (${nArgs}) must match the parameters (${nParams})`;
       diagnostics.push({ location, msg, id: 'PExpansionArity' });
       return { code: macroIdentifier, construct: new PreprocessorExpansion(location, macro) };
     }
     if (nArgs) code = code.replaceAll(
-      RegExp('"(?:[^"\\\\]|\\\\["\\\\])*"|\\b(?:' + parameters!.join('|') + ')\\b', 'g'),
-      s => s.startsWith('"') ? s : args[parameters!.indexOf(s)] ?? s
+      RegExp('"(?:[^"\\\\]|\\\\["\\\\])*"|\\b(?:' + parameterNames.join('|') + ')\\b', 'g'),
+      s => s.startsWith('"') ? s : args[parameterNames.indexOf(s)] ?? s
     ); // replaced args into parameters all at once
   } // else expanding onto an identifier only
   code = code.replace(/(?<=[^#\s])\s*##\s*(?=[^#\s])/g, ''); // handle ## concatenation token
@@ -548,23 +550,23 @@ function expansion(
 
 /** Represents a valid preprocessor `#` directive. */
 export abstract class PreprocessorDirective extends PreprocessorConstruct {
-  directiveLine: string;
-  constructor(location: CodeLocation, mainRange: CodeRange, line: string) {
+  constructor(location: CodeLocation, mainRange: CodeRange,
+    readonly directiveLine: string,
+  ) {
     super(location, mainRange);
-    this.directiveLine = line;
   }
 }
 async function directive(
   preprocessor: GDShaderPreprocessorBase, tokens: readonly TokenString[], diagnostics: PreprocessorDiagnostic[],
-  location: CodeLocation, includes: number,
+  location: CodeLocation, macros: MacrosDefined, includes: number,
 ): Promise<PreprocessedOutput> {
   const line = tokens.map(t => typeof t == 'string' ? t : t.code).join('');
   const directiveToken = tokens[1] ?? '';
   const directiveKeyword = typeof directiveToken == 'string' ? directiveToken : directiveToken.code;
   switch (directiveKeyword) {
-    case 'include': return await include(preprocessor, tokens, diagnostics, location, includes, line);
-    case 'define': return define(preprocessor, tokens, diagnostics, location, line);
-    case 'undef': return undef(preprocessor, tokens, diagnostics, location, line);
+    case 'include': return await include(tokens, diagnostics, location, line, macros, preprocessor, includes);
+    case 'define': return define(tokens, diagnostics, location, line, macros);
+    case 'undef': return undef(tokens, diagnostics, location, line, macros);
   }
   //TODO #ifdef #if #pragma etc...
   const msg = `invalid or unsupported directive '#${directiveKeyword}' in: '${line}'`;
@@ -574,17 +576,17 @@ async function directive(
 
 /** Represents a valid preprocessor `#include` directive. */
 export class PreprocessorInclude extends PreprocessorDirective {
-  path: string;
-  unit: PreprocessedUnit;
-  constructor(location: CodeLocation, mainRange: CodeRange, line: string, path: string, unit: PreprocessedUnit) {
+  constructor(location: CodeLocation, mainRange: CodeRange, line: string,
+    readonly path: string,
+    readonly unit: PreprocessedUnit,
+  ) {
     super(location, mainRange, line);
-    this.path = path;
-    this.unit = unit;
   }
 }
 async function include(
-  preprocessor: GDShaderPreprocessorBase, tokens: readonly TokenString[], diagnostics: PreprocessorDiagnostic[],
-  location: CodeLocation, includes: number, line: string,
+  tokens: readonly TokenString[], diagnostics: PreprocessorDiagnostic[],
+  location: CodeLocation, line: string, macros: MacrosDefined,
+  preprocessor: GDShaderPreprocessorBase, includes: number,
 ): Promise<PreprocessedOutput> {
   if (includes <= 0) {
     const msg = 'include depth is limited to avoid infinite recursion';
@@ -612,7 +614,7 @@ async function include(
     diagnostics.push({ location, msg, id: 'PIncludePath' });
     return PreprocessorProblem.output(location, line);
   }
-  const subUnit = await preprocessor.preprocess(loadedFile, includes - 1);
+  const subUnit = await preprocessor.preprocess(loadedFile, macros, includes - 1);
   const msg = 'from included file';
   for (const d of subUnit.diagnostics) {
     const cause: PreprocessorDiagnostic = { location: d.location, msg, cause: d.cause, id: '' };
@@ -625,20 +627,20 @@ async function include(
 }
 
 /** Represents a valid preprocessor `#define` directive. */
-export class PreprocessorDefine extends PreprocessorDirective {
-  identifier: PreprocessorToken;
-  definition: MacroReplacementDefinition;
-  constructor(
-    location: CodeLocation, line: string, identifier: PreprocessorToken, definition: MacroReplacementDefinition
+export class PreprocessorDefine extends PreprocessorDirective implements MacroDefinition {
+  constructor(location: CodeLocation, line: string,
+    readonly identifier: PreprocessorToken,
+    readonly parameters: null | readonly PreprocessorToken[],
+    readonly body: string,
   ) {
     super(location, identifier, line);
-    this.identifier = identifier;
-    this.definition = definition;
+    this.parameterNames = this.parameters?.map(p => typeof p == 'string' ? p : p.code) ?? null;
   }
+  readonly parameterNames: readonly string[] | null;
 }
 function define(
-  preprocessor: GDShaderPreprocessorBase, tokens: readonly TokenString[], diagnostics: PreprocessorDiagnostic[],
-  location: CodeLocation, line: string,
+  tokens: readonly TokenString[], diagnostics: PreprocessorDiagnostic[],
+  location: CodeLocation, line: string, macros: MacrosDefined,
 ): PreprocessedOutput {
   let identifier: PreprocessorToken | null = null, i = 2;
   const n = tokens.length;
@@ -654,14 +656,25 @@ function define(
     return PreprocessorProblem.output(location, line);
   }
   const macroIdentifier = identifier.code;
-  if (preprocessor.macros.has(macroIdentifier)) {
-    const msg = `redefinition of macro '${macroIdentifier}'`;
+  const isForbiddenName = macroIdentifier == 'defined';
+  if (isForbiddenName || macros.has(macroIdentifier)) {
     const loc = { uri: location.uri, start: identifier.start, end: identifier.end };
-    //TODO we can add cause 'previously defined here' by adding constructs with locations to map of macros
-    diagnostics.push({ location: loc, msg, id: 'PDefineClash' });
+    if (isForbiddenName)
+      diagnostics.push({ location: loc, msg: `'defined' cannot be used as a macro name`, id: 'PDefinedMisnomer' });
+    else {
+      const msg = `redefinition of macro '${macroIdentifier}'`;
+      const other = macros.get(macroIdentifier)!;
+      //TODO? 'previously defined here': trace includes; try using output location instead somehow, then sourcemap?
+      if (other instanceof PreprocessorDefine) diagnostics.push({
+        location: loc, msg, id: 'PDefineClash', cause: {
+          location: other.location, msg: 'previously defined here', id: ''
+        }
+      });
+      else diagnostics.push({ location: loc, msg: msg + ' already defined externally', id: 'PDefineClash' });
+    }
     return PreprocessorProblem.output(loc, line);
   }
-  let parameters: string[] | null, code = '';
+  let parameters: PreprocessorToken[] | null, body = '';
   const openToken = tokens[++i] ?? '';
   if (openToken == '(') {
     parameters = []; // parse parameter identifiers
@@ -673,7 +686,7 @@ function define(
         if (/^[ \t]*$/.test(token)) continue; // ignore whitespace
         if (last == 'x' && token == ',') { last = ','; continue; }
       } else if (last != 'x' && /^[A-Z_a-z]\w*$/.test(token.code)) {
-        parameters.push(token.code); last = 'x'; continue;
+        parameters.push(token); last = 'x'; continue;
       }
       break; // unexpected token
     }
@@ -700,28 +713,26 @@ function define(
     const token = tokens[i]!;
     if (typeof token == 'string') {
       if (/^[ \t]*$/.test(token)) { spaceBuffer += token; continue; } // skip trailing whitespace
-      else code += spaceBuffer + token;
-    } else code += spaceBuffer + token.code; // could also add code tokens for identifiers into a construct field
+      else body += spaceBuffer + token;
+    } else body += spaceBuffer + token.code; // could also add code tokens for identifiers into a construct field
     spaceBuffer = ''; // added non-trailing whitespace, so clean buffer
   }
-  const definition = { parameters, code };
-  preprocessor.macros.set(macroIdentifier, definition);
-  return { code: commentOut(line), construct: new PreprocessorDefine(location, line, identifier, definition) };
+  const construct = new PreprocessorDefine(location, line, identifier, parameters, body);
+  macros.set(macroIdentifier, construct);
+  return { code: commentOut(line), construct };
 }
 
 /** Represents a valid preprocessor `#undef` directive. */
 export class PreprocessorUndef extends PreprocessorDirective {
-  identifier: PreprocessorToken;
-  constructor(
-    location: CodeLocation, line: string, identifier: PreprocessorToken
+  constructor(location: CodeLocation, line: string,
+    readonly identifier: PreprocessorToken,
   ) {
     super(location, identifier, line);
-    this.identifier = identifier;
   }
 }
 function undef(
-  preprocessor: GDShaderPreprocessorBase, tokens: readonly TokenString[], diagnostics: PreprocessorDiagnostic[],
-  location: CodeLocation, line: string,
+  tokens: readonly TokenString[], diagnostics: PreprocessorDiagnostic[],
+  location: CodeLocation, line: string, macros: MacrosDefined,
 ): PreprocessedOutput {
   let identifier: PreprocessorToken | null = null, i = 2;
   const n = tokens.length;
@@ -736,6 +747,12 @@ function undef(
     diagnostics.push({ location, msg, id: 'PUndefWho' });
     return PreprocessorProblem.output(location, line);
   }
+  const macroIdentifier = identifier.code;
+  if (macroIdentifier == 'defined') {
+    const loc = { uri: location.uri, start: identifier.start, end: identifier.end };
+    diagnostics.push({ location: loc, msg: `'defined' cannot be used as a macro name`, id: 'PDefinedMisnomer' });
+    return PreprocessorProblem.output(loc, line);
+  }
   // allow only whitespace after identifier
   for (i++; i < n; i++) {
     const token = tokens[i]!;
@@ -745,7 +762,6 @@ function undef(
       return PreprocessorProblem.output(location, line);
     }
   }
-  const macroIdentifier = identifier.code;
-  preprocessor.macros.delete(macroIdentifier);
+  macros.delete(macroIdentifier);
   return { code: commentOut(line), construct: new PreprocessorUndef(location, line, identifier) };
 }

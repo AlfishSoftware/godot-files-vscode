@@ -9,7 +9,8 @@ import GDShaderModel from './GDShaderModel';
 import LanguageSpec, { ParserRule, DefinitionConstruct, diagnosticsFromGrammar } from '../Parsing/LanguageSpec';
 import GDShaderPreprocessorBase, {
   CodePosition, MappedLocation, preprocessorErrorTypes,
-  PreprocessingFile, PreprocessorDiagnostic, PreprocessedUnit, PreprocessorDirective, PreprocessorInclude,
+  PreprocessingFile, MacrosDefined, PreprocessorDiagnostic, PreprocessedUnit,
+  PreprocessorDirective, PreprocessorInclude, PreprocessorDefine,
 } from './GDShaderPreprocessor';
 import * as gds from './.antlr/GDShaderParser';
 const toUTF8 = new TextDecoder();
@@ -32,7 +33,7 @@ class GDShaderPreprocessor extends GDShaderPreprocessorBase {
     const code = document?.getText() ?? toUTF8.decode(await workspace.fs.readFile(uri));
     return { uri: uriStr, code };
   }
-  pushDiagnostics(diagnostics: PreprocessorDiagnostic[]): Diagnostic[] {
+  static ideDiagnostics(diagnostics: PreprocessorDiagnostic[]): Diagnostic[] {
     const documentDiagnostics: Diagnostic[] = [];
     for (const d of diagnostics) {
       const location = d.location;
@@ -56,6 +57,7 @@ class GDShaderPreprocessor extends GDShaderPreprocessorBase {
     return documentDiagnostics;
   }
 }
+const preprocessor = new GDShaderPreprocessor();
 function mapRange(length: number, loc: MappedLocation): Range {
   const { inputPosition, replacement, unit } = loc;
   const a = unit.inputPositionAt(inputPosition);
@@ -82,13 +84,21 @@ export default class GDShaderProvider implements
     const uri = document.uri.toString(true);
     const entryCode = document.getText();
     // Preprocess code
-    const preprocessor = new GDShaderPreprocessor();
-    const unit = await preprocessor.preprocess({ uri, code: entryCode });
+    const macros: MacrosDefined = new Map();
+    const predefined: undefined | { [m: string]: string | string[]; } =
+      workspace.getConfiguration('godotFiles').get('_debug_.godotShaderPreDefined');
+    if (predefined) for (const m in predefined) {
+      const d = predefined[m] ?? '';
+      const parameterNames = typeof d == 'string' ? null : d.slice(0, d.length - 1);
+      const body = typeof d == 'string' ? d : d[d.length - 1] ?? '';
+      macros.set(m, { parameterNames, body });
+    }
+    const unit = await preprocessor.preprocess({ uri, code: entryCode }, macros);
     const { preprocessedCode } = unit;
     // Parse model
     const model = this.models[uri] = new GDShaderModel(preprocessedCode);
     // Report diagnostics
-    const documentDiagnostics = preprocessor.pushDiagnostics(unit.diagnostics);
+    const documentDiagnostics = GDShaderPreprocessor.ideDiagnostics(unit.diagnostics);
     diagnosticsFromGrammar(model, (d, errType, length, msg) => {
       const outputPosition = unit.outputOffsetAt(d.line, d.column);
       const rootLoc = unit.sourcemap(outputPosition);
@@ -151,11 +161,20 @@ class GDShaderLanguageSpec extends LanguageSpec {
     }
   }
   directiveDefinition(directive: PreprocessorDirective): DocumentSymbol | null {
-    if (directive instanceof PreprocessorInclude) {
-      const { location, mainRange } = directive;
-      const range = ideRange(location.start, location.end);
-      const selectionRange = ideRange(mainRange.start, mainRange.end);
+    const { location, mainRange } = directive;
+    const range = ideRange(location.start, location.end);
+    const selectionRange = ideRange(mainRange.start, mainRange.end);
+    if (directive instanceof PreprocessorInclude)
       return new DocumentSymbol(directive.path, '#include', SymbolKind.File, range, selectionRange);
+    else if (directive instanceof PreprocessorDefine) {
+      const s = new DocumentSymbol(directive.identifier.code, '#define', SymbolKind.Key, range, selectionRange);
+      // also add parameters with ranges under the symbol
+      if (directive.parameters && directive.parameters.length)
+        s.children = directive.parameters.map(p => {
+          const r = ideRange(p.start, p.end);
+          return new DocumentSymbol(p.code, 'const in', SymbolKind.Variable, r, r);
+        });
+      return s;
     }
     return null;
   }
@@ -208,8 +227,8 @@ class GDShaderLanguageSpec extends LanguageSpec {
       return [{ kind: SymbolKind.Function, id: tree._name, detail: tree.aReturnType().getText() }];
     if (tree instanceof gds.AStructDefContext)
       return [{ kind: SymbolKind.Struct, id: tree._name, detail: 'struct' }];
-    //TODO maybe we should not add these constructs below in outline, but still process them here anyway
     if (tree instanceof gds.AGroupUniformsContext) {
+      //TODO save this, to add following uniforms as children; when unsetting the group, don't add extra "-" symbol
       const group = tree._group?.text; let id;
       if (group) {
         const subgroup = tree._subgroup?.text;
@@ -217,10 +236,11 @@ class GDShaderLanguageSpec extends LanguageSpec {
       } else id = null;
       return [{ kind: SymbolKind.Namespace, id, detail: 'group_uniforms' }];
     }
-    if (tree instanceof gds.ARenderModeContext)
-      return tree._values.map(id => ({ kind: SymbolKind.Interface, id, detail: 'render_mode', range: id }));
-    if (tree instanceof gds.AShaderTypeContext)
-      return [{ kind: SymbolKind.Class, id: tree._value, detail: 'shader_type' }];
+    // maybe we should not add these constructs below in outline, but still process them here anyway
+    //if (tree instanceof gds.ARenderModeContext)
+    //  return tree._values.map(id => ({ kind: SymbolKind.Interface, id, detail: 'render_mode', range: id }));
+    //if (tree instanceof gds.AShaderTypeContext)
+    //  return [{ kind: SymbolKind.Class, id: tree._value, detail: 'shader_type' }];
     return null;
   }
 }

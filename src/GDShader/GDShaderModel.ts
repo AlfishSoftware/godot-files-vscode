@@ -1,5 +1,5 @@
 // GDShader Model
-import { workspace, FileType, TextDocument, Uri } from 'vscode';
+import { workspace } from 'vscode';
 import { CharStream, CommonTokenStream } from 'antlr4';
 import GDShaderLexer from './.antlr/GDShaderLexer';
 import GDShaderParser from './.antlr/GDShaderParser';

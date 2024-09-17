@@ -64,15 +64,15 @@ function sectionSymbol(
         symbol.name = attributes.name ? GDAsset.nodeCode(`/root/${gdasset.rootNode = attributes.name}`) : tag;
       else symbol.name = gdasset.nodePath(`${attributes.parent}/${attributes.name}`);
       if (attributes.type) symbol.detail = attributes.type;
-      else if (attributes.index)
-        symbol.detail = '@' + attributes.index;
       else if (attributes.instance_placeholder) {
         const path = attributes.instance_placeholder;
         symbol.detail = `InstancePlaceholder # ${GDAsset.filename(path)?.title ?? path}`;
       } else if (attributes.instance) {
         const path = gdasset.resCall(attributes.instance)?.resource?.path ?? '?';
         symbol.detail = `# ${GDAsset.filename(path)?.title ?? path}`;
-      } else symbol.detail = '';
+      } else if (attributes.index)
+        symbol.detail = '@' + attributes.index;
+      else symbol.detail = 'Node';
       symbol.kind = SymbolKind.Object;
       break;
     case 'connection':
