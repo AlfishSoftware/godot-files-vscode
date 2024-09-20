@@ -78,6 +78,9 @@ export interface DefinitionConstruct {
   detail: string;
   range?: ParseTree | Token;
   isDeprecated?: boolean;
+  ideSymbol?: DocumentSymbol;
+  overrideParent?: DefinitionConstruct;
+  overrideParentAsCopy?: true;
 }
 
 function treeRange(tree: any) {
@@ -101,10 +104,9 @@ function tokenRange(symbol: Token) {
 }
 
 export default abstract class LanguageSpec {
-  abstract parserDefinitions(tree: ParserRule): DefinitionConstruct[] | null | string;
+  abstract parserDefinitions(tree: ParserRule): DefinitionConstruct[] | DefinitionConstruct | null | string;
   abstract sourcemap(range: Range): Range | null;
   addParserSymbols(tree: ParseTree, symbols: DocumentSymbol[]): void {
-    let symbol: DocumentSymbol;
     if (!(tree instanceof ParserRuleContext)) return;
     const branches = tree.children ?? [];
     const subSymbols: DocumentSymbol[] = [];
@@ -120,28 +122,43 @@ export default abstract class LanguageSpec {
       const range = this.sourcemap(ruleRange(tree));
       if (!range) return;
       const ruleName = tree.constructor.name.replace(/Context$/, '');
-      symbol = new DocumentSymbol(defConstructs, ruleName, SymbolKind.Object, range, range);
+      const symbol = new DocumentSymbol(defConstructs, ruleName, SymbolKind.Object, range, range);
       symbol.children = subSymbols;
       symbols.push(symbol);
       return;
     }
-    let range;
-    for (const defConstruct of defConstructs) {
-      const id = defConstruct.id;
-      const constructName = typeof id == 'string' ? id
-        : id instanceof Token ? id.text : id?.getText() ?? '-';
-      const subRangeOutput = treeRange(defConstruct.range);
-      const subRange = subRangeOutput ? this.sourcemap(subRangeOutput)
-        : (range === undefined ? range = this.sourcemap(ruleRange(tree)) : range);
-      if (!subRange) continue;
-      const idRangeOutput = treeRange(id);
-      const idRange = idRangeOutput ? this.sourcemap(idRangeOutput) : subRange;
-      if (!idRange) continue;
-      symbol = new DocumentSymbol(constructName, defConstruct.detail, defConstruct.kind, subRange, idRange);
-      if (defConstruct.isDeprecated) symbol.tags = [SymbolTag.Deprecated];
-      symbol.children = subSymbols;
-      symbols.push(symbol);
-    }
+    if (defConstructs instanceof Array) for (const defConstruct of defConstructs)
+      this.#parserSymbol(defConstruct, subSymbols, tree, symbols);
+    else this.#parserSymbol(defConstructs, subSymbols, tree, symbols);
+  }
+  #parserSymbol(
+    defConstruct: DefinitionConstruct, subSymbols: DocumentSymbol[], tree: ParserRuleContext, symbols: DocumentSymbol[]
+  ): void {
+    const id = defConstruct.id;
+    const constructName = typeof id == 'string' ? id
+      : id instanceof Token ? id.text : id?.getText() ?? '-';
+    const subRangeOutput = treeRange(defConstruct.range);
+    const subRange = subRangeOutput ? this.sourcemap(subRangeOutput) : this.sourcemap(ruleRange(tree));
+    if (!subRange) return;
+    const idRangeOutput = treeRange(id);
+    const idRange = idRangeOutput ? this.sourcemap(idRangeOutput) : subRange;
+    if (!idRange) return;
+    const symbol = new DocumentSymbol(constructName, defConstruct.detail, defConstruct.kind, subRange, idRange);
+    if (defConstruct.isDeprecated) symbol.tags = [SymbolTag.Deprecated];
+    symbol.children = subSymbols;
+    defConstruct.ideSymbol = symbol;
+    const parent = defConstruct.overrideParent?.ideSymbol;
+    if (parent) { // we want to override the parent symbol
+      if (defConstruct.overrideParentAsCopy) {
+        // duplicate parent symbol for this symbol, to not include unrelated previous symbols; and add parent instead
+        const newParent = { ...parent, children: [symbol], range: symbol.range };
+        defConstruct.overrideParent!.ideSymbol = newParent;
+        symbols.push(newParent);
+      } else {
+        parent.range = parent.range.union(symbol.range); // extend range of existing parent for this symbol
+        parent.children.push(symbol); // just add to existing parent
+      }
+    } else symbols.push(symbol); // else we just add the symbol to where it belongs in the structure normally
   }
 }
 export function verboseParserDefinitions(tree: ParserRuleContext): string {

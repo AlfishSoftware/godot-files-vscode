@@ -126,10 +126,8 @@ export default class GDShaderProvider implements
 }
 
 class GDShaderLanguageSpec extends LanguageSpec {
-  unit: PreprocessedUnit
-  constructor(unit: PreprocessedUnit) {
+  constructor(readonly unit: PreprocessedUnit) {
     super();
-    this.unit = unit;
   }
   override sourcemap(range: Range): Range | null {
     const { start } = range, unit = this.unit;
@@ -178,7 +176,9 @@ class GDShaderLanguageSpec extends LanguageSpec {
     }
     return null;
   }
-  override parserDefinitions(tree: ParserRule): DefinitionConstruct[] | null | string {
+  #currentUniformsGroup?: DefinitionConstruct; #insideGroup = false;
+  override parserDefinitions(tree: ParserRule): DefinitionConstruct[] | DefinitionConstruct | null | string {
+    // these are not at the root scope, so don't worry about group uniforms
     if (tree instanceof gds.ALocalVarDefContext
       || tree instanceof gds.AConstDefContext
       || tree instanceof gds.AStructFieldDefContext
@@ -199,6 +199,14 @@ class GDShaderLanguageSpec extends LanguageSpec {
         return { kind, id: flexileName._name, detail: type + arraySize, range: flexileName };
       });
     }
+    if (tree instanceof gds.AParameterDefContext) {
+      const qualifier = tree.aDirectionalQualifier()._qualifier?.text ?? 'in';
+      const type = atomicTypeText(tree.aAtomicAnyType());
+      const arraySize = tree.aArraySize()?.getText() ?? '';
+      const detail = `${qualifier} ${type}${arraySize}`;
+      return { kind: SymbolKind.Variable, id: tree._name, detail };
+    }
+    // anything below is at the root scope
     if (tree instanceof gds.AUniformDefContext) {
       const sharing = tree._sharing?.text;
       const typeSharing = sharing ? sharing + ' ' : '';
@@ -207,40 +215,41 @@ class GDShaderLanguageSpec extends LanguageSpec {
       const hints = tree._typeHints.map(h => h.getText()).join();
       const typeHints = hints ? ':' + hints : '';
       const detail = `${typeSharing}${type}${arraySize}${typeHints}`;
-      return [{ kind: SymbolKind.Property, id: tree._name, detail }];
+      const overrideParent = this.#currentUniformsGroup;
+      const overrideParentAsCopy = overrideParent?.ideSymbol && !this.#insideGroup || undefined;
+      if (overrideParentAsCopy) this.#insideGroup = true; // back to extending the duplicate group
+      return { kind: SymbolKind.Property, id: tree._name, detail, overrideParent, overrideParentAsCopy };
     }
+    const wasInsideCurrentUniformsGroup = this.#insideGroup;
+    this.#insideGroup = false; // any other symbol resets this to not extend symbol range of group
     if (tree instanceof gds.AVaryingDefContext) {
       const interpolator = tree._interpolator?.text ?? 'varying';
       const type = atomicTypeText(tree.aAtomicBasicType());
       const arraySize = tree.aArraySize()?.getText() ?? '';
       const detail = `${interpolator} ${type}${arraySize}`;
-      return [{ kind: SymbolKind.Property, id: tree._name, detail }];
-    }
-    if (tree instanceof gds.AParameterDefContext) {
-      const qualifier = tree.aDirectionalQualifier()._qualifier?.text ?? 'in';
-      const type = atomicTypeText(tree.aAtomicAnyType());
-      const arraySize = tree.aArraySize()?.getText() ?? '';
-      const detail = `${qualifier} ${type}${arraySize}`;
-      return [{ kind: SymbolKind.Variable, id: tree._name, detail }];
+      return { kind: SymbolKind.Property, id: tree._name, detail };
     }
     if (tree instanceof gds.AFunctionDefContext)
-      return [{ kind: SymbolKind.Function, id: tree._name, detail: tree.aReturnType().getText() }];
+      return { kind: SymbolKind.Function, id: tree._name, detail: tree.aReturnType().getText() };
     if (tree instanceof gds.AStructDefContext)
-      return [{ kind: SymbolKind.Struct, id: tree._name, detail: 'struct' }];
+      return { kind: SymbolKind.Struct, id: tree._name, detail: 'struct' };
     if (tree instanceof gds.AGroupUniformsContext) {
-      //TODO save this, to add following uniforms as children; when unsetting the group, don't add extra "-" symbol
-      const group = tree._group?.text; let id;
-      if (group) {
-        const subgroup = tree._subgroup?.text;
-        id = subgroup ? `${group}.${subgroup}` : group;
-      } else id = null;
-      return [{ kind: SymbolKind.Namespace, id, detail: 'group_uniforms' }];
+      const id = tree._name;
+      if (id) {
+        // save this group symbol, to add following uniforms as children
+        this.#insideGroup = true; // extend this group as long as we find uniform vars
+        return this.#currentUniformsGroup = { kind: SymbolKind.Namespace, id, detail: 'group_uniforms' };
+      }
+      // if resetting to root group, clear current group and don't add extra "-" group symbol
+      this.#currentUniformsGroup = undefined;
+      return null;
     }
     // maybe we should not add these constructs below in outline, but still process them here anyway
     //if (tree instanceof gds.ARenderModeContext)
     //  return tree._values.map(id => ({ kind: SymbolKind.Interface, id, detail: 'render_mode', range: id }));
     //if (tree instanceof gds.AShaderTypeContext)
-    //  return [{ kind: SymbolKind.Class, id: tree._value, detail: 'shader_type' }];
+    //  return { kind: SymbolKind.Class, id: tree._value, detail: 'shader_type' };
+    this.#insideGroup = wasInsideCurrentUniformsGroup; // no symbol, so keep it as it was
     return null;
   }
 }

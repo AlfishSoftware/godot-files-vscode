@@ -28,7 +28,8 @@ aArraySize: '[' size=aExpression? ']';
 
 aRenderMode: 'render_mode' values+=ID (',' values+=ID)* ';';
 
-aGroupUniforms: 'group_uniforms' (group=ID ('.' subgroup=ID)?)? ';';
+aGroupUniforms: 'group_uniforms' name=aGroupName? ';';
+aGroupName: group=ID ('.' subgroup=ID)?;
 
 aStructDef: 'struct' name=ID '{' fieldDefs+=aStructFieldDef+ '}' ';';
 aStructFieldDef
