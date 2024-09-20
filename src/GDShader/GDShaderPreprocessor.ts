@@ -1,4 +1,5 @@
-// GDShader Preprocessor
+// Public Domain, as per The Unlicense. NO WARRANTY.
+// Independent GDShader Preprocessor for IDEs. This module has no dependencies at all, and runs on both NodeJS and Web.
 
 type Other = { [_: string]: undefined; };
 
@@ -203,6 +204,8 @@ interface PreprocessingStateFile extends PreprocessingState {
   inBlockComment: boolean;
   inDirective: boolean;
   tokens: TokenString[];
+  nestedConditions: number;
+  inEnabledCode: boolean;
 }
 
 function skipLineComment(code: string, p: PreprocessingStatePosition): void {
@@ -264,7 +267,7 @@ async function endDirective(
   const location = {
     uri, start: { line: p.lineStart, column: p.columnStart }, end: { line: p.line, column: p.column }
   };
-  return await directive(preprocessor, p.tokens, p.diagnostics, location, p.macros, includes);
+  return await directive(preprocessor, location, p, includes);
 }
 
 function readMacroExpansionCall(
@@ -415,6 +418,7 @@ export default abstract class GDShaderPreprocessorBase {
   ): Promise<PreprocessedUnit> {
     const { uri, code } = input;
     const p: PreprocessingStateFile = {
+      nestedConditions: 0, inEnabledCode: true,
       macros,
       inBlockComment: false, inDirective: false, tokens: [],
       chunks: [],
@@ -450,6 +454,10 @@ export default abstract class GDShaderPreprocessorBase {
     if (p.inDirective) {
       p.chunks.push({ inputCode: code.substring(p.i0), replacement: await endDirective(this, uri, includes, p) });
     } else endCode(input, p);
+    if (p.nestedConditions) {
+      const position = { line: p.line, column: p.column }, msg = `missing '#endif'`;
+      p.diagnostics.push({ location: { uri, start: position, end: position }, msg, id: 'PEndifMissing' });
+    }
     return new PreprocessedUnit(input, p.chunks, p.diagnostics);
   }
 }
@@ -471,6 +479,8 @@ export const preprocessorErrorTypes = {
   PDefineTouchy: docsUrl + '#define',
   PUndefWho: docsUrl + '#undef',
   PUndefExtra: docsUrl + '#undef',
+  PEndifUnmatched: docsUrl + '#endif',
+  PEndifMissing: docsUrl + '#endif',
 };
 
 /** Represents a parsed preprocessor construct from which code is replaced. */
@@ -557,18 +567,36 @@ export abstract class PreprocessorDirective extends PreprocessorConstruct {
   }
 }
 async function directive(
-  preprocessor: GDShaderPreprocessorBase, tokens: readonly TokenString[], diagnostics: PreprocessorDiagnostic[],
-  location: CodeLocation, macros: MacrosDefined, includes: number,
+  preprocessor: GDShaderPreprocessorBase, location: CodeLocation, p: PreprocessingStateFile, includes: number,
 ): Promise<PreprocessedOutput> {
+  const { diagnostics, macros } = p, tokens: readonly TokenString[] = p.tokens;
   const line = tokens.map(t => typeof t == 'string' ? t : t.code).join('');
   const directiveToken = tokens[1] ?? '';
   const directiveKeyword = typeof directiveToken == 'string' ? directiveToken : directiveToken.code;
   switch (directiveKeyword) {
-    case 'include': return await include(tokens, diagnostics, location, line, macros, preprocessor, includes);
-    case 'define': return define(tokens, diagnostics, location, line, macros);
-    case 'undef': return undef(tokens, diagnostics, location, line, macros);
+    case 'include': return await includeDirective(tokens, diagnostics, location, line, macros, preprocessor, includes);
+    case 'define': return defineDirective(tokens, diagnostics, location, line, macros);
+    case 'undef': return undefDirective(tokens, diagnostics, location, line, macros);
+    case 'endif':
+      if (!p.nestedConditions) {
+        diagnostics.push({ location, msg: `unmatched '#endif'`, id: 'PEndifUnmatched' });
+        return PreprocessorProblem.output(location, line);
+      }
+      p.nestedConditions--;
+      return endifDirective(tokens, diagnostics, location, line, macros);
+    //TODO case 'else': return elseDirective(tokens, diagnostics, location, line, macros);
+    case 'ifdef':
+      p.nestedConditions++;
+      return ifdefDirective(tokens, diagnostics, location, line, macros, true);
+    case 'ifndef':
+      p.nestedConditions++;
+      return ifdefDirective(tokens, diagnostics, location, line, macros, false);
+    case 'if':
+      p.nestedConditions++;
+      return ifDirective(tokens, diagnostics, location, line, macros);
+    //TODO case 'elif': return elifDirective(tokens, diagnostics, location, line, macros);
+    //TODO case 'pragma': return pragmaDirective(tokens, diagnostics, location, line, macros);
   }
-  //TODO #ifdef #if #pragma etc...
   const msg = `invalid or unsupported directive '#${directiveKeyword}' in: '${line}'`;
   diagnostics.push({ location, msg, id: 'PDirectiveMiss' });
   return PreprocessorProblem.output(location, line);
@@ -583,7 +611,7 @@ export class PreprocessorInclude extends PreprocessorDirective {
     super(location, mainRange, line);
   }
 }
-async function include(
+async function includeDirective(
   tokens: readonly TokenString[], diagnostics: PreprocessorDiagnostic[],
   location: CodeLocation, line: string, macros: MacrosDefined,
   preprocessor: GDShaderPreprocessorBase, includes: number,
@@ -638,7 +666,7 @@ export class PreprocessorDefine extends PreprocessorDirective implements MacroDe
   }
   readonly parameterNames: readonly string[] | null;
 }
-function define(
+function defineDirective(
   tokens: readonly TokenString[], diagnostics: PreprocessorDiagnostic[],
   location: CodeLocation, line: string, macros: MacrosDefined,
 ): PreprocessedOutput {
@@ -730,7 +758,7 @@ export class PreprocessorUndef extends PreprocessorDirective {
     super(location, identifier, line);
   }
 }
-function undef(
+function undefDirective(
   tokens: readonly TokenString[], diagnostics: PreprocessorDiagnostic[],
   location: CodeLocation, line: string, macros: MacrosDefined,
 ): PreprocessedOutput {
@@ -764,4 +792,66 @@ function undef(
   }
   macros.delete(macroIdentifier);
   return { code: commentOut(line), construct: new PreprocessorUndef(location, line, identifier) };
+}
+
+/** Represents a valid preprocessor branching directive, related to control flow. */
+export abstract class PreprocessorBranching extends PreprocessorDirective {
+}
+
+/** Represents a valid preprocessor `#endif` directive. */
+export class PreprocessorEndIf extends PreprocessorBranching {
+}
+function endifDirective(
+  tokens: readonly TokenString[], diagnostics: PreprocessorDiagnostic[],
+  location: CodeLocation, line: string, macros: MacrosDefined
+): PreprocessedOutput {
+  const msg = `not implemented yet: '${line}'`; //TODO endif
+  diagnostics.push({ location, msg, id: '' });
+  return PreprocessorProblem.output(location, line);
+}
+
+/** Represents a valid preprocessor `#else` directive. */
+export class PreprocessorElse extends PreprocessorBranching {
+}
+
+/** Represents a valid preprocessor condition directive, which is evaluated to true or false. */
+export abstract class PreprocessorCondition extends PreprocessorBranching {
+}
+
+/** Represents a valid preprocessor `#elif` directive. */
+export class PreprocessorElseIf extends PreprocessorCondition {
+}
+
+/** Represents a valid preprocessor condition start directive, which must have a corresponding `#endif`. */
+export abstract class PreprocessorStartIf extends PreprocessorCondition {
+}
+
+/** Represents a valid preprocessor `#if` directive. */
+export class PreprocessorIf extends PreprocessorStartIf {
+}
+function ifDirective(
+  tokens: readonly TokenString[], diagnostics: PreprocessorDiagnostic[],
+  location: CodeLocation, line: string, macros: MacrosDefined,
+): PreprocessedOutput {
+  const msg = `not implemented yet: '${line}'`; //TODO if
+  diagnostics.push({ location, msg, id: '' });
+  return PreprocessorProblem.output(location, line);
+}
+
+/** Represents a valid preprocessor `#ifdef` or `#ifndef` directive. */
+export class PreprocessorIfDefinition extends PreprocessorStartIf {
+  constructor(location: CodeLocation, line: string,
+    readonly identifier: PreprocessorToken,
+  ) {
+    super(location, identifier, line);
+  }
+}
+function ifdefDirective(
+  tokens: readonly TokenString[], diagnostics: PreprocessorDiagnostic[],
+  location: CodeLocation, line: string, macros: MacrosDefined,
+  wantsDefined: boolean,
+): PreprocessedOutput {
+  const msg = `not implemented yet: '${line}'`; //TODO ifdef, ifndef
+  diagnostics.push({ location, msg, id: '' });
+  return PreprocessorProblem.output(location, line);
 }
