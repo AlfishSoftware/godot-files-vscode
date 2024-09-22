@@ -481,6 +481,10 @@ export const preprocessorErrorTypes = {
   PUndefExtra: docsUrl + '#undef',
   PEndifUnmatched: docsUrl + '#endif',
   PEndifMissing: docsUrl + '#endif',
+  PIfdefWho: docsUrl + '#ifdef',
+  PIfdefExtra: docsUrl + '#ifdef',
+  PIfndefWho: docsUrl + '#ifndef',
+  PIfndefExtra: docsUrl + '#ifndef',
 };
 
 /** Represents a parsed preprocessor construct from which code is replaced. */
@@ -750,6 +754,41 @@ function defineDirective(
   return { code: commentOut(line), construct };
 }
 
+/** Parse tokens expecting a single identifier (macro name) and nothing else after the directive keyword. */
+function onlyIdentifier(
+  tokens: readonly TokenString[], diagnostics: PreprocessorDiagnostic[], location: CodeLocation, line: string
+): PreprocessorToken | null {
+  const n = tokens.length;
+  let identifier: PreprocessorToken | null = null, i = 2;
+  for (; i < n; i++) {
+    const token = tokens[i]!;
+    if (typeof token == 'string') { if (/^[ \t]*$/.test(token)) continue; } // ignore whitespace
+    else if (/^[A-Z_a-z]\w*$/.test(token.code)) { identifier = token; } // we want an identifier
+    break; // stop at first non-space token
+  }
+  const directiveToken = tokens[1] ?? '';
+  const directiveKeyword = typeof directiveToken == 'string' ? directiveToken : directiveToken.code;
+  if (!identifier) {
+    const msg = `expected identifier after '#${directiveKeyword}' in: '${line}'`;
+    const id =
+      directiveKeyword == 'ifndef' ? 'PIfndefWho' : directiveKeyword == 'ifdef' ? 'PIfdefWho' : 'PUndefWho';
+    diagnostics.push({ location, msg, id });
+    return null;
+  }
+  // allow only whitespace after identifier
+  for (i++; i < n; i++) {
+    const token = tokens[i]!;
+    if (typeof token != 'string' || !/^[ \t]*$/.test(token)) {
+      const msg = `unexpected code after '#${directiveKeyword}' identifier in: '${line}'`;
+      const id =
+        directiveKeyword == 'ifndef' ? 'PIfndefExtra' : directiveKeyword == 'ifdef' ? 'PIfdefExtra' : 'PUndefExtra';
+      diagnostics.push({ location, msg, id });
+      return null;
+    }
+  }
+  return identifier;
+}
+
 /** Represents a valid preprocessor `#undef` directive. */
 export class PreprocessorUndef extends PreprocessorDirective {
   constructor(location: CodeLocation, line: string,
@@ -762,33 +801,13 @@ function undefDirective(
   tokens: readonly TokenString[], diagnostics: PreprocessorDiagnostic[],
   location: CodeLocation, line: string, macros: MacrosDefined,
 ): PreprocessedOutput {
-  let identifier: PreprocessorToken | null = null, i = 2;
-  const n = tokens.length;
-  for (; i < n; i++) {
-    const token = tokens[i]!;
-    if (typeof token == 'string') { if (/^[ \t]*$/.test(token)) continue; } // ignore whitespace
-    else if (/^[A-Z_a-z]\w*$/.test(token.code)) { identifier = token; } // we want an identifier
-    break; // stop at first non-space token
-  }
-  if (!identifier) {
-    const msg = `expected identifier after '#undef' in: '${line}'`;
-    diagnostics.push({ location, msg, id: 'PUndefWho' });
-    return PreprocessorProblem.output(location, line);
-  }
+  const identifier = onlyIdentifier(tokens, diagnostics, location, line);
+  if (!identifier) return PreprocessorProblem.output(location, line);
   const macroIdentifier = identifier.code;
   if (macroIdentifier == 'defined') {
     const loc = { uri: location.uri, start: identifier.start, end: identifier.end };
     diagnostics.push({ location: loc, msg: `'defined' cannot be used as a macro name`, id: 'PDefinedMisnomer' });
     return PreprocessorProblem.output(loc, line);
-  }
-  // allow only whitespace after identifier
-  for (i++; i < n; i++) {
-    const token = tokens[i]!;
-    if (typeof token != 'string' || !/^[ \t]*$/.test(token)) {
-      const msg = `unexpected code after '#undef' identifier in: '${line}'`;
-      diagnostics.push({ location, msg, id: 'PUndefExtra' });
-      return PreprocessorProblem.output(location, line);
-    }
   }
   macros.delete(macroIdentifier);
   return { code: commentOut(line), construct: new PreprocessorUndef(location, line, identifier) };
@@ -842,6 +861,8 @@ function ifDirective(
 export class PreprocessorIfDefinition extends PreprocessorStartIf {
   constructor(location: CodeLocation, line: string,
     readonly identifier: PreprocessorToken,
+    readonly wantsDefined: boolean,
+    readonly enableCode: boolean,
   ) {
     super(location, identifier, line);
   }
@@ -851,7 +872,13 @@ function ifdefDirective(
   location: CodeLocation, line: string, macros: MacrosDefined,
   wantsDefined: boolean,
 ): PreprocessedOutput {
-  const msg = `not implemented yet: '${line}'`; //TODO ifdef, ifndef
-  diagnostics.push({ location, msg, id: '' });
-  return PreprocessorProblem.output(location, line);
+  const identifier = onlyIdentifier(tokens, diagnostics, location, line);
+  if (!identifier) return PreprocessorProblem.output(location, line);
+  const macroIdentifier = identifier.code;
+  const enableCode = macros.has(macroIdentifier) == wantsDefined;
+  return {
+    code: commentOut(line),
+    construct: new PreprocessorIfDefinition(location, line, identifier, wantsDefined, enableCode),
+  };
 }
+//TODO somehow not output or comment the code when disabled, but beware of comments, strings, nested ifs
