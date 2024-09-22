@@ -142,7 +142,7 @@
             { "include": "#text" },
             { "include": "#lineContinuation" },
             { "include": "#macroParameter" },
-            { "match": "[,]", "name": "punctuation.separator.parameters.gdshader" }
+            { "match": "[,]", "name": "punctuation.separator.parameters.macro.gdshader" }
           ]
         },
         "6": { "name": "punctuation.definition.parameters.macro.gdshader" }

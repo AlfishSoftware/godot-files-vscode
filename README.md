@@ -18,7 +18,7 @@ This extension also works on browser IDEs ([vscode.dev](https://vscode.dev) and 
 
 Includes syntax-coloring for these languages:
 
-- **Godot Shader** files: `*.gdshader`, `*.gdshaderinc`.
+- **GDShader** files: `*.gdshader`, `*.gdshaderinc`.
 - Better (more specific) grammar for the INI-like files used by Godot (called "GDAsset" here):  
 	`project.godot`, `*.tscn`, `*.escn`, `*.tres`, `*.gdns`, `*.gdnlib`, `*.import`, `*.tet`, `*.remap`.
 - The same grammar is reused for other INI-like files:  
@@ -31,7 +31,7 @@ Includes syntax-coloring for these languages:
 
 **GDAsset** files also support:
 
-- Syntax-coloring of embedded code in asset strings for GDScript and Godot Shader resources (see image above).  
+- Syntax-coloring of embedded code in asset strings for GDScript and GDShader resources (see image above).  
 	😎 It even handles both inner and outer languages' escape sequences gracefully, and colors them differently:  
 	![Showcasing how embedded code escape sequences are handled gracefully](docs/showcase-embedded-code-escapes.webp)
 
@@ -159,13 +159,14 @@ Id | Weeks | Possible Feature
 bDecode | $$ | Read-only textual GDAsset code (tres, tscn) for binary resource files (res, scn, etc.)
 bTexView | $$ | Open .stex and .ctex texture files like images
 
-### Godot Shader
+### GDShader
 
 Id | Depends on | Weeks | Possible Feature
 -|-|-|-
 sParser | | $$$$$$$$ | Preprocessor + Parser, independent of Godot Editor
 sSyntaxErr | sParser | $ | Report Syntactical Errors
-sOutline | sParser | $ | Outline / Breadcrumbs + Go to Workspace Symbol
+sOutline | sParser | $ | Outline / Breadcrumbs
+sProjSymbol | sParser | $ | Go to Workspace Symbol
 sGotoDef | sParser | $ | Go to Definition in User Code
 sHighlight | sGotoDef | $ | Highlight Occurrences
 sSemantic | sParser | $ | Semantic Coloring

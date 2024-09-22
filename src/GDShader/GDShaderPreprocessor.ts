@@ -393,7 +393,7 @@ function endCode(input: PreprocessingFile, p: PreprocessingState): void {
   p.chunks.push({ inputCode: code.substring(p.i0) });
 }
 
-/** Implementation for a Godot Shader Preprocessor that is suitable for IDEs.
+/** Implementation for a GDShader Preprocessor that is suitable for IDEs.
  */
 export default abstract class GDShaderPreprocessorBase {
   /** Implement this to make `#include` directives load a file from its path.

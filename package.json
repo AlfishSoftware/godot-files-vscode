@@ -48,9 +48,9 @@
 			{
 				"id": "godot-shader",
 				"aliases": [
+					"GDShader",
 					"Godot Shader",
-					"Godot Shading Language",
-					"GDShader"
+					"Godot Shading Language"
 				],
 				"extensions": [
 					".gdshader",
