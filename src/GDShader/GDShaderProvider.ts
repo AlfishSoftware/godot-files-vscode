@@ -1,8 +1,8 @@
 // GDShader Features
 import {
-  languages, workspace, Uri, FileType, ExtensionContext, CancellationToken, Range,
+  languages, window, workspace, Uri, FileType, ExtensionContext, CancellationToken, Range,
   TextDocument, DocumentSymbol, SymbolKind, DocumentFilter, DocumentSymbolProvider,
-  Diagnostic, DiagnosticSeverity, DiagnosticRelatedInformation,
+  Diagnostic, DiagnosticSeverity, DiagnosticRelatedInformation, DecorationRangeBehavior,
 } from 'vscode';
 import { locateResPath } from '../GodotProject';
 import GDShaderModel from './GDShaderModel';
@@ -23,10 +23,10 @@ class GDShaderPreprocessor extends GDShaderPreprocessorBase {
   override async loader(loadPath: string, fromUri: string): Promise<PreprocessingFile> {
     const toUri = await locateResPath(loadPath, Uri.parse(fromUri, true));
     if (typeof toUri == 'string')
-      throw `file not found at: "${toUri}";\nloading from "${fromUri}"`;
+      throw `file not found at "${toUri}";\nloading from "${fromUri}"`;
     const { uri, stat } = toUri;
     if (stat.type & FileType.Directory)
-      throw `found directory instead of file at: "${uri.toString(true)}";\nloading from "${fromUri}"`;
+      throw `found directory instead of file at "${uri.toString(true)}";\nloading from "${fromUri}"`;
     const uriStr = uri.toString();
     const document = workspace.textDocuments.find(d =>
       d.languageId == languageIdGodotShader && d.uri.toString() == uriStr);
@@ -56,8 +56,19 @@ class GDShaderPreprocessor extends GDShaderPreprocessorBase {
     }
     return documentDiagnostics;
   }
+  static updateInactiveRegions(document: TextDocument, inactiveRegions: Range[]): void {
+    for (const editor of window.visibleTextEditors.filter(e => e.document == document))
+      editor.setDecorations(inactiveDecoration, inactiveRegions);
+  }
 }
 const preprocessor = new GDShaderPreprocessor();
+
+const inactiveOpacity = '0.55'; //: number | undefined = settings.inactiveRegionOpacity;
+const inactiveDecoration = window.createTextEditorDecorationType({
+  rangeBehavior: DecorationRangeBehavior.OpenOpen,
+  opacity: inactiveOpacity,
+});
+
 function mapRange(length: number, loc: MappedLocation): Range {
   const { inputPosition, replacement, unit } = loc;
   const a = unit.inputPositionAt(inputPosition);
@@ -94,8 +105,11 @@ export default class GDShaderProvider implements
       macros.set(m, { parameterNames, body });
     }
     const unit = await preprocessor.preprocess({ uri, code: entryCode }, macros);
-    const { preprocessedCode } = unit;
+    // Mark inactive ranges
+    const inactiveRanges = unit.listInactiveRanges().map(r => ideRange(r.start, r.end));
+    GDShaderPreprocessor.updateInactiveRegions(document, inactiveRanges);
     // Parse model
+    const { preprocessedCode } = unit;
     const model = this.models[uri] = new GDShaderModel(preprocessedCode);
     // Report diagnostics
     const documentDiagnostics = GDShaderPreprocessor.ideDiagnostics(unit.diagnostics);
