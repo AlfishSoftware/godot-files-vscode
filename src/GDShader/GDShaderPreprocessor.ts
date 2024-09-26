@@ -480,6 +480,7 @@ export const preprocessorErrorTypes = {
   
   PDirectivePos: docsUrl + '#directives',
   PDirectiveMiss: docsUrl + '#directives',
+  PDirectiveTouchy: docsUrl + '#directives',
   
   PDefinedMisnomer: docsUrl + '#if',
   
@@ -563,8 +564,15 @@ function expansion(
   // exclude this macro def and reapply expansion on the output code for the remaining defs recursively
   const subMacros = new Map(macros);
   subMacros.delete(macroIdentifier);
-  if (subMacros.size) {
-    const uri = location.uri, input = { uri, code };
+  code = expandCode({ uri: location.uri, code }, subMacros);
+  diagnostics.push({ location, msg: `DEBUG: expands to '${code}'`, id: '' });
+  return { code, construct: new PreprocessorExpansion(location, macro) };
+}
+
+/** Perform only macro expansions on the code, for any macros found from the set. */
+function expandCode(input: PreprocessingFile, macros: MacrosAvailable): string {
+  let { code } = input;
+  if (macros.size) {
     const p: PreprocessingState = {
       chunks: [],
       diagnostics: [],
@@ -575,16 +583,15 @@ function expansion(
     };
     while (p.i < code.length) {
       const c2: string = code.substring(p.i, p.i + 2), c1 = c2[0]!;
-      if (p.expandingMacro) readMacroExpansionCall(subMacros, input, p, c2, c1);
+      if (p.expandingMacro) readMacroExpansionCall(macros, input, p, c2, c1);
       else if (c1 == '"') readString(code, p);
-      else if (/\w/.test(c1) && !/\w/.test(code[p.i - 1] ?? '')) readIdentifier(subMacros, input, p, c1);
+      else if (/\w/.test(c1) && !/\w/.test(code[p.i - 1] ?? '')) readIdentifier(macros, input, p, c1);
       else skipChar(p, c2, c1); // do nothing special, just skip keeping text as is until this chunk is handled
     }
     endCode(input, p);
     code = joinChunks(p.chunks);
   }
-  diagnostics.push({ location, msg: `DEBUG: expands to '${code}'`, id: '' });
-  return { code, construct: new PreprocessorExpansion(location, macro) };
+  return code;
 }
 
 /** Represents a valid preprocessor `#` directive. */
@@ -619,6 +626,12 @@ async function directive(
   const line = tokens.map(t => typeof t == 'string' ? t : t.code).join('');
   const directiveToken = tokens[1] ?? '';
   const directiveKeyword = typeof directiveToken == 'string' ? directiveToken : directiveToken.code;
+  const afterDirective = tokens[2] ?? '';
+  if (typeof afterDirective != 'string' || !/^[ \t]*$/.test(afterDirective)) {
+    const msg = `missing whitespace after '#${directiveKeyword}' in: '${line}'`;
+    diagnostics.push({ location, msg, id: 'PDirectiveTouchy' });
+    return PreprocessorProblem.output(location, line);
+  }
   switch (directiveKeyword) {
     case 'include':
       return await includeDirective(
