@@ -484,6 +484,9 @@ export const preprocessorErrorTypes = {
   
   PDefinedMisnomer: docsUrl + '#if',
   
+  PConditionString: docsUrl + '#if',
+  PConditionSyntax: docsUrl + '#if',
+  
   PIncludeForm: docsUrl + '#include',
   PIncludeDeep: docsUrl + '#include',
   PIncludePath: docsUrl + '#include',
@@ -506,7 +509,10 @@ export const preprocessorErrorTypes = {
   PIfndefWho: docsUrl + '#ifndef',
   PIfndefExtra: docsUrl + '#ifndef',
   
+  PIfWhat: docsUrl + '#if',
+  
   PElifUnmatched: docsUrl + '#elif',
+  PElifWhat: docsUrl + '#elif',
   
   PElseUnmatched: docsUrl + '#else',
   PElseExtra: docsUrl + '#else',
@@ -952,14 +958,33 @@ function elseDirective(
 export abstract class PreprocessorCondition extends PreprocessorBranchBegin {
 }
 function conditionExpression(
-  tokens: readonly TokenString[], diagnostics: PreprocessorDiagnostic[], location: CodeLocation, line: string
+  diagnostics: PreprocessorDiagnostic[], location: CodeLocation, code: string, macros: MacrosDefined
 ) {
-  const identifier = onlyIdentifier(tokens, diagnostics, location, line);
-  if (!identifier) return null;
-  return identifier.code; //TODO
+  if (code.includes('"')) {
+    const msg = 'strings are not allowed in preprocessor condition expressions';
+    diagnostics.push({ location, msg, id: 'PConditionString' });
+    return null;
+  }
+  // resolve `defined(macro_name)` constructs to 0 (false) or 1 (true)
+  code = code.replace(/\bdefined\s*\(\s*([A-Z_a-z]\w*)\s*\)/g,
+    (_: string, m: string) => macros.has(m) ? ' 1 ' : ' 0 '
+  );
+  // expand any macros found; any remaining identifier may raise "undefined macro" error if evaluation reaches it
+  code = expandCode({ uri: location.uri, code }, macros);
+  return code;
 }
-function evaluateCondition(condition: string): boolean {
-  return condition == 'true'; //TODO
+//TODO parse token sequence, aborting on illegal tokens; uint and/or hex literals are replaced with int
+//TODO build parse tree, grouping parentheses atomically; put result in a root group; groups have a token sequence
+//TODO to evaluate a group, repeat steps below on a loop;
+//TODO split by || then inside by &&; evaluate parts in short-circuit logic
+//TODO reduce other operators; abort if identifier is evaluated; stop when only a single integer token is left
+function evaluateCondition(
+  diagnostics: PreprocessorDiagnostic[], location: CodeLocation, condition: string
+): boolean | null {
+  if (/^\s*0*\s*$/.test(condition)) return false;
+  if (/^\s*0*[1-9]\d*\s*$/.test(condition)) return true;
+  diagnostics.push({ location, msg: `condition evaluation error`, id: 'PConditionSyntax' });
+  return null;
 }
 
 /** Represents a valid preprocessor `#elif` directive. */
@@ -969,12 +994,19 @@ function elifDirective(
   tokens: readonly TokenString[], diagnostics: PreprocessorDiagnostic[], activeBefore: boolean | null,
   location: CodeLocation, line: string, macros: MacrosDefined
 ): PreprocessedOutput<PreprocessorElseIf | PreprocessorProblem> {
-  const condition = conditionExpression(tokens, diagnostics, location, line);
-  if (condition == null)
+  const conditionLine = line.match(/^#elif\s+(.*?)\s*$/)?.[1];
+  if (!conditionLine) {
+    diagnostics.push({ location, msg: `missing condition after '#elif'`, id: 'PElifWhat' });
     return PreprocessorProblem.output(location, line);
-  const activeBranch = activeBefore == false ? evaluateCondition(condition) : null;
+  }
+  const condition = conditionExpression(diagnostics, location, conditionLine, macros);
+  if (condition == null) return PreprocessorProblem.output(location, line);
   //TODO mainRange is condition tokens
-  return { code: commentOut(line), construct: new PreprocessorElseIf(location, location, line, activeBranch) };
+  if (activeBefore == false) {
+    const activeBranch = evaluateCondition(diagnostics, location, condition);
+    if (activeBranch == null) return PreprocessorProblem.output(location, line);
+    return { code: commentOut(line), construct: new PreprocessorElseIf(location, location, line, activeBranch) };
+  } else return { code: commentOut(line), construct: new PreprocessorElseIf(location, location, line, null) };
 }
 
 /** Represents a valid preprocessor condition start directive, which must have a corresponding `#endif`. */
@@ -988,12 +1020,19 @@ function ifDirective(
   tokens: readonly TokenString[], diagnostics: PreprocessorDiagnostic[], activeParent: boolean,
   location: CodeLocation, line: string, macros: MacrosDefined,
 ): PreprocessedOutput<PreprocessorIf | PreprocessorProblem> {
-  const condition = conditionExpression(tokens, diagnostics, location, line);
-  if (condition == null)
+  const conditionLine = line.match(/^#if\s+(.*?)\s*$/)?.[1];
+  if (!conditionLine) {
+    diagnostics.push({ location, msg: `missing condition after '#if'`, id: 'PIfWhat' });
     return PreprocessorProblem.output(location, line);
-  const activeBranch = activeParent ? evaluateCondition(condition) : null;
+  }
+  const condition = conditionExpression(diagnostics, location, conditionLine, macros);
+  if (condition == null) return PreprocessorProblem.output(location, line);
   //TODO mainRange is condition tokens
-  return { code: commentOut(line), construct: new PreprocessorIf(location, location, line, activeBranch) };
+  if (activeParent) {
+    const activeBranch = evaluateCondition(diagnostics, location, condition);
+    if (activeBranch == null) return PreprocessorProblem.output(location, line);
+    return { code: commentOut(line), construct: new PreprocessorIf(location, location, line, activeBranch) };
+  } else return { code: commentOut(line), construct: new PreprocessorIf(location, location, line, null) };
 }
 
 /** Represents a valid preprocessor `#ifdef` or `#ifndef` directive. */
