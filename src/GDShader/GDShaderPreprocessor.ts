@@ -533,6 +533,7 @@ export const preprocessorErrorTypes = {
   
   PDefinedMisnomer: docsUrl + '#if',
   
+  PConditionNone: docsUrl + '#if',
   PConditionString: docsUrl + '#if',
   PConditionSyntax: docsUrl + '#if',
   
@@ -558,10 +559,7 @@ export const preprocessorErrorTypes = {
   PIfndefWho: docsUrl + '#ifndef',
   PIfndefExtra: docsUrl + '#ifndef',
   
-  PIfWhat: docsUrl + '#if',
-  
   PElifUnmatched: docsUrl + '#elif',
-  PElifWhat: docsUrl + '#elif',
   
   PElseUnmatched: docsUrl + '#else',
   PElseExtra: docsUrl + '#else',
@@ -1001,12 +999,28 @@ function elseDirective(
 /** Represents a valid preprocessor condition directive, which is evaluated to true or false. */
 export abstract class PreprocessorCondition extends PreprocessorBranchBegin {
 }
+interface ConditionExpression {
+  readonly location: CodeLocation;
+  readonly code: string;
+}
 function conditionExpression(
-  diagnostics: PreprocessorDiagnostic[], location: CodeLocation, code: string, macros: MacrosDefined
-) {
+  tokens: readonly PreprocessorToken[], diagnostics: PreprocessorDiagnostic[],
+  location: CodeLocation, macros: MacrosDefined
+): ConditionExpression | null {
+  let i = 3; const n = tokens.length;
+  while (i < n && /^[ \t]*$/.test(tokens[i]!.code)) i++; // skip initial whitespace until first code token
+  if (i >= n) {
+    diagnostics.push({ location, msg: `missing preprocessor condition expression`, id: 'PConditionNone' });
+    return null;
+  }
+  let j = n - 1;
+  while (j > i && /^[ \t]*$/.test(tokens[j]!.code)) j--; // skip final whitespace until last code token
+  const firstToken = tokens[i]!, lastToken = tokens[j]!;
+  const { uri } = location, { start } = firstToken, { end } = lastToken;
+  let code = firstToken.code; while (++i < n) code += tokens[i]!.code;
   if (code.includes('"')) {
     const msg = 'strings are not allowed in preprocessor condition expressions';
-    diagnostics.push({ location, msg, id: 'PConditionString' });
+    diagnostics.push({ location: { uri, start, end }, msg, id: 'PConditionString' });
     return null;
   }
   // resolve `defined(macro_name)` constructs to 0 (false) or 1 (true)
@@ -1014,8 +1028,8 @@ function conditionExpression(
     (_: string, m: string) => macros.has(m) ? ' 1 ' : ' 0 '
   );
   // expand any macros found; any remaining identifier may raise "undefined macro" error if evaluation reaches it
-  code = expandCode({ uri: location.uri, code }, macros);
-  return code;
+  code = expandCode({ uri, code }, macros);
+  return { location: { uri, start, end }, code };
 }
 //TODO parse token sequence, aborting on illegal tokens; uint and/or hex literals are replaced with int
 //TODO build parse tree, grouping parentheses atomically; put result in a root group; groups have a token sequence
@@ -1023,10 +1037,11 @@ function conditionExpression(
 //TODO split by || then inside by &&; evaluate parts in short-circuit logic
 //TODO reduce other operators; abort if identifier is evaluated; stop when only a single integer token is left
 function evaluateCondition(
-  diagnostics: PreprocessorDiagnostic[], location: CodeLocation, condition: string
+  diagnostics: PreprocessorDiagnostic[], condition: ConditionExpression
 ): boolean | null {
-  if (/^\s*0*\s*$/.test(condition)) return false;
-  if (/^\s*0*[1-9]\d*\s*$/.test(condition)) return true;
+  const { location, code } = condition;
+  if (/^\s*0*\s*$/.test(code)) return false;
+  if (/^\s*0*[1-9]\d*\s*$/.test(code)) return true;
   diagnostics.push({ location, msg: `condition evaluation error`, id: 'PConditionSyntax' });
   return null;
 }
@@ -1038,19 +1053,15 @@ function elifDirective(
   tokens: readonly PreprocessorToken[], diagnostics: PreprocessorDiagnostic[], activeBefore: boolean | null,
   location: CodeLocation, line: string, macros: MacrosDefined
 ): PreprocessedOutput<PreprocessorElseIf | PreprocessorProblem> {
-  const conditionLine = line.match(/^#elif\s+(.*?)\s*$/)?.[1];
-  if (!conditionLine) {
-    diagnostics.push({ location, msg: `missing condition after '#elif'`, id: 'PElifWhat' });
-    return PreprocessorProblem.output(location, line);
-  }
-  const condition = conditionExpression(diagnostics, location, conditionLine, macros);
+  const condition
+    = conditionExpression(tokens, diagnostics, location, macros);
   if (condition == null) return PreprocessorProblem.output(location, line);
-  //TODO mainRange is condition tokens
+  const condLocation = condition.location;
   if (activeBefore == false) {
-    const activeBranch = evaluateCondition(diagnostics, location, condition);
+    const activeBranch = evaluateCondition(diagnostics, condition);
     if (activeBranch == null) return PreprocessorProblem.output(location, line);
-    return { code: commentOut(line), construct: new PreprocessorElseIf(location, location, line, activeBranch) };
-  } else return { code: commentOut(line), construct: new PreprocessorElseIf(location, location, line, null) };
+    return { code: commentOut(line), construct: new PreprocessorElseIf(location, condLocation, line, activeBranch) };
+  } else return { code: commentOut(line), construct: new PreprocessorElseIf(location, condLocation, line, null) };
 }
 
 /** Represents a valid preprocessor condition start directive, which must have a corresponding `#endif`. */
@@ -1064,19 +1075,15 @@ function ifDirective(
   tokens: readonly PreprocessorToken[], diagnostics: PreprocessorDiagnostic[], activeParent: boolean,
   location: CodeLocation, line: string, macros: MacrosDefined,
 ): PreprocessedOutput<PreprocessorIf | PreprocessorProblem> {
-  const conditionLine = line.match(/^#if\s+(.*?)\s*$/)?.[1];
-  if (!conditionLine) {
-    diagnostics.push({ location, msg: `missing condition after '#if'`, id: 'PIfWhat' });
-    return PreprocessorProblem.output(location, line);
-  }
-  const condition = conditionExpression(diagnostics, location, conditionLine, macros);
+  const condition
+    = conditionExpression(tokens, diagnostics, location, macros);
   if (condition == null) return PreprocessorProblem.output(location, line);
-  //TODO mainRange is condition tokens
+  const condLocation = condition.location;
   if (activeParent) {
-    const activeBranch = evaluateCondition(diagnostics, location, condition);
+    const activeBranch = evaluateCondition(diagnostics, condition);
     if (activeBranch == null) return PreprocessorProblem.output(location, line);
-    return { code: commentOut(line), construct: new PreprocessorIf(location, location, line, activeBranch) };
-  } else return { code: commentOut(line), construct: new PreprocessorIf(location, location, line, null) };
+    return { code: commentOut(line), construct: new PreprocessorIf(location, condLocation, line, activeBranch) };
+  } else return { code: commentOut(line), construct: new PreprocessorIf(location, condLocation, line, null) };
 }
 
 /** Represents a valid preprocessor `#ifdef` or `#ifndef` directive. */
