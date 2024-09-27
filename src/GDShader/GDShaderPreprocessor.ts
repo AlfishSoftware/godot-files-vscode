@@ -28,7 +28,6 @@ interface PreprocessorToken extends CodeRange {
   /** The preprocessed token text. */
   readonly code: string;
 }
-type TokenString = string | PreprocessorToken;
 export interface PreprocessorDiagnostic {
   /** A code for the type of error. */
   readonly id: '' | keyof typeof preprocessorErrorTypes;
@@ -221,7 +220,7 @@ interface PreprocessingState extends PreprocessingStatePosition {
 interface PreprocessingStateFile extends PreprocessingState {
   readonly macros: MacrosDefined;
   inDirective: boolean;
-  tokens: TokenString[];
+  tokens: PreprocessorToken[];
 }
 
 function isActive(branchingStack: PreprocessorBranchBegin[]): boolean {
@@ -232,22 +231,22 @@ function skipLineComment(code: string, p: PreprocessingStatePosition): void {
   let c; p.i++; do { p.i++; c = code[p.i] ?? ''; } while (c && c != '\n' && c != '\r');
 }
 function skipBlockComment(input: PreprocessingFile, p: PreprocessingStateFile): void {
-  const { uri, code } = input;
+  const { uri, code } = input, start = { line: p.line, column: p.column };
   p.i += 2; p.column += 2; // begin block comment
   while (p.i < code.length) {
     const c2: string = code.substring(p.i, p.i + 2);
     if (c2 == '*/') {
       p.i += 2; p.column += 2; // end block comment
-      endComment(p);
+      endBlockComment(p, start);
       return;
     } else skipChar(p, c2, c2[0]!);
   }
   const position = { line: p.line, column: p.column }, msg = 'unterminated block comment';
   p.diagnostics.push({ location: { uri, start: position, end: position }, msg, id: 'PEndComment' });
-  endComment(p);
+  endBlockComment(p, start);
 }
-function endComment(p: PreprocessingStateFile): void {
-  if (p.inDirective) p.tokens.push(' ');
+function endBlockComment(p: PreprocessingStateFile, start: CodePosition): void {
+  if (p.inDirective) p.tokens.push({ code: ' ', start, end: { line: p.line, column: p.column } });
   else if (p.expandingMacro) {
     const args = p.expandingMacro.arguments!, nArgs = args.length;
     if (nArgs) args[nArgs - 1] += ' ';
@@ -256,26 +255,72 @@ function endComment(p: PreprocessingStateFile): void {
 
 function readDirectiveStart(input: PreprocessingFile, p: PreprocessingStateFile): void {
   // begin directive
-  const { uri, code } = input;
-  const preColumn = columnOfPreviousTokenInLine(code, p.i, p.column);
+  const { uri, code } = input, { line, column } = p;
+  const preColumn = columnOfPreviousTokenInLine(code, p.i, column);
   if (preColumn >= 0) { // uncommented code cannot appear preceding # on the same line
-    const start = { line: p.line, column: preColumn }, end = { line: p.line, column: preColumn + 1 };
+    const start = { line, column: preColumn }, end = { line, column: preColumn + 1 };
     const msg = 'code before a directive on the same line is not allowed';
     p.diagnostics.push({ location: { uri, start, end }, msg, id: 'PDirectivePos' });
-    p.i++; p.column++; return;
+    p.i++; p.column++;
+    return;
   }
   p.chunks.push({ inputCode: code.substring(p.i0, p.i), active: isActive(p.branchingStack) });
   p.i0 = p.i; // pushed chunk of code verbatim up to before # char
-  p.lineStart = p.line; p.columnStart = p.column;
-  p.inDirective = true; p.tokens.push('#');
+  p.lineStart = line; p.columnStart = column;
+  p.inDirective = true;
+  p.tokens.push({ code: '#', start: { line, column }, end: { line, column: column + 1 } });
   p.i++; p.column++;
 }
-function readLineContinuationInDirective(code: string, p: PreprocessingStatePosition): void {
+function skipLineContinuationInDirective(code: string, p: PreprocessingStatePosition): void {
   // line continuation; skip backslash and the line terminator
   p.i++; if (code.substring(p.i, p.i + 2) == '\r\n') p.i++; p.i++; p.column = 0; p.line++;
 }
-function readCharInDirective(p: PreprocessingStateFile, c2: string, c1: string): void {
-  p.tokens.push(c1); skipChar(p, c2, c1); // gather directive line
+function readWhitespaceInDirective(p: PreprocessingStateFile, c1: string): void {
+  const { line, column } = p;
+  p.tokens.push({ code: c1, start: { line, column }, end: { line, column: column + 1 } }); p.column++; p.i++;
+}
+function readNumberInDirective(code: string, p: PreprocessingStateFile, c1: string): void {
+  // we only care about integer literals for now
+  const start = { line: p.line, column: p.column };
+  let tokenCode = c1, c: string; p.i++; p.column++; // 1st char is a decimal digit
+  while (/\\[\n\r]/.test(code.substring(p.i, p.i + 2))) skipLineContinuationInDirective(code, p);
+  if (/^[xX]/.test(c = code[p.i] ?? '')) {
+    tokenCode += c; p.i++; p.column++;
+    while (/\\[\n\r]|^[0-9A-Fa-f]/.test(c = code.substring(p.i, p.i + 2))) {
+      if (c == '\\\n' || c == '\\\r') { skipLineContinuationInDirective(code, p); }
+      else { tokenCode += c[0]; p.i++; p.column++; } // append hex digit
+    }
+  } else while (/\\[\n\r]|^\d/.test(c = code.substring(p.i, p.i + 2))) {
+    if (c == '\\\n' || c == '\\\r') { skipLineContinuationInDirective(code, p); }
+    else { tokenCode += c[0]; p.i++; p.column++; } // append decimal digit
+  }
+  if (/^[uU]/.test(c = code[p.i] ?? '')) { tokenCode += c; p.i++; p.column++; }
+  const end = { line: p.line, column: p.column };
+  p.tokens.push({ code: tokenCode, start, end });
+}
+function readPairSymbolInDirective(code: string, p: PreprocessingStateFile, c1: string): void {
+  const start = { line: p.line, column: p.column };
+  let tokenCode = c1; p.i++; p.column++; // 1st symbol char: =!<>&|
+  let r: RegExp, end: CodePosition;
+  switch (c1) { // look for the next char, which might be broken by line continuations
+    case '<': r = /^[<=]/; break; // look for '<' or '='
+    case '>': r = /^[>=]/; break; // look for '>' or '='
+    case '!': case '=': r = /^=/; break; // look for '='
+    case '&': r = /^&/; break; // look for '&'
+    case '|': r = /^\|/; break; // look for '|'
+    default: throw null;
+  }
+  while (/\\[\n\r]/.test(code.substring(p.i, p.i + 2))) skipLineContinuationInDirective(code, p);
+  const c = code[p.i] ?? '';
+  if (r.test(c)) { tokenCode += c; p.i++; p.column++; end = { line: p.line, column: p.column }; } // 2nd char
+  else end = { line: start.line, column: start.column + 1 }; // if only 1 char, exclude line continuations from token
+  p.tokens.push({ code: tokenCode, start, end });
+}
+function readCharSymbolInDirective(p: PreprocessingStateFile, c1: string): void {
+  // 1 char symbol: -+*/%~^() or any other char
+  const { line, column } = p;
+  p.tokens.push({ code: c1, start: { line, column }, end: { line, column: column + 1 } });
+  p.column++; p.i++;
 }
 async function readDirectiveEnd(
   preprocessor: GDShaderPreprocessorBase, input: PreprocessingFile, includes: number,
@@ -297,7 +342,7 @@ function readMacroExpansionCall(
   if (/\s/.test(c1)) { // on whitespace or newline, push and skip normally below
     if (iArg >= 0) args[iArg]! += ' ';
   } else if (c1 == '(') {
-    if (iArg < 0) args.push(''); // if just opened macro parenthesis, add space to collect first arg
+    if (iArg < 0) args.push(''); // if just opened macro parenthesis, add entry to collect first arg
     else args[iArg]! += '(';
     p.openedParentheses++; // always track parentheses to match; skip normally below
   } else if (iArg < 0) { // other char when expecting '('
@@ -309,14 +354,15 @@ function readMacroExpansionCall(
       const location = {
         uri, start: { line: p.lineStart, column: p.columnStart }, end: { line: p.line, column: p.column }
       };
-      const replacement = expansion(expandingMacro, macros, p.diagnostics, location);
+      const replacement
+        = expansion(expandingMacro, macros, p.diagnostics, location);
       p.chunks.push({ inputCode: code.substring(p.i0, p.i), active: isActive(p.branchingStack), replacement });
       p.i0 = p.i; // replace expansion code into the macro identifier
       p.expandingMacro = null;
       return; // finished macro expansion
     } else args[iArg]! += ')'; // continue below
   } else if (c1 == ',' && p.openedParentheses == 1) {
-    args.push(''); // add space to collect next arg
+    args.push(''); // add entry to collect next arg
   } else if (c1 == '"') { // gather single-line string token atomically
     p.i++; p.column++; let s = countString(code, p.i);
     if (s < 0) s = ~s + 1; // line continuation is unsupported; in this case count the '\' too and end string
@@ -386,7 +432,7 @@ function readIdentifierInDirective(code: string, p: PreprocessingStateFile, c1: 
   const start = { line: p.line, column: p.column };
   let tokenCode = c1; p.i++; p.column++;
   for (let c; /\\[\n\r]|^\w/.test(c = code.substring(p.i, p.i + 2));) {
-    if (c == '\\\n' || c == '\\\r') { p.i += 2; p.column = 0; p.line++; } // can contain line continuations
+    if (c == '\\\n' || c == '\\\r') { skipLineContinuationInDirective(code, p); }
     else { tokenCode += c[0]!; p.i++; p.column++; } // append char
   }
   const end = { line: p.line, column: p.column };
@@ -450,15 +496,18 @@ export default abstract class GDShaderPreprocessorBase {
       if (c2 == '//') skipLineComment(code, p); // skip line comment until end of line
       else if (c2 == '/*') skipBlockComment(input, p); // skip entire block comment here
       else if (p.inDirective) // parse directive
-        if (c2 == '\\\n' || c2 == '\\\r') readLineContinuationInDirective(code, p);
+        if (c2 == '\\\n' || c2 == '\\\r') skipLineContinuationInDirective(code, p);
         else if (c1 == '\n' || c1 == '\r') await readDirectiveEnd(this, input, includes, p, c2, c1);
+        else if (c1 == ' ' || c1 == '\t') readWhitespaceInDirective(p, c1);
         else if (c1 == '"') readStringInDirective(code, p);
-        else if (/\w/.test(c1) && !/\w/.test(code[p.i - 1] ?? '')) readIdentifierInDirective(code, p, c1);
-        else readCharInDirective(p, c2, c1);
+        else if (/[a-z_A-Z]/.test(c1) && !/\w/.test(code[p.i - 1] ?? '')) readIdentifierInDirective(code, p, c1);
+        else if (/\d/.test(c1) && !/\w/.test(code[p.i - 1] ?? '')) readNumberInDirective(code, p, c1);
+        else if (/[=!<>&|]/.test(c1)) readPairSymbolInDirective(code, p, c1);
+        else readCharSymbolInDirective(p, c1);
       else if (p.expandingMacro) readMacroExpansionCall(macros, input, p, c2, c1);
       else if (c1 == '#') readDirectiveStart(input, p);
       else if (c1 == '"') readString(code, p);
-      else if (/\w/.test(c1) && !/\w/.test(code[p.i - 1] ?? '')) readIdentifier(macros, input, p, c1);
+      else if (/[a-z_A-Z]/.test(c1) && !/\w/.test(code[p.i - 1] ?? '')) readIdentifier(macros, input, p, c1);
       else skipChar(p, c2, c1); // do nothing special, just skip keeping text as is until this chunk is handled
     }
     if (p.inDirective) await endDirective(this, input, includes, p);
@@ -591,7 +640,7 @@ function expandCode(input: PreprocessingFile, macros: MacrosAvailable): string {
       const c2: string = code.substring(p.i, p.i + 2), c1 = c2[0]!;
       if (p.expandingMacro) readMacroExpansionCall(macros, input, p, c2, c1);
       else if (c1 == '"') readString(code, p);
-      else if (/\w/.test(c1) && !/\w/.test(code[p.i - 1] ?? '')) readIdentifier(macros, input, p, c1);
+      else if (/[a-z_A-Z]/.test(c1) && !/\w/.test(code[p.i - 1] ?? '')) readIdentifier(macros, input, p, c1);
       else skipChar(p, c2, c1); // do nothing special, just skip keeping text as is until this chunk is handled
     }
     endCode(input, p);
@@ -628,12 +677,11 @@ async function endDirective(
 async function directive(
   preprocessor: GDShaderPreprocessorBase, location: CodeLocation, p: PreprocessingStateFile, includes: number,
 ): Promise<PreprocessedOutput<PreprocessorDirective | PreprocessorProblem>> {
-  const { diagnostics, macros, branchingStack } = p, tokens: readonly TokenString[] = p.tokens;
-  const line = tokens.map(t => typeof t == 'string' ? t : t.code).join('');
-  const directiveToken = tokens[1] ?? '';
-  const directiveKeyword = typeof directiveToken == 'string' ? directiveToken : directiveToken.code;
-  const afterDirective = tokens[2] ?? '';
-  if (typeof afterDirective != 'string' || !/^[ \t]*$/.test(afterDirective)) {
+  const { diagnostics, macros, branchingStack } = p, tokens: readonly PreprocessorToken[] = p.tokens;
+  const line = tokens.map(t => t.code).join('');
+  const directiveKeyword = tokens[1]?.code ?? '';
+  const afterDirective = tokens[2]?.code ?? '';
+  if (!/^[ \t]*$/.test(afterDirective)) {
     const msg = `missing whitespace after '#${directiveKeyword}' in: '${line}'`;
     diagnostics.push({ location, msg, id: 'PDirectiveTouchy' });
     return PreprocessorProblem.output(location, line);
@@ -686,7 +734,7 @@ export class PreprocessorInclude extends PreprocessorDirective {
   }
 }
 async function includeDirective(
-  tokens: readonly TokenString[], diagnostics: PreprocessorDiagnostic[], activeParent: boolean,
+  tokens: readonly PreprocessorToken[], diagnostics: PreprocessorDiagnostic[], activeParent: boolean,
   location: CodeLocation, line: string, macros: MacrosDefined,
   preprocessor: GDShaderPreprocessorBase, includes: number,
 ): Promise<PreprocessedOutput<PreprocessorInclude | PreprocessorProblem>> {
@@ -697,9 +745,9 @@ async function includeDirective(
   }
   let stringToken;
   for (let i = 2, n = tokens.length; i < n; i++) {
-    const token = tokens[i]!;
-    if (typeof token == 'string') { if (/^[ \t]*$/.test(token)) continue; } // ignore whitespace
-    else if (stringToken == null && /^"(?:[^"\\]|\\["\\])+"$/.test(token.code)) { stringToken = token; continue; }
+    const token = tokens[i]!, tokenCode = token.code;
+    if (/^[ \t]*$/.test(tokenCode)) continue; // ignore whitespace
+    else if (stringToken == null && /^"(?:[^"\\]|\\["\\])+"$/.test(tokenCode)) { stringToken = token; continue; }
     stringToken = undefined; break; // the only token in the directive line after #include must be a string
   }
   if (!stringToken) {
@@ -738,19 +786,19 @@ export class PreprocessorDefine extends PreprocessorDirective implements MacroDe
     readonly body: string,
   ) {
     super(location, identifier, line);
-    this.parameterNames = this.parameters?.map(p => typeof p == 'string' ? p : p.code) ?? null;
+    this.parameterNames = this.parameters?.map(p => p.code) ?? null;
   }
   readonly parameterNames: readonly string[] | null;
 }
 function defineDirective(
-  tokens: readonly TokenString[], diagnostics: PreprocessorDiagnostic[], activeParent: boolean,
+  tokens: readonly PreprocessorToken[], diagnostics: PreprocessorDiagnostic[], activeParent: boolean,
   location: CodeLocation, line: string, macros: MacrosDefined,
 ): PreprocessedOutput<PreprocessorDefine | PreprocessorProblem> {
   let identifier: PreprocessorToken | null = null, i = 2;
   const n = tokens.length;
   for (; i < n; i++) {
     const token = tokens[i]!;
-    if (typeof token == 'string') { if (/^[ \t]*$/.test(token)) continue; } // ignore whitespace
+    if (/^[ \t]*$/.test(token.code)) continue; // ignore whitespace
     else if (/^[A-Z_a-z]\w*$/.test(token.code)) { identifier = token; } // we want an identifier
     break; // stop at first non-space token
   }
@@ -780,17 +828,17 @@ function defineDirective(
     return PreprocessorProblem.output(loc, line);
   }
   let parameters: PreprocessorToken[] | null, body = '';
-  const openToken = tokens[++i] ?? '';
-  if (openToken == '(') {
+  const openTokenCode = tokens[++i]?.code ?? '';
+  if (openTokenCode == '(') {
     parameters = []; // parse parameter identifiers
     let last: '(' | 'x' | ',' | ')' = '('; // '('=atStart; 'x'=afterIdentifier; ','=afterComma; ')'=endedOk;
     for (i++; i < n; i++) {
-      const token = tokens[i]!;
-      if (typeof token == 'string') {
-        if (token == ')') { if (last != ',') last = ')'; break; } // end here or when no more tokens
-        if (/^[ \t]*$/.test(token)) continue; // ignore whitespace
-        if (last == 'x' && token == ',') { last = ','; continue; }
-      } else if (last != 'x' && /^[A-Z_a-z]\w*$/.test(token.code)) {
+      const token = tokens[i]!, tokenCode = token.code;
+      if (/^[ \t]*$/.test(tokenCode)) continue; // ignore whitespace
+      if (last == 'x' && tokenCode == ',') { last = ','; continue; }
+      else if (tokenCode == ')') {
+        if (last != ',') last = ')'; break; // end here or when no more tokens
+      } else if (last != 'x' && /^[A-Z_a-z]\w*$/.test(tokenCode)) {
         parameters.push(token); last = 'x'; continue;
       }
       break; // unexpected token
@@ -801,7 +849,7 @@ function defineDirective(
       diagnostics.push({ location, msg, id: 'PDefineParams' });
       return PreprocessorProblem.output(location, line);
     }
-  } else if (typeof openToken == 'string' && /^[ \t]*$/.test(openToken)) {
+  } else if (/^[ \t]*$/.test(openTokenCode)) {
     parameters = null; // no parameters, just start code definition
   } else { // identifier is touching some non-whitespace token
     const msg = `missing whitespace after macro name in: '${line}'`;
@@ -811,15 +859,13 @@ function defineDirective(
   // skip leading whitespace
   for (i++; i < n; i++) {
     const token = tokens[i]!;
-    if (typeof token != 'string' || !/^[ \t]*$/.test(token)) break;
+    if (!/^[ \t]*$/.test(token.code)) break;
   }
   let spaceBuffer = '';
   for (; i < n; i++) {
-    const token = tokens[i]!;
-    if (typeof token == 'string') {
-      if (/^[ \t]*$/.test(token)) { spaceBuffer += token; continue; } // skip trailing whitespace
-      else body += spaceBuffer + token;
-    } else body += spaceBuffer + token.code; // could also add code tokens for identifiers into a construct field
+    const token = tokens[i]!, tokenCode = token.code;
+    if (/^[ \t]*$/.test(tokenCode)) { spaceBuffer += tokenCode; continue; } // skip trailing whitespace
+    else body += spaceBuffer + tokenCode; // could also add code tokens for identifiers into a construct field
     spaceBuffer = ''; // added non-trailing whitespace, so clean buffer
   }
   const construct = new PreprocessorDefine(location, line, identifier, parameters, body);
@@ -829,18 +875,17 @@ function defineDirective(
 
 /** Parse tokens expecting a single identifier (macro name) and nothing else after the directive keyword. */
 function onlyIdentifier(
-  tokens: readonly TokenString[], diagnostics: PreprocessorDiagnostic[], location: CodeLocation, line: string
+  tokens: readonly PreprocessorToken[], diagnostics: PreprocessorDiagnostic[], location: CodeLocation, line: string
 ): PreprocessorToken | null {
   const n = tokens.length;
   let identifier: PreprocessorToken | null = null, i = 2;
   for (; i < n; i++) {
-    const token = tokens[i]!;
-    if (typeof token == 'string') { if (/^[ \t]*$/.test(token)) continue; } // ignore whitespace
-    else if (/^[A-Z_a-z]\w*$/.test(token.code)) { identifier = token; } // we want an identifier
+    const token = tokens[i]!, tokenCode = token.code;
+    if (/^[ \t]*$/.test(tokenCode)) continue; // ignore whitespace
+    else if (/^[A-Z_a-z]\w*$/.test(tokenCode)) { identifier = token; } // we want an identifier
     break; // stop at first non-space token
   }
-  const directiveToken = tokens[1] ?? '';
-  const directiveKeyword = typeof directiveToken == 'string' ? directiveToken : directiveToken.code;
+  const directiveKeyword = tokens[1]?.code ?? '';
   if (!identifier) {
     const msg = `expected identifier after '#${directiveKeyword}' in: '${line}'`;
     const id =
@@ -851,7 +896,7 @@ function onlyIdentifier(
   // allow only whitespace after identifier
   for (i++; i < n; i++) {
     const token = tokens[i]!;
-    if (typeof token != 'string' || !/^[ \t]*$/.test(token)) {
+    if (!/^[ \t]*$/.test(token.code)) {
       const msg = `unexpected code after '#${directiveKeyword}' identifier in: '${line}'`;
       const id =
         directiveKeyword == 'ifndef' ? 'PIfndefExtra' : directiveKeyword == 'ifdef' ? 'PIfdefExtra' : 'PUndefExtra';
@@ -863,15 +908,14 @@ function onlyIdentifier(
 }
 
 function onlyDirective(
-  tokens: readonly TokenString[], diagnostics: PreprocessorDiagnostic[], location: CodeLocation, line: string
+  tokens: readonly PreprocessorToken[], diagnostics: PreprocessorDiagnostic[], location: CodeLocation, line: string
 ): boolean {
   const n = tokens.length;
   // allow only whitespace after directive
   for (let i = 2; i < n; i++) {
     const token = tokens[i]!;
-    if (typeof token == 'string' && /^[ \t]*$/.test(token)) continue;
-    const directiveToken = tokens[1] ?? '';
-    const directiveKeyword = typeof directiveToken == 'string' ? directiveToken : directiveToken.code;
+    if (/^[ \t]*$/.test(token.code)) continue;
+    const directiveKeyword = tokens[1]?.code ?? '';
     const msg = `unexpected code after '#${directiveKeyword}' in: '${line}'`;
     const id = directiveKeyword == 'endif' ? 'PEndifExtra' : 'PElseExtra';
     diagnostics.push({ location, msg, id });
@@ -889,7 +933,7 @@ export class PreprocessorUndef extends PreprocessorDirective {
   }
 }
 function undefDirective(
-  tokens: readonly TokenString[], diagnostics: PreprocessorDiagnostic[], activeParent: boolean,
+  tokens: readonly PreprocessorToken[], diagnostics: PreprocessorDiagnostic[], activeParent: boolean,
   location: CodeLocation, line: string, macros: MacrosDefined,
 ): PreprocessedOutput<PreprocessorUndef | PreprocessorProblem> {
   const identifier = onlyIdentifier(tokens, diagnostics, location, line);
@@ -919,7 +963,7 @@ export class PreprocessorEndIf extends PreprocessorBranching implements Preproce
   }
 }
 function endifDirective(
-  tokens: readonly TokenString[], diagnostics: PreprocessorDiagnostic[],
+  tokens: readonly PreprocessorToken[], diagnostics: PreprocessorDiagnostic[],
   location: CodeLocation, line: string, macros: MacrosDefined
 ): PreprocessedOutput<PreprocessorEndIf | PreprocessorProblem> {
   if (onlyDirective(tokens, diagnostics, location, line))
@@ -945,7 +989,7 @@ export class PreprocessorElse extends PreprocessorBranchBegin implements Preproc
   }
 }
 function elseDirective(
-  tokens: readonly TokenString[], diagnostics: PreprocessorDiagnostic[], activeBefore: boolean | null,
+  tokens: readonly PreprocessorToken[], diagnostics: PreprocessorDiagnostic[], activeBefore: boolean | null,
   location: CodeLocation, line: string, macros: MacrosDefined
 ): PreprocessedOutput<PreprocessorElse | PreprocessorProblem> {
   if (!onlyDirective(tokens, diagnostics, location, line))
@@ -991,7 +1035,7 @@ function evaluateCondition(
 export class PreprocessorElseIf extends PreprocessorCondition implements PreprocessorBranchEnd {
 }
 function elifDirective(
-  tokens: readonly TokenString[], diagnostics: PreprocessorDiagnostic[], activeBefore: boolean | null,
+  tokens: readonly PreprocessorToken[], diagnostics: PreprocessorDiagnostic[], activeBefore: boolean | null,
   location: CodeLocation, line: string, macros: MacrosDefined
 ): PreprocessedOutput<PreprocessorElseIf | PreprocessorProblem> {
   const conditionLine = line.match(/^#elif\s+(.*?)\s*$/)?.[1];
@@ -1017,7 +1061,7 @@ export abstract class PreprocessorBeginIf extends PreprocessorCondition {
 export class PreprocessorIf extends PreprocessorBeginIf {
 }
 function ifDirective(
-  tokens: readonly TokenString[], diagnostics: PreprocessorDiagnostic[], activeParent: boolean,
+  tokens: readonly PreprocessorToken[], diagnostics: PreprocessorDiagnostic[], activeParent: boolean,
   location: CodeLocation, line: string, macros: MacrosDefined,
 ): PreprocessedOutput<PreprocessorIf | PreprocessorProblem> {
   const conditionLine = line.match(/^#if\s+(.*?)\s*$/)?.[1];
@@ -1044,7 +1088,7 @@ export class PreprocessorIfDefinition extends PreprocessorBeginIf {
   }
 }
 function ifdefDirective(
-  tokens: readonly TokenString[], diagnostics: PreprocessorDiagnostic[], activeParent: boolean,
+  tokens: readonly PreprocessorToken[], diagnostics: PreprocessorDiagnostic[], activeParent: boolean,
   location: CodeLocation, line: string, macros: MacrosDefined,
   wantsDefined: boolean,
 ): PreprocessedOutput<PreprocessorIfDefinition | PreprocessorProblem> {
