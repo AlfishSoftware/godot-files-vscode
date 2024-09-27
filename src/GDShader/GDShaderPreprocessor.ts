@@ -27,6 +27,8 @@ interface CodeLocation extends CodeRange {
 interface PreprocessorToken extends CodeRange {
   /** The preprocessed token text. */
   readonly code: string;
+  /** The numerical value, if the token represents a signed int32. */
+  readonly intValue?: number;
 }
 export interface PreprocessorDiagnostic {
   /** A code for the type of error. */
@@ -532,9 +534,11 @@ export const preprocessorErrorTypes = {
   PDirectiveTouchy: docsUrl + '#directives',
   
   PDefinedMisnomer: docsUrl + '#if',
+  PDefinedSyntax: docsUrl + '#if',
   
   PConditionNone: docsUrl + '#if',
   PConditionString: docsUrl + '#if',
+  PConditionLiteral: docsUrl + '#if',
   PConditionSyntax: docsUrl + '#if',
   
   PIncludeForm: docsUrl + '#include',
@@ -999,14 +1003,14 @@ function elseDirective(
 /** Represents a valid preprocessor condition directive, which is evaluated to true or false. */
 export abstract class PreprocessorCondition extends PreprocessorBranchBegin {
 }
-interface ConditionExpression {
+interface ConditionTokens {
   readonly location: CodeLocation;
-  readonly code: string;
+  readonly tokens: PreprocessorToken[];
 }
-function conditionExpression(
+function conditionTokens(
   tokens: readonly PreprocessorToken[], diagnostics: PreprocessorDiagnostic[],
   location: CodeLocation, macros: MacrosDefined
-): ConditionExpression | null {
+): ConditionTokens | null {
   let i = 3; const n = tokens.length;
   while (i < n && /^[ \t]*$/.test(tokens[i]!.code)) i++; // skip initial whitespace until first code token
   if (i >= n) {
@@ -1016,32 +1020,128 @@ function conditionExpression(
   let j = n - 1;
   while (j > i && /^[ \t]*$/.test(tokens[j]!.code)) j--; // skip final whitespace until last code token
   const firstToken = tokens[i]!, lastToken = tokens[j]!;
-  const { uri } = location, { start } = firstToken, { end } = lastToken;
-  let code = firstToken.code; while (++i < n) code += tokens[i]!.code;
-  if (code.includes('"')) {
-    const msg = 'strings are not allowed in preprocessor condition expressions';
-    diagnostics.push({ location: { uri, start, end }, msg, id: 'PConditionString' });
-    return null;
+  const { uri } = location, exprStart = firstToken.start, exprEnd = lastToken.end;
+  // replace tokens for defined calls and macro calls, building a new seq of tokens
+  const resolvedTokens: PreprocessorToken[] = [];
+  for (let k = i; k < n; k++) { // check for tokens not allowed
+    let token = tokens[k]!, tokenCode = token.code;
+    if (tokenCode == 'defined') { // resolve `defined(macro_name)` constructs to 0 (false) or 1 (true)
+      const definedKeyword = token;
+      while (++k < n && /^[ \t]*$/.test(tokens[k]!.code)); // skip whitespace
+      if (k >= n || (token = tokens[k]!).code != '(') {
+        const msg = `expected '(' after 'defined' keyword`;
+        diagnostics.push({ location: { uri, start: token.start, end: token.end }, msg, id: 'PDefinedSyntax' });
+        return null;
+      }
+      while (++k < n && /^[ \t]*$/.test(tokens[k]!.code)); // skip whitespace
+      if (k >= n || !/^[A-Z_a-z]\w*$/.test((token = tokens[k]!).code)) {
+        const msg = `expected identifier inside 'defined' keyword call`;
+        diagnostics.push({ location: { uri, start: token.start, end: token.end }, msg, id: 'PDefinedSyntax' });
+        return null;
+      }
+      const identifier = token;
+      while (++k < n && /^[ \t]*$/.test(tokens[k]!.code)); // skip whitespace
+      if (k >= n || (token = tokens[k]!).code != ')') {
+        const msg = `expected ')' after identifier in 'defined' keyword call`;
+        diagnostics.push({ location: { uri, start: token.start, end: token.end }, msg, id: 'PDefinedSyntax' });
+        return null;
+      }
+      token = { code: macros.has(identifier.code) ? '1' : '0', start: definedKeyword.start, end: token.end };
+      resolvedTokens.push(token);
+      continue;
+    } else if (/^[A-Z_a-z]\w*$/.test(tokenCode)) { // identifiers may expand as macros
+      const identifier = token;
+      const definition = macros.get(tokenCode);
+      // allow undefined macros for now, as it only raises "undefined macro" error if evaluation reaches it
+      if (!definition) { resolvedTokens.push(identifier); continue; }
+      if (!definition.parameterNames) { // parameter-less macro
+        const macro = { identifier, definition, arguments: null }, { start, end } = identifier;
+        const expandedCode = expansion(macro, macros, diagnostics, { uri, start, end }).code;
+        resolvedTokens.push(...expandedTokens(expandedCode, start, end));
+        continue;
+      }
+      // macro has parameters; expand if args are provided
+      while (++k < n && /^[ \t]*$/.test(tokens[k]!.code)); // skip whitespace
+      if (k >= n || (token = tokens[k]!).code != '(') {
+        // allow arg-less macros for now, as the token only raises "undefined macro" error if evaluation reaches it
+        resolvedTokens.push(identifier);
+        k--; continue; // decrement because it was already pointing to next token
+      }
+      const { start } = identifier, args: string[] = []; let openedParentheses = 1, arg = '';
+      while (openedParentheses && ++k < n) {
+        token = tokens[k]!; tokenCode = token.code;
+        if (tokenCode == ',') { if (openedParentheses < 2) { args.push(arg); arg = ''; } else arg += ','; }
+        else if (tokenCode == ')') { if (--openedParentheses) arg += ')'; }
+        else if (tokenCode == '(') { openedParentheses++; arg += '('; }
+        else arg += tokenCode;
+      }
+      const { end } = token, macroLocation = { uri, start, end };
+      if (k >= n) {
+        const msg = 'unterminated macro expansion call';
+        diagnostics.push({ location: macroLocation, msg, id: 'PEndExpansion' });
+        return null;
+      }
+      args.push(arg);
+      const macro = { identifier, definition, arguments: args };
+      const expandedCode = expansion(macro, macros, diagnostics, macroLocation).code;
+      resolvedTokens.push(...expandedTokens(expandedCode, start, end));
+      continue;
+    } else resolvedTokens.push(token); // push every other token verbatim
   }
-  // resolve `defined(macro_name)` constructs to 0 (false) or 1 (true)
-  code = code.replace(/\bdefined\s*\(\s*([A-Z_a-z]\w*)\s*\)/g,
-    (_: string, m: string) => macros.has(m) ? ' 1 ' : ' 0 '
-  );
-  // expand any macros found; any remaining identifier may raise "undefined macro" error if evaluation reaches it
-  code = expandCode({ uri, code }, macros);
-  return { location: { uri, start, end }, code };
+  const nTokens = resolvedTokens.length;
+  for (let l = 0; l < nTokens; l++) { // check lexical tokens after expansions
+    const token = resolvedTokens[l]!, tokenCode = token.code;
+    if (tokenCode.startsWith('"')) {
+      const msg = 'strings are not allowed in preprocessor condition expressions';
+      diagnostics.push({ location: { uri, start: token.start, end: token.end }, msg, id: 'PConditionString' });
+      return null;
+    }
+    //TODO? check float literals and abort as unsupported
+    let m;
+    if (m = /^(0[xX][0-9A-Fa-f]+|\d+)([uU]?)$/.exec(tokenCode)) { // replace hex and decimal with signed int32 literal
+      const { start, end } = token, s = m[1]!;
+      if (m[2]!) {
+        const msg = 'uint literals are not supported in preprocessor condition expressions';
+        diagnostics.push({ location: { uri, start, end }, msg, id: 'PConditionLiteral' });
+        return null;
+      }
+      const d = +s; // parse number from string; this also supports 0x syntax for hex
+      if (d >= 0x100000000) { // must fit in 32 bits
+        const msg = 'numeric literal is too big for int32';
+        diagnostics.push({ location: { uri, start, end }, msg, id: 'PConditionLiteral' });
+        return null;
+      }
+      if (d >= 0x80000000 && !/^0[xX]/.test(s)) { // values >= 2147483648 would become negative when cast to signed int
+        const msg = `decimal literal is too big for signed int32, so it overflows to (${d | 0})`;
+        diagnostics.push({ location: { uri, start, end }, msg, id: 'PConditionLiteral' });
+        return null;
+      }
+      resolvedTokens[l] = { ...token, intValue: d | 0 };
+    }
+  }
+  return { location: { uri, start: exprStart, end: exprEnd }, tokens: resolvedTokens };
 }
-//TODO parse token sequence, aborting on illegal tokens; uint and/or hex literals are replaced with int
+function expandedTokens(expandedCode: string, start: CodePosition, end: CodePosition): PreprocessorToken[] {
+  const tokens: PreprocessorToken[] = [];
+  for (const m of expandedCode.matchAll( // to reparse tokens after a macro expansion, just use regexes
+    /\s+|"(?:[^"\\]|\\[^])*"|\b[A-Z_a-z]\w*|\b0[xX][0-9A-Fa-f]+[uU]?|\b\d+[uU]?|[=!<>]=|[<>&|]{2}|[^]/g
+  )) {
+    // keep same original range from macro call for every replacement token in the result, so errors refer to the call
+    tokens.push({ code: m[0], start, end });
+  }
+  return tokens;
+}
 //TODO build parse tree, grouping parentheses atomically; put result in a root group; groups have a token sequence
 //TODO to evaluate a group, repeat steps below on a loop;
 //TODO split by || then inside by &&; evaluate parts in short-circuit logic
 //TODO reduce other operators; abort if identifier is evaluated; stop when only a single integer token is left
 function evaluateCondition(
-  diagnostics: PreprocessorDiagnostic[], condition: ConditionExpression
+  diagnostics: PreprocessorDiagnostic[], condition: ConditionTokens
 ): boolean | null {
-  const { location, code } = condition;
-  if (/^\s*0*\s*$/.test(code)) return false;
-  if (/^\s*0*[1-9]\d*\s*$/.test(code)) return true;
+  const { location, tokens } = condition;
+  let code = tokens.map(t => t.intValue ?? t.code).join('');
+  if (/^\s*-?\s*0*[uU]?\s*$/.test(code)) return false;
+  if (/^\s*-?\s*0*[1-9]\d*[uU]?\s*$/.test(code)) return true;
   diagnostics.push({ location, msg: `condition evaluation error`, id: 'PConditionSyntax' });
   return null;
 }
@@ -1054,7 +1154,7 @@ function elifDirective(
   location: CodeLocation, line: string, macros: MacrosDefined
 ): PreprocessedOutput<PreprocessorElseIf | PreprocessorProblem> {
   const condition
-    = conditionExpression(tokens, diagnostics, location, macros);
+    = conditionTokens(tokens, diagnostics, location, macros);
   if (condition == null) return PreprocessorProblem.output(location, line);
   const condLocation = condition.location;
   if (activeBefore == false) {
@@ -1076,7 +1176,7 @@ function ifDirective(
   location: CodeLocation, line: string, macros: MacrosDefined,
 ): PreprocessedOutput<PreprocessorIf | PreprocessorProblem> {
   const condition
-    = conditionExpression(tokens, diagnostics, location, macros);
+    = conditionTokens(tokens, diagnostics, location, macros);
   if (condition == null) return PreprocessorProblem.output(location, line);
   const condLocation = condition.location;
   if (activeParent) {

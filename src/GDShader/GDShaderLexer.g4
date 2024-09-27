@@ -11,8 +11,8 @@ STRING
 : '"' ( '\\' ["\\] | ~[\\"\n\r] )* '"'
 | '"' ( '\\' . | ~[\\"] )* '"' {false}?; // fallback allows invalid chars|escapes to not break token
 FLOAT: (DIGITS EXPONENT | (DIGITS? '.' DIGITS | DIGITS '.') EXPONENT?) [fF]?;
-INTEGER: DIGITS [uU]?;
 HEX: '0' [xX] [0-9A-Fa-f]+ [uU]?;
+INTEGER: DIGITS [uU]?;
 BOOL: 'false' | 'true';
 
 OP_ITERATIVE: '++' | '--';

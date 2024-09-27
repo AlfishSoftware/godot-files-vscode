@@ -114,7 +114,7 @@ aDelimitedExpression
 aNamedCall: callableName=ID '(' args=aExpressions ')'; // named function or named constructor
 aAtomicBasicConstructor: aAtomicBasicType '(' args=aExpressions ')';
 aArrayConstructor: '{' values=aExpressions '}' | aAtomicConstructibleType aArraySize '(' values=aExpressions ')';
-aLiteral: FLOAT | INTEGER | HEX | BOOL;
+aLiteral: FLOAT | HEX | INTEGER | BOOL;
 aNominal: name=ID;
 
 aPostfixedExpression
