@@ -533,14 +533,6 @@ export const preprocessorErrorTypes = {
   PDirectiveMiss: docsUrl + '#directives',
   PDirectiveTouchy: docsUrl + '#directives',
   
-  PDefinedMisnomer: docsUrl + '#if',
-  PDefinedSyntax: docsUrl + '#if',
-  
-  PConditionNone: docsUrl + '#if',
-  PConditionString: docsUrl + '#if',
-  PConditionLiteral: docsUrl + '#if',
-  PConditionSyntax: docsUrl + '#if',
-  
   PIncludeForm: docsUrl + '#include',
   PIncludeDeep: docsUrl + '#include',
   PIncludePath: docsUrl + '#include',
@@ -567,6 +559,15 @@ export const preprocessorErrorTypes = {
   
   PElseUnmatched: docsUrl + '#else',
   PElseExtra: docsUrl + '#else',
+  
+  PDefinedMisnomer: docsUrl + '#if',
+  PDefinedSyntax: docsUrl + '#if',
+  
+  PConditionNone: docsUrl + '#if',
+  PConditionString: docsUrl + '#if',
+  PConditionLiteral: docsUrl + '#if',
+  PConditionSyntax: docsUrl + '#if',
+  PConditionBalance: docsUrl + '#if',
 };
 
 /** Represents a parsed preprocessor construct from which code is replaced. */
@@ -1003,14 +1004,18 @@ function elseDirective(
 /** Represents a valid preprocessor condition directive, which is evaluated to true or false. */
 export abstract class PreprocessorCondition extends PreprocessorBranchBegin {
 }
-interface ConditionTokens {
-  readonly location: CodeLocation;
-  readonly tokens: PreprocessorToken[];
+class ExpressionTokens implements CodeRange {
+  constructor(
+    readonly start: CodePosition,
+    readonly end: CodePosition,
+    readonly tokens: (PreprocessorToken | ExpressionTokens)[],
+  ) {
+  }
 }
 function conditionTokens(
   tokens: readonly PreprocessorToken[], diagnostics: PreprocessorDiagnostic[],
   location: CodeLocation, macros: MacrosDefined
-): ConditionTokens | null {
+): ExpressionTokens | null {
   let i = 3; const n = tokens.length;
   while (i < n && /^[ \t]*$/.test(tokens[i]!.code)) i++; // skip initial whitespace until first code token
   if (i >= n) {
@@ -1119,7 +1124,7 @@ function conditionTokens(
       resolvedTokens[l] = { ...token, intValue: d | 0 };
     }
   }
-  return { location: { uri, start: exprStart, end: exprEnd }, tokens: resolvedTokens };
+  return new ExpressionTokens(exprStart, exprEnd, resolvedTokens);
 }
 function expandedTokens(expandedCode: string, start: CodePosition, end: CodePosition): PreprocessorToken[] {
   const tokens: PreprocessorToken[] = [];
@@ -1131,18 +1136,52 @@ function expandedTokens(expandedCode: string, start: CodePosition, end: CodePosi
   }
   return tokens;
 }
-//TODO build parse tree, grouping parentheses atomically; put result in a root group; groups have a token sequence
+function groupExpressions(
+  diagnostics: PreprocessorDiagnostic[], uri: string, expr: ExpressionTokens
+): boolean {
+  const { tokens } = expr;
+  // group parentheses atomically; put result in a root group; groups have a token sequence
+  let a = -1;
+  for (let i = 0, n = tokens.length; i < n; i++) {
+    const token = tokens[i]!;
+    if (token instanceof ExpressionTokens) continue;
+    const tokenCode = token.code;
+    if (tokenCode == '(') a = i; // track last open parenthesis
+    else if (tokenCode == ')') {
+      if (a < 0) {
+        const msg = `missing corresponding '(' in expression`;
+        diagnostics.push({ location: { uri, start: token.start, end: token.end }, msg, id: 'PConditionBalance' });
+        return false;
+      }
+      const start = tokens[a]!.start;
+      const subTokens = tokens.splice(a, i - a + 1);
+      const subExpr = new ExpressionTokens(start, token.end, subTokens);
+      tokens.splice(a, 0, subExpr);
+      // tail recursion to check for more parenthesized groups
+      a = i = -1; n = tokens.length; continue;
+    }
+  }
+  if (a >= 0) {
+    const token = tokens[a] as PreprocessorToken;
+    const msg = `missing corresponding ')' in expression`;
+    diagnostics.push({ location: { uri, start: token.start, end: token.end }, msg, id: 'PConditionBalance' });
+    return false;
+  }
+  return true;
+}
 //TODO to evaluate a group, repeat steps below on a loop;
 //TODO split by || then inside by &&; evaluate parts in short-circuit logic
 //TODO reduce other operators; abort if identifier is evaluated; stop when only a single integer token is left
 function evaluateCondition(
-  diagnostics: PreprocessorDiagnostic[], condition: ConditionTokens
+  diagnostics: PreprocessorDiagnostic[], uri: string, condition: ExpressionTokens
 ): boolean | null {
-  const { location, tokens } = condition;
-  let code = tokens.map(t => t.intValue ?? t.code).join('');
+  const { start, end, tokens } = condition;
+  let code = tokens.map(t =>
+    t instanceof ExpressionTokens ? '()' : t.intValue ?? t.code
+  ).join('');
   if (/^\s*-?\s*0*[uU]?\s*$/.test(code)) return false;
   if (/^\s*-?\s*0*[1-9]\d*[uU]?\s*$/.test(code)) return true;
-  diagnostics.push({ location, msg: `condition evaluation error`, id: 'PConditionSyntax' });
+  diagnostics.push({ location: { uri, start, end }, msg: `condition evaluation error`, id: 'PConditionSyntax' });
   return null;
 }
 
@@ -1156,9 +1195,11 @@ function elifDirective(
   const condition
     = conditionTokens(tokens, diagnostics, location, macros);
   if (condition == null) return PreprocessorProblem.output(location, line);
-  const condLocation = condition.location;
+  const { uri } = location;
+  if (!groupExpressions(diagnostics, uri, condition)) return PreprocessorProblem.output(location, line);
+  const condLocation = { uri, start: condition.start, end: condition.end };
   if (activeBefore == false) {
-    const activeBranch = evaluateCondition(diagnostics, condition);
+    const activeBranch = evaluateCondition(diagnostics, uri, condition);
     if (activeBranch == null) return PreprocessorProblem.output(location, line);
     return { code: commentOut(line), construct: new PreprocessorElseIf(location, condLocation, line, activeBranch) };
   } else return { code: commentOut(line), construct: new PreprocessorElseIf(location, condLocation, line, null) };
@@ -1178,9 +1219,11 @@ function ifDirective(
   const condition
     = conditionTokens(tokens, diagnostics, location, macros);
   if (condition == null) return PreprocessorProblem.output(location, line);
-  const condLocation = condition.location;
+  const { uri } = location;
+  if (!groupExpressions(diagnostics, uri, condition)) return PreprocessorProblem.output(location, line);
+  const condLocation = { uri, start: condition.start, end: condition.end };
   if (activeParent) {
-    const activeBranch = evaluateCondition(diagnostics, condition);
+    const activeBranch = evaluateCondition(diagnostics, uri, condition);
     if (activeBranch == null) return PreprocessorProblem.output(location, line);
     return { code: commentOut(line), construct: new PreprocessorIf(location, condLocation, line, activeBranch) };
   } else return { code: commentOut(line), construct: new PreprocessorIf(location, condLocation, line, null) };
