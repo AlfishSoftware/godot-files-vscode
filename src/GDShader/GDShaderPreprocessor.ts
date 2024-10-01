@@ -302,7 +302,7 @@ function readNumberInDirective(code: string, p: PreprocessingStateFile, c1: stri
 }
 function readPairSymbolInDirective(code: string, p: PreprocessingStateFile, c1: string): void {
   const start = { line: p.line, column: p.column };
-  let tokenCode = c1; p.i++; p.column++; // 1st symbol char: =!<>&|
+  let tokenCode = c1; p.i++; p.column++; // 1st symbol char: =!<>&|+-
   let r: RegExp, end: CodePosition;
   switch (c1) { // look for the next char, which might be broken by line continuations
     case '<': r = /^[<=]/; break; // look for '<' or '='
@@ -310,6 +310,8 @@ function readPairSymbolInDirective(code: string, p: PreprocessingStateFile, c1: 
     case '!': case '=': r = /^=/; break; // look for '='
     case '&': r = /^&/; break; // look for '&'
     case '|': r = /^\|/; break; // look for '|'
+    case '+': r = /^\+/; break; // look for '+'
+    case '-': r = /^-/; break; // look for '-'
     default: throw null;
   }
   while (/\\[\n\r]/.test(code.substring(p.i, p.i + 2))) skipLineContinuationInDirective(code, p);
@@ -319,7 +321,7 @@ function readPairSymbolInDirective(code: string, p: PreprocessingStateFile, c1: 
   p.tokens.push({ code: tokenCode, start, end });
 }
 function readCharSymbolInDirective(p: PreprocessingStateFile, c1: string): void {
-  // 1 char symbol: -+*/%~^() or any other char
+  // 1 char symbol: */%~^() or any other char
   const { line, column } = p;
   p.tokens.push({ code: c1, start: { line, column }, end: { line, column: column + 1 } });
   p.column++; p.i++;
@@ -504,7 +506,7 @@ export default abstract class GDShaderPreprocessorBase {
         else if (c1 == '"') readStringInDirective(code, p);
         else if (/[a-z_A-Z]/.test(c1) && !/\w/.test(code[p.i - 1] ?? '')) readIdentifierInDirective(code, p, c1);
         else if (/\d/.test(c1) && !/\w/.test(code[p.i - 1] ?? '')) readNumberInDirective(code, p, c1);
-        else if (/[=!<>&|]/.test(c1)) readPairSymbolInDirective(code, p, c1);
+        else if (/[=!<>&|+-]/.test(c1)) readPairSymbolInDirective(code, p, c1);
         else readCharSymbolInDirective(p, c1);
       else if (p.expandingMacro) readMacroExpansionCall(macros, input, p, c2, c1);
       else if (c1 == '#') readDirectiveStart(input, p);
@@ -564,7 +566,7 @@ export const preprocessorErrorTypes = {
   PDefinedSyntax: docsUrl + '#if',
   
   PConditionNone: docsUrl + '#if',
-  PConditionString: docsUrl + '#if',
+  PConditionToken: docsUrl + '#if',
   PConditionLiteral: docsUrl + '#if',
   PConditionSyntax: docsUrl + '#if',
   PConditionBalance: docsUrl + '#if',
@@ -1004,14 +1006,70 @@ function elseDirective(
 /** Represents a valid preprocessor condition directive, which is evaluated to true or false. */
 export abstract class PreprocessorCondition extends PreprocessorBranchBegin {
 }
+
 class ExpressionTokens implements CodeRange {
   constructor(
     readonly start: CodePosition,
     readonly end: CodePosition,
-    readonly tokens: (PreprocessorToken | ExpressionTokens)[],
+    readonly tokens: (PreprocessorToken | ParenthesizedTokens)[],
   ) {
   }
 }
+class ParenthesizedTokens extends ExpressionTokens {
+  constructor(
+    readonly open: PreprocessorToken,
+    readonly close: PreprocessorToken,
+    tokens: (PreprocessorToken | ParenthesizedTokens)[],
+  ) {
+    super(open.start, close.end, tokens);
+  }
+}
+
+abstract class ExpressionTree implements CodeRange {
+  constructor(
+    readonly start: CodePosition,
+    readonly end: CodePosition,
+  ) {
+  }
+}
+class InfixedExpression extends ExpressionTree {
+  constructor(
+    readonly left: ExpressionTree,
+    readonly op: PreprocessorToken,
+    readonly right: ExpressionTree,
+  ) {
+    super(left.start, right.end);
+  }
+}
+abstract class ExpressionPart extends ExpressionTree {
+}
+class PrefixedExpression extends ExpressionPart {
+  constructor(
+    readonly op: PreprocessorToken,
+    readonly arg: ExpressionPart,
+  ) {
+    super(op.start, arg.end);
+  }
+}
+abstract class ExpressionAtom extends ExpressionPart {
+}
+class AtomicExpression extends ExpressionAtom {
+  constructor(
+    readonly token: PreprocessorToken,
+  ) {
+    super(token.start, token.end);
+  }
+}
+class ParenthesizedExpression extends ExpressionAtom {
+  constructor(
+    readonly open: PreprocessorToken,
+    readonly inner: ExpressionTree,
+    readonly close: PreprocessorToken,
+  ) {
+    super(open.start, close.end);
+  }
+}
+
 function conditionTokens(
   tokens: readonly PreprocessorToken[], diagnostics: PreprocessorDiagnostic[],
   location: CodeLocation, macros: MacrosDefined
@@ -1096,14 +1154,14 @@ function conditionTokens(
   const nTokens = resolvedTokens.length;
   for (let l = 0; l < nTokens; l++) { // check lexical tokens after expansions
     const token = resolvedTokens[l]!, tokenCode = token.code;
-    if (tokenCode.startsWith('"')) {
-      const msg = 'strings are not allowed in preprocessor condition expressions';
-      diagnostics.push({ location: { uri, start: token.start, end: token.end }, msg, id: 'PConditionString' });
+    if (/^"|^[-+]{2}$/.test(tokenCode)) {
+      const msg = 'this token is not allowed in preprocessor condition expressions';
+      diagnostics.push({ location: { uri, start: token.start, end: token.end }, msg, id: 'PConditionToken' });
       return null;
     }
     //TODO? check float literals and abort as unsupported
     let m;
-    if (m = /^(0[xX][0-9A-Fa-f]+|\d+)([uU]?)$/.exec(tokenCode)) { // replace hex and decimal with signed int32 literal
+    if (m = /^(0[xX][0-9A-Fa-f]+|\d+)([uU]?)$/.exec(tokenCode)) { // read hex and decimal as signed int32 literal
       const { start, end } = token, s = m[1]!;
       if (m[2]!) {
         const msg = 'uint literals are not supported in preprocessor condition expressions';
@@ -1153,10 +1211,10 @@ function groupExpressions(
         diagnostics.push({ location: { uri, start: token.start, end: token.end }, msg, id: 'PConditionBalance' });
         return false;
       }
-      const start = tokens[a]!.start;
-      const subTokens = tokens.splice(a, i - a + 1);
-      const subExpr = new ExpressionTokens(start, token.end, subTokens);
-      tokens.splice(a, 0, subExpr);
+      const open = tokens[a] as PreprocessorToken;
+      const subTokens = tokens.splice(a + 1, i - a - 1);
+      const subExpr = new ParenthesizedTokens(open, token, subTokens);
+      tokens.splice(a, 2, subExpr); // replace 2 remaining ( and ) tokens with grouped contents
       // tail recursion to check for more parenthesized groups
       a = i = -1; n = tokens.length; continue;
     }
@@ -1169,20 +1227,109 @@ function groupExpressions(
   }
   return true;
 }
+function parseExpression(
+  diagnostics: PreprocessorDiagnostic[], uri: string, expr: ExpressionTokens,
+): ExpressionTree | null {
+  try {
+    const tree = parseExpressionTree(uri, expr);
+    if (tree instanceof ExpressionTree) return tree;
+    if (tree) throw tree;
+    const msg = `syntax error in condition expression`; // should probably not happen, but guard with generic error
+    throw { location: { uri, start: expr.start, end: expr.end }, msg, id: 'PConditionSyntax' };
+  } catch (e) {
+    if (e instanceof Object && 'location' in e && 'msg' in e && 'id' in e) {
+      diagnostics.push(e as PreprocessorDiagnostic);
+      return null;
+    } else throw e;
+  }
+}
+function parseExpressionTree(uri: string, expr: ExpressionTokens, ops: RegExp[] = [
+  /^\|\|$/, /^&&$/, /^\|$/, /^\^$/, /^&$/, /^[=!]=$/, /^[<>]=?$/, /^[<>]{2}$/, /^[-+]$/, /^[*/%]$/
+]): ExpressionTree | PreprocessorDiagnostic | null {
+  const { tokens } = expr, op = ops[0];
+  if (!op)
+    return parseExpressionPart(uri, expr);
+  for (let i = 0, n = tokens.length; i < n; i++) {
+    const token = tokens[i]!;
+    if (token instanceof ExpressionTokens) continue;
+    if (op.test(token.code)) {
+      const leftExpr = new ExpressionTokens(expr.start, token.start, tokens.slice(0, i));
+      const left = parseExpressionTree(uri, leftExpr, ops);
+      if (!(left instanceof ExpressionTree)) {
+        if (ops.length == 2) continue; // prefix - or +, which has more priority
+        if (left) throw left;
+        const msg = `missing argument before infix operator`;
+        throw { location: { uri, start: leftExpr.start, end: leftExpr.end }, msg, id: 'PConditionSyntax' };
+      }
+      const rightExpr = new ExpressionTokens(token.end, expr.end, tokens.slice(i + 1));
+      const right = parseExpressionTree(uri, rightExpr, ops);
+      if (right instanceof ExpressionTree) return new InfixedExpression(left, token, right);
+      if (right) return right;
+      // try other options in tree structure
+      const msg = `missing argument after infix operator`;
+      return { location: { uri, start: rightExpr.start, end: rightExpr.end }, msg, id: 'PConditionSyntax' };
+    }
+  }
+  return parseExpressionTree(uri, expr, ops.slice(1));
+}
+function isNonSpaceToken(token: ExpressionTokens | PreprocessorToken): boolean {
+  return token instanceof ExpressionTokens || !/^\s*$/.test(token.code);
+}
+function parseExpressionPart(uri: string, expr: ExpressionTokens): ExpressionPart | PreprocessorDiagnostic | null {
+  const { tokens } = expr;
+  for (let i = 0, n = tokens.length; i < n; i++) {
+    const token = tokens[i]!;
+    if (token instanceof ExpressionTokens) continue;
+    if (/^[-+!~]$/.test(token.code)) {
+      const errToken = tokens.slice(0, i).find(isNonSpaceToken);
+      if (errToken) {
+        const msg = `unexpected code before prefix operator`;
+        throw { location: { uri, start: errToken.start, end: errToken.end }, msg, id: 'PConditionSyntax' };
+      }
+      const argStart = token.end, argEnd = expr.end;
+      const argExpr = new ExpressionTokens(argStart, argEnd, tokens.slice(i + 1));
+      const arg = parseExpressionPart(uri, argExpr);
+      if (arg instanceof ExpressionPart) return new PrefixedExpression(token, arg);
+      if (arg) return arg;
+      // try other options in tree structure
+      const msg = `missing argument after prefix operator`;
+      return { location: { uri, start: argStart, end: argEnd }, msg, id: 'PConditionSyntax' };
+    }
+  }
+  return parseExpressionAtom(uri, expr);
+}
+function parseExpressionAtom(uri: string, expr: ExpressionTokens): ExpressionAtom | null {
+  const { tokens } = expr;
+  for (let i = 0, n = tokens.length; i < n; i++) {
+    const token = tokens[i]!;
+    if (token instanceof ExpressionTokens || /^(?:[A-Z_a-z]\w*|(?:0[xX][0-9A-Fa-f]+|\d+)[uU]?)$/.test(token.code)) {
+      const errToken =
+        tokens.slice(0, i).find(isNonSpaceToken) ?? tokens.slice(i + 1).find(isNonSpaceToken);
+      if (errToken) {
+        const msg = `unexpected extra code around condition atom`;
+        throw { location: { uri, start: errToken.start, end: errToken.end }, msg, id: 'PConditionSyntax' };
+      }
+      if (token instanceof ExpressionTokens) {
+        const inner = parseExpressionTree(uri, token);
+        if (inner instanceof ExpressionTree) return new ParenthesizedExpression(token.open, inner, token.close);
+        if (inner) throw inner;
+        const msg = `missing inner expression`;
+        throw { location: { uri, start: token.start, end: token.end }, msg, id: 'PConditionSyntax' };
+      } else return new AtomicExpression(token);
+    }
+  }
+  if (!tokens.find(isNonSpaceToken)) return null; // if no code, we need to try other alternatives
+  const msg = `unexpected code as condition atom`;
+  const location = { uri, start: expr.start, end: expr.end };
+  throw { location, msg, id: 'PConditionSyntax' };
+}
 //TODO to evaluate a group, repeat steps below on a loop;
 //TODO split by || then inside by &&; evaluate parts in short-circuit logic
 //TODO reduce other operators; abort if identifier is evaluated; stop when only a single integer token is left
 function evaluateCondition(
-  diagnostics: PreprocessorDiagnostic[], uri: string, condition: ExpressionTokens
+  diagnostics: PreprocessorDiagnostic[], uri: string, tree: ExpressionTree
 ): boolean | null {
-  const { start, end, tokens } = condition;
-  let code = tokens.map(t =>
-    t instanceof ExpressionTokens ? '()' : t.intValue ?? t.code
-  ).join('');
-  if (/^\s*-?\s*0*[uU]?\s*$/.test(code)) return false;
-  if (/^\s*-?\s*0*[1-9]\d*[uU]?\s*$/.test(code)) return true;
-  diagnostics.push({ location: { uri, start, end }, msg: `condition evaluation error`, id: 'PConditionSyntax' });
-  return null;
+  return true; // TODO
 }
 
 /** Represents a valid preprocessor `#elif` directive. */
@@ -1192,14 +1339,16 @@ function elifDirective(
   tokens: readonly PreprocessorToken[], diagnostics: PreprocessorDiagnostic[], activeBefore: boolean | null,
   location: CodeLocation, line: string, macros: MacrosDefined
 ): PreprocessedOutput<PreprocessorElseIf | PreprocessorProblem> {
-  const condition
-    = conditionTokens(tokens, diagnostics, location, macros);
+  const condition = conditionTokens(tokens, diagnostics, location, macros);
   if (condition == null) return PreprocessorProblem.output(location, line);
   const { uri } = location;
   if (!groupExpressions(diagnostics, uri, condition)) return PreprocessorProblem.output(location, line);
+  const tree = parseExpression(diagnostics, uri, condition);
+  if (!tree) return PreprocessorProblem.output(location, line);
+  console.log(tree);
   const condLocation = { uri, start: condition.start, end: condition.end };
   if (activeBefore == false) {
-    const activeBranch = evaluateCondition(diagnostics, uri, condition);
+    const activeBranch = evaluateCondition(diagnostics, uri, tree);
     if (activeBranch == null) return PreprocessorProblem.output(location, line);
     return { code: commentOut(line), construct: new PreprocessorElseIf(location, condLocation, line, activeBranch) };
   } else return { code: commentOut(line), construct: new PreprocessorElseIf(location, condLocation, line, null) };
@@ -1216,14 +1365,16 @@ function ifDirective(
   tokens: readonly PreprocessorToken[], diagnostics: PreprocessorDiagnostic[], activeParent: boolean,
   location: CodeLocation, line: string, macros: MacrosDefined,
 ): PreprocessedOutput<PreprocessorIf | PreprocessorProblem> {
-  const condition
-    = conditionTokens(tokens, diagnostics, location, macros);
+  const condition = conditionTokens(tokens, diagnostics, location, macros);
   if (condition == null) return PreprocessorProblem.output(location, line);
   const { uri } = location;
   if (!groupExpressions(diagnostics, uri, condition)) return PreprocessorProblem.output(location, line);
+  const tree = parseExpression(diagnostics, uri, condition);
+  if (!tree) return PreprocessorProblem.output(location, line);
+  console.log(tree);
   const condLocation = { uri, start: condition.start, end: condition.end };
   if (activeParent) {
-    const activeBranch = evaluateCondition(diagnostics, uri, condition);
+    const activeBranch = evaluateCondition(diagnostics, uri, tree);
     if (activeBranch == null) return PreprocessorProblem.output(location, line);
     return { code: commentOut(line), construct: new PreprocessorIf(location, condLocation, line, activeBranch) };
   } else return { code: commentOut(line), construct: new PreprocessorIf(location, condLocation, line, null) };
