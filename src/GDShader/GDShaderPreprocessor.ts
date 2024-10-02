@@ -329,12 +329,13 @@ function readCharSymbolInDirective(p: PreprocessingStateFile, c1: string): void 
 async function readDirectiveEnd(
   preprocessor: GDShaderPreprocessorBase, input: PreprocessingFile, includes: number,
   p: PreprocessingStateFile, c2: string, c1: string
-): Promise<void> {
+): Promise<boolean> {
   // end directive
-  await endDirective(preprocessor, input, includes, p);
+  const abort = await endDirective(preprocessor, input, includes, p);
   p.i0 = p.i; // replace directive code until before the ending newline
   p.inDirective = false; p.tokens = []; // consumed tokens when exiting a directive
   skipChar(p, c2, c1);
+  return abort;
 }
 
 function readMacroExpansionCall(
@@ -501,7 +502,9 @@ export default abstract class GDShaderPreprocessorBase {
       else if (c2 == '/*') skipBlockComment(input, p); // skip entire block comment here
       else if (p.inDirective) // parse directive
         if (c2 == '\\\n' || c2 == '\\\r') skipLineContinuationInDirective(code, p);
-        else if (c1 == '\n' || c1 == '\r') await readDirectiveEnd(this, input, includes, p, c2, c1);
+        else if (c1 == '\n' || c1 == '\r')
+          if (await readDirectiveEnd(this, input, includes, p, c2, c1)) break; // abort if disable preprocessor
+          else continue; // otherwise keep parsing normally; when aborting the remaining code is still output verbatim
         else if (c1 == ' ' || c1 == '\t') readWhitespaceInDirective(p, c1);
         else if (c1 == '"') readStringInDirective(code, p);
         else if (/[a-z_A-Z]/.test(c1) && !/\w/.test(code[p.i - 1] ?? '')) readIdentifierInDirective(code, p, c1);
@@ -574,6 +577,8 @@ export const preprocessorErrorTypes = {
   PEvalUndefined: docsUrl + '#if',
   PEvalOverflow: docsUrl + '#if',
   PEvalDiv: docsUrl + '#if',
+  
+  PPragmaExtra: docsUrl + '#pragma',
 };
 
 /** Represents a parsed preprocessor construct from which code is replaced. */
@@ -669,20 +674,26 @@ export abstract class PreprocessorDirective extends PreprocessorConstruct {
 }
 async function endDirective(
   preprocessor: GDShaderPreprocessorBase, input: PreprocessingFile, includes: number, p: PreprocessingStateFile
-): Promise<void> {
+): Promise<boolean> {
   const { uri, code } = input;
   const location = {
     uri, start: { line: p.lineStart, column: p.columnStart }, end: { line: p.line, column: p.column }
   };
   const replacement = await directive(preprocessor, location, p, includes);
   const { construct } = replacement, { branchingStack } = p;
-  let active: boolean;
+  let active: boolean, abort = false;
   if (construct instanceof PreprocessorBranchBegin) {
     if (construct instanceof PreprocessorElseIf || construct instanceof PreprocessorElse) branchingStack.pop();
     active = isActive(branchingStack);
     branchingStack.push(construct);
-  } else active = isActive(branchingStack);
+  } else {
+    active = isActive(branchingStack);
+    if (construct instanceof PragmaDirective) switch (construct.command?.code) {
+      case 'disable_preprocessor': abort = true; break;
+    }
+  }
   p.chunks.push({ inputCode: code.substring(p.i0, p.i), active, replacement });
+  return abort;
 }
 async function directive(
   preprocessor: GDShaderPreprocessorBase, location: CodeLocation, p: PreprocessingStateFile, includes: number,
@@ -710,7 +721,7 @@ async function directive(
         diagnostics.push({ location, msg: `unmatched '#endif'`, id: 'PEndifUnmatched' });
         return PreprocessorProblem.output(location, line);
       }
-      return endifDirective(tokens, diagnostics, location, line, macros);
+      return endifDirective(tokens, diagnostics, location, line);
     case 'else': case 'elif':
       const prev = branchingStack.at(-1);
       const isElif = directiveKeyword == 'elif';
@@ -726,7 +737,8 @@ async function directive(
       );
     case 'if':
       return ifDirective(tokens, diagnostics, isActive(branchingStack), location, line, macros);
-    //TODO case 'pragma': return pragmaDirective(tokens, diagnostics, location, line, macros);
+    case 'pragma':
+      return pragmaDirective(tokens, diagnostics, isActive(branchingStack), location, line);
     default:
       const msg = `invalid or unsupported directive '#${directiveKeyword}' in: '${line}'`;
       diagnostics.push({ location, msg, id: 'PDirectiveMiss' });
@@ -754,7 +766,7 @@ async function includeDirective(
     return PreprocessorProblem.output(location, line);
   }
   let stringToken;
-  for (let i = 2, n = tokens.length; i < n; i++) {
+  for (let i = 3, n = tokens.length; i < n; i++) {
     const token = tokens[i]!, tokenCode = token.code;
     if (/^[ \t]*$/.test(tokenCode)) continue; // ignore whitespace
     else if (stringToken == null && /^"(?:[^"\\]|\\["\\])+"$/.test(tokenCode)) { stringToken = token; continue; }
@@ -804,7 +816,7 @@ function defineDirective(
   tokens: readonly PreprocessorToken[], diagnostics: PreprocessorDiagnostic[], activeParent: boolean,
   location: CodeLocation, line: string, macros: MacrosDefined,
 ): PreprocessedOutput<PreprocessorDefine | PreprocessorProblem> {
-  let identifier: PreprocessorToken | null = null, i = 2;
+  let identifier: PreprocessorToken | null = null, i = 3;
   const n = tokens.length;
   for (; i < n; i++) {
     const token = tokens[i]!;
@@ -888,7 +900,7 @@ function onlyIdentifier(
   tokens: readonly PreprocessorToken[], diagnostics: PreprocessorDiagnostic[], location: CodeLocation, line: string
 ): PreprocessorToken | null {
   const n = tokens.length;
-  let identifier: PreprocessorToken | null = null, i = 2;
+  let identifier: PreprocessorToken | null = null, i = 3;
   for (; i < n; i++) {
     const token = tokens[i]!, tokenCode = token.code;
     if (/^[ \t]*$/.test(tokenCode)) continue; // ignore whitespace
@@ -922,7 +934,7 @@ function onlyDirective(
 ): boolean {
   const n = tokens.length;
   // allow only whitespace after directive
-  for (let i = 2; i < n; i++) {
+  for (let i = 3; i < n; i++) {
     const token = tokens[i]!;
     if (/^[ \t]*$/.test(token.code)) continue;
     const directiveKeyword = tokens[1]?.code ?? '';
@@ -974,7 +986,7 @@ export class PreprocessorEndIf extends PreprocessorBranching implements Preproce
 }
 function endifDirective(
   tokens: readonly PreprocessorToken[], diagnostics: PreprocessorDiagnostic[],
-  location: CodeLocation, line: string, macros: MacrosDefined
+  location: CodeLocation, line: string
 ): PreprocessedOutput<PreprocessorEndIf | PreprocessorProblem> {
   if (onlyDirective(tokens, diagnostics, location, line))
     return { code: commentOut(line), construct: new PreprocessorEndIf(location, line) };
@@ -1000,7 +1012,7 @@ export class PreprocessorElse extends PreprocessorBranchBegin implements Preproc
 }
 function elseDirective(
   tokens: readonly PreprocessorToken[], diagnostics: PreprocessorDiagnostic[], activeBefore: boolean | null,
-  location: CodeLocation, line: string, macros: MacrosDefined
+  location: CodeLocation, line: string
 ): PreprocessedOutput<PreprocessorElse | PreprocessorProblem> {
   if (!onlyDirective(tokens, diagnostics, location, line))
     return PreprocessorProblem.output(location, line);
@@ -1093,26 +1105,29 @@ function conditionTokens(
   const resolvedTokens: PreprocessorToken[] = [];
   for (let k = i; k < n; k++) { // check for tokens not allowed
     let token = tokens[k]!, tokenCode = token.code;
-    if (tokenCode == 'defined') { // resolve `defined(macro_name)` constructs to 0 (false) or 1 (true)
+    if (tokenCode == 'defined') { // resolve `defined` constructs to 0 (false) or 1 (true)
       const definedKeyword = token;
       while (++k < n && /^[ \t]*$/.test(tokens[k]!.code)); // skip whitespace
-      if (k >= n || (token = tokens[k]!).code != '(') {
-        const msg = `expected '(' after 'defined' keyword`;
-        diagnostics.push({ location: { uri, start: token.start, end: token.end }, msg, id: 'PDefinedSyntax' });
-        return null;
-      }
-      while (++k < n && /^[ \t]*$/.test(tokens[k]!.code)); // skip whitespace
+      let parenthesis: boolean;
+      if (k < n && (token = tokens[k]!).code == '(') {
+        parenthesis = true;
+        while (++k < n && /^[ \t]*$/.test(tokens[k]!.code)); // skip whitespace
+      } else parenthesis = false;
       if (k >= n || !/^[A-Z_a-z]\w*$/.test((token = tokens[k]!).code)) {
-        const msg = `expected identifier inside 'defined' keyword call`;
+        const msg = parenthesis ?
+          `expected identifier inside 'defined' keyword call` :
+          `expected identifier or '(' after 'defined' operator keyword`;
         diagnostics.push({ location: { uri, start: token.start, end: token.end }, msg, id: 'PDefinedSyntax' });
         return null;
       }
       const identifier = token;
-      while (++k < n && /^[ \t]*$/.test(tokens[k]!.code)); // skip whitespace
-      if (k >= n || (token = tokens[k]!).code != ')') {
-        const msg = `expected ')' after identifier in 'defined' keyword call`;
-        diagnostics.push({ location: { uri, start: token.start, end: token.end }, msg, id: 'PDefinedSyntax' });
-        return null;
+      if (parenthesis) {
+        while (++k < n && /^[ \t]*$/.test(tokens[k]!.code)); // skip whitespace
+        if (k >= n || (token = tokens[k]!).code != ')') {
+          const msg = `expected ')' after identifier in 'defined' keyword call`;
+          diagnostics.push({ location: { uri, start: token.start, end: token.end }, msg, id: 'PDefinedSyntax' });
+          return null;
+        }
       }
       token = { code: macros.has(identifier.code) ? '1' : '0', start: definedKeyword.start, end: token.end };
       resolvedTokens.push(token);
@@ -1482,4 +1497,42 @@ function ifdefDirective(
     code: commentOut(line),
     construct: new PreprocessorIfDefinition(location, line, identifier, activeBranch, wantsDefined),
   };
+}
+
+export class PragmaDirective extends PreprocessorDirective {
+  constructor(location: CodeLocation, mainRange: CodeRange, line: string,
+    readonly command: PreprocessorToken | null,
+    readonly afterCommand: string,
+  ) {
+    super(location, mainRange, line);
+  }
+}
+
+function pragmaDirective(
+  tokens: readonly PreprocessorToken[], diagnostics: PreprocessorDiagnostic[], activeParent: boolean,
+  location: CodeLocation, line: string
+): PreprocessedOutput<PragmaDirective | PreprocessorProblem> {
+  if (!activeParent)
+    return { code: commentOut(line), construct: new PragmaDirective(location, location, line, null, '') };
+  const n = tokens.length;
+  let i = 3, mainRange: CodeRange, command: PreprocessorToken | null = null;
+  while (i < n && /^[ \t]*$/.test(tokens[i]!.code)) i++; // skip initial whitespace until first code token
+  let j = n - 1, afterCommand = '';
+  if (i >= n) mainRange = location;
+  else {
+    while (j > i && /^[ \t]*$/.test(tokens[j]!.code)) j--; // skip final whitespace until last code token
+    command = tokens[i]!;
+    const { end } = tokens[j]!;
+    mainRange = { start: command.start, end };
+    for (let k = i + 1; k <= j; k++) afterCommand += tokens[k]!.code;
+    switch (command.code) {
+      case 'disable_preprocessor':
+        if (afterCommand.trim()) {
+          const msg = `unexpected code after '#pragma disable_preprocessor'`;
+          diagnostics.push({ location: { uri: location.uri, start: command.end, end }, msg, id: 'PPragmaExtra' });
+          return PreprocessorProblem.output(location, line);
+        } else break; // return normally, as we will break the preprocessor loop later in this case
+    }
+  }
+  return { code: line, construct: new PragmaDirective(location, mainRange, line, command, afterCommand) };
 }

@@ -5,6 +5,7 @@ channels { DOCUMENTATION }
 
 COMMENT_BLOCK: '/*' .*? ('*/'|EOF) -> channel(HIDDEN); //TODO detect documentation, unterminated
 COMMENT_LINE: '//' ~[\n\r]* -> channel(HIDDEN);
+PRAGMA: '#pragma' ~[\n\r]* -> channel(HIDDEN); // ignore unrecognized pragmas that may come from preprocessor
 WHITESPACE: [ \t\n\r]+ -> channel(HIDDEN);
 
 STRING

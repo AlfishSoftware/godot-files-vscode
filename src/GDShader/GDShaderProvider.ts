@@ -13,6 +13,7 @@ import GDShaderPreprocessorBase, {
   PreprocessorDirective, PreprocessorInclude, PreprocessorDefine,
 } from './GDShaderPreprocessor';
 import * as gds from './.antlr/GDShaderParser';
+import { supported } from '../ExtensionEntry';
 const toUTF8 = new TextDecoder();
 
 function ideRange(start: CodePosition, end: CodePosition): Range {
@@ -39,7 +40,7 @@ class GDShaderPreprocessor extends GDShaderPreprocessorBase {
       const location = d.location;
       const range = ideRange(location.start, location.end);
       let severity: DiagnosticSeverity, msg: string;
-      if (/^DEBUG: /.test(d.msg)) { severity = DiagnosticSeverity.Information; msg = d.msg.substring(7); }
+      if (/^DEBUG: /.test(d.msg)) { severity = DiagnosticSeverity.Hint; msg = d.msg.substring(7); }
       else { severity = DiagnosticSeverity.Error; msg = 'Preprocessor Error: ' + d.msg; }
       const diagnostic = new Diagnostic(range, msg, severity);
       diagnostic.source = 'gdshader';
@@ -92,6 +93,7 @@ export default class GDShaderProvider implements
   }
   models: { [uri: string]: GDShaderModel | undefined; } = {};
   async provideDocumentSymbols(document: TextDocument, _token: CancellationToken): Promise<DocumentSymbol[]> {
+    if (!supported) return [];
     const uri = document.uri.toString(true);
     const entryCode = document.getText();
     // Preprocess code
