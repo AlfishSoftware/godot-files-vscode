@@ -312,7 +312,7 @@ function readPairSymbolInDirective(code: string, p: PreprocessingStateFile, c1: 
     case '|': r = /^\|/; break; // look for '|'
     case '+': r = /^\+/; break; // look for '+'
     case '-': r = /^-/; break; // look for '-'
-    default: throw null;
+    default: throw null; // no other cases
   }
   while (/\\[\n\r]/.test(code.substring(p.i, p.i + 2))) skipLineContinuationInDirective(code, p);
   const c = code[p.i] ?? '';
@@ -568,8 +568,12 @@ export const preprocessorErrorTypes = {
   PConditionNone: docsUrl + '#if',
   PConditionToken: docsUrl + '#if',
   PConditionLiteral: docsUrl + '#if',
-  PConditionSyntax: docsUrl + '#if',
   PConditionBalance: docsUrl + '#if',
+  PConditionSyntax: docsUrl + '#if',
+  
+  PEvalUndefined: docsUrl + '#if',
+  PEvalOverflow: docsUrl + '#if',
+  PEvalDiv: docsUrl + '#if',
 };
 
 /** Represents a parsed preprocessor construct from which code is replaced. */
@@ -625,6 +629,7 @@ function expansion(
   const subMacros = new Map(macros);
   subMacros.delete(macroIdentifier);
   code = expandCode({ uri: location.uri, code }, subMacros);
+  //TODO use another way to show expansion code
   diagnostics.push({ location, msg: `DEBUG: expands to '${code}'`, id: '' });
   return { code, construct: new PreprocessorExpansion(location, macro) };
 }
@@ -1227,6 +1232,9 @@ function groupExpressions(
   }
   return true;
 }
+function isPreprocessorDiagnostic(e: unknown) {
+  return e instanceof Object && 'location' in e && 'msg' in e && 'id' in e;
+}
 function parseExpression(
   diagnostics: PreprocessorDiagnostic[], uri: string, expr: ExpressionTokens,
 ): ExpressionTree | null {
@@ -1234,10 +1242,10 @@ function parseExpression(
     const tree = parseExpressionTree(uri, expr);
     if (tree instanceof ExpressionTree) return tree;
     if (tree) throw tree;
-    const msg = `syntax error in condition expression`; // should probably not happen, but guard with generic error
-    throw { location: { uri, start: expr.start, end: expr.end }, msg, id: 'PConditionSyntax' };
+    const msg = `syntax error in condition expression`, { start, end } = expr; // should not happen, but guard anyway
+    throw { location: { uri, start, end }, msg, id: 'PConditionSyntax' } as PreprocessorDiagnostic;
   } catch (e) {
-    if (e instanceof Object && 'location' in e && 'msg' in e && 'id' in e) {
+    if (isPreprocessorDiagnostic(e)) {
       diagnostics.push(e as PreprocessorDiagnostic);
       return null;
     } else throw e;
@@ -1258,8 +1266,8 @@ function parseExpressionTree(uri: string, expr: ExpressionTokens, ops: RegExp[] 
       if (!(left instanceof ExpressionTree)) {
         if (ops.length == 2) continue; // prefix - or +, which has more priority
         if (left) throw left;
-        const msg = `missing argument before infix operator`;
-        throw { location: { uri, start: leftExpr.start, end: leftExpr.end }, msg, id: 'PConditionSyntax' };
+        const msg = `missing argument before infix operator`, { start, end } = leftExpr;
+        throw { location: { uri, start, end }, msg, id: 'PConditionSyntax' } as PreprocessorDiagnostic;
       }
       const rightExpr = new ExpressionTokens(token.end, expr.end, tokens.slice(i + 1));
       const right = parseExpressionTree(uri, rightExpr, ops);
@@ -1283,8 +1291,8 @@ function parseExpressionPart(uri: string, expr: ExpressionTokens): ExpressionPar
     if (/^[-+!~]$/.test(token.code)) {
       const errToken = tokens.slice(0, i).find(isNonSpaceToken);
       if (errToken) {
-        const msg = `unexpected code before prefix operator`;
-        throw { location: { uri, start: errToken.start, end: errToken.end }, msg, id: 'PConditionSyntax' };
+        const msg = `unexpected code before prefix operator`, { start, end } = errToken;
+        throw { location: { uri, start, end }, msg, id: 'PConditionSyntax' } as PreprocessorDiagnostic;
       }
       const argStart = token.end, argEnd = expr.end;
       const argExpr = new ExpressionTokens(argStart, argEnd, tokens.slice(i + 1));
@@ -1302,38 +1310,110 @@ function parseExpressionAtom(uri: string, expr: ExpressionTokens): ExpressionAto
   const { tokens } = expr;
   for (let i = 0, n = tokens.length; i < n; i++) {
     const token = tokens[i]!;
-    if (token instanceof ExpressionTokens || /^(?:[A-Z_a-z]\w*|(?:0[xX][0-9A-Fa-f]+|\d+)[uU]?)$/.test(token.code)) {
+    if (token instanceof ExpressionTokens || /^(?:[A-Z_a-z]\w*|0[xX][0-9A-Fa-f]+|\d+)$/.test(token.code)) {
       const errToken =
         tokens.slice(0, i).find(isNonSpaceToken) ?? tokens.slice(i + 1).find(isNonSpaceToken);
       if (errToken) {
-        const msg = `unexpected extra code around condition atom`;
-        throw { location: { uri, start: errToken.start, end: errToken.end }, msg, id: 'PConditionSyntax' };
+        const msg = `unexpected extra code around condition atom`, { start, end } = errToken;
+        throw { location: { uri, start, end }, msg, id: 'PConditionSyntax' } as PreprocessorDiagnostic;
       }
       if (token instanceof ExpressionTokens) {
         const inner = parseExpressionTree(uri, token);
         if (inner instanceof ExpressionTree) return new ParenthesizedExpression(token.open, inner, token.close);
         if (inner) throw inner;
-        const msg = `missing inner expression`;
-        throw { location: { uri, start: token.start, end: token.end }, msg, id: 'PConditionSyntax' };
+        const msg = `missing inner expression`, { start, end } = token;
+        throw { location: { uri, start, end }, msg, id: 'PConditionSyntax' } as PreprocessorDiagnostic;
       } else return new AtomicExpression(token);
     }
   }
   if (!tokens.find(isNonSpaceToken)) return null; // if no code, we need to try other alternatives
   const msg = `unexpected code as condition atom`;
   const location = { uri, start: expr.start, end: expr.end };
-  throw { location, msg, id: 'PConditionSyntax' };
+  throw { location, msg, id: 'PConditionSyntax' } as PreprocessorDiagnostic;
 }
-//TODO to evaluate a group, repeat steps below on a loop;
-//TODO split by || then inside by &&; evaluate parts in short-circuit logic
-//TODO reduce other operators; abort if identifier is evaluated; stop when only a single integer token is left
-function evaluateCondition(
-  diagnostics: PreprocessorDiagnostic[], uri: string, tree: ExpressionTree
-): boolean | null {
-  return true; // TODO
+function evaluateCondition(diagnostics: PreprocessorDiagnostic[], uri: string, tree: ExpressionTree): boolean | null {
+  try {
+    return evaluateExpression(uri, tree) != 0;
+  } catch (e) {
+    if (isPreprocessorDiagnostic(e)) {
+      diagnostics.push(e as PreprocessorDiagnostic);
+      return null;
+    } else throw e;
+  }
+}
+function checkDenominator(uri: string, op: PreprocessorToken, n: number): number {
+  if (n != 0) return n;
+  const msg = `integer division by zero when evaluating condition expression`;
+  const location = { uri, start: op.start, end: op.end };
+  throw { location, msg, id: 'PEvalDiv' } as PreprocessorDiagnostic;
+}
+function checkOverflow(uri: string, op: PreprocessorToken, n: number): number {
+  const i = n | 0;
+  if (i == n) return i;
+  const msg = `arithmetic overflow when evaluating condition expression`;
+  const location = { uri, start: op.start, end: op.end };
+  throw { location, msg, id: 'PEvalOverflow' } as PreprocessorDiagnostic;
+}
+function evaluateExpression(uri: string, tree: ExpressionTree): number {
+  if (tree instanceof ParenthesizedExpression) return evaluateExpression(uri, tree.inner);
+  if (tree instanceof AtomicExpression) {
+    const { token } = tree, { intValue } = token;
+    if (intValue != undefined) return intValue;
+    const msg = `undefined macro '${token.code}' cannot be evaluated in condition expression`;
+    const location = { uri, start: token.start, end: token.end };
+    throw { location, msg, id: 'PEvalUndefined' } as PreprocessorDiagnostic;
+  }
+  if (tree instanceof PrefixedExpression) {
+    const { op, arg } = tree;
+    switch (op.code) {
+      case '-': return checkOverflow(uri, op, -evaluateExpression(uri, arg)); // can overflow on -(-2147483648)
+      case '+': return +evaluateExpression(uri, arg);
+      case '!': return +!evaluateExpression(uri, arg);
+      case '~': return ~evaluateExpression(uri, arg);
+    }
+  }
+  if (tree instanceof InfixedExpression) {
+    const { op, left, right } = tree;
+    switch (op.code) {
+      case '||': return +(evaluateExpression(uri, left) || evaluateExpression(uri, right));
+      case '&&': return +(evaluateExpression(uri, left) && evaluateExpression(uri, right));
+      case '|': return evaluateExpression(uri, left) | evaluateExpression(uri, right);
+      case '^': return evaluateExpression(uri, left) ^ evaluateExpression(uri, right);
+      case '&': return evaluateExpression(uri, left) & evaluateExpression(uri, right);
+      case '==': return +(evaluateExpression(uri, left) == evaluateExpression(uri, right));
+      case '!=': return +(evaluateExpression(uri, left) != evaluateExpression(uri, right));
+      case '<': return +(evaluateExpression(uri, left) < evaluateExpression(uri, right));
+      case '>=': return +(evaluateExpression(uri, left) >= evaluateExpression(uri, right));
+      case '>': return +(evaluateExpression(uri, left) > evaluateExpression(uri, right));
+      case '<=': return +(evaluateExpression(uri, left) <= evaluateExpression(uri, right));
+      case '<<': return evaluateExpression(uri, left) << evaluateExpression(uri, right);
+      case '>>': return evaluateExpression(uri, left) >> evaluateExpression(uri, right);
+      case '-': return checkOverflow(uri, op, evaluateExpression(uri, left) - evaluateExpression(uri, right));
+      case '+': return checkOverflow(uri, op, evaluateExpression(uri, left) + evaluateExpression(uri, right));
+      case '*': return checkOverflow(uri, op, evaluateExpression(uri, left) * evaluateExpression(uri, right));
+      case '/': return checkOverflow(uri, op, // can overflow on (-2147483648)/-1
+        Math.trunc(evaluateExpression(uri, left) / checkDenominator(uri, op, evaluateExpression(uri, right)))
+      );
+      case '%': // should never overflow, specially since it's truncated from the float operation
+        return (evaluateExpression(uri, left) % checkDenominator(uri, op, evaluateExpression(uri, right))) | 0;
+    }
+  }
+  throw null; // no other cases
+}
+
+/** Represents a valid preprocessor condition expression directive, which is evaluated to true or false. */
+export interface PreprocessorConditionExpression {
+  readonly tree: ExpressionTree;
 }
 
 /** Represents a valid preprocessor `#elif` directive. */
-export class PreprocessorElseIf extends PreprocessorCondition implements PreprocessorBranchEnd {
+export class PreprocessorElseIf extends PreprocessorCondition
+  implements PreprocessorBranchEnd, PreprocessorConditionExpression {
+  constructor(location: CodeLocation, line: string, activeBranch: boolean | null,
+    readonly tree: ExpressionTree,
+  ) {
+    super(location, tree, line, activeBranch);
+  }
 }
 function elifDirective(
   tokens: readonly PreprocessorToken[], diagnostics: PreprocessorDiagnostic[], activeBefore: boolean | null,
@@ -1345,13 +1425,11 @@ function elifDirective(
   if (!groupExpressions(diagnostics, uri, condition)) return PreprocessorProblem.output(location, line);
   const tree = parseExpression(diagnostics, uri, condition);
   if (!tree) return PreprocessorProblem.output(location, line);
-  console.log(tree);
-  const condLocation = { uri, start: condition.start, end: condition.end };
   if (activeBefore == false) {
     const activeBranch = evaluateCondition(diagnostics, uri, tree);
     if (activeBranch == null) return PreprocessorProblem.output(location, line);
-    return { code: commentOut(line), construct: new PreprocessorElseIf(location, condLocation, line, activeBranch) };
-  } else return { code: commentOut(line), construct: new PreprocessorElseIf(location, condLocation, line, null) };
+    return { code: commentOut(line), construct: new PreprocessorElseIf(location, line, activeBranch, tree) };
+  } else return { code: commentOut(line), construct: new PreprocessorElseIf(location, line, null, tree) };
 }
 
 /** Represents a valid preprocessor condition start directive, which must have a corresponding `#endif`. */
@@ -1359,7 +1437,12 @@ export abstract class PreprocessorBeginIf extends PreprocessorCondition {
 }
 
 /** Represents a valid preprocessor `#if` directive. */
-export class PreprocessorIf extends PreprocessorBeginIf {
+export class PreprocessorIf extends PreprocessorBeginIf implements PreprocessorConditionExpression {
+  constructor(location: CodeLocation, line: string, activeBranch: boolean | null,
+    readonly tree: ExpressionTree,
+  ) {
+    super(location, tree, line, activeBranch);
+  }
 }
 function ifDirective(
   tokens: readonly PreprocessorToken[], diagnostics: PreprocessorDiagnostic[], activeParent: boolean,
@@ -1371,13 +1454,11 @@ function ifDirective(
   if (!groupExpressions(diagnostics, uri, condition)) return PreprocessorProblem.output(location, line);
   const tree = parseExpression(diagnostics, uri, condition);
   if (!tree) return PreprocessorProblem.output(location, line);
-  console.log(tree);
-  const condLocation = { uri, start: condition.start, end: condition.end };
   if (activeParent) {
     const activeBranch = evaluateCondition(diagnostics, uri, tree);
     if (activeBranch == null) return PreprocessorProblem.output(location, line);
-    return { code: commentOut(line), construct: new PreprocessorIf(location, condLocation, line, activeBranch) };
-  } else return { code: commentOut(line), construct: new PreprocessorIf(location, condLocation, line, null) };
+    return { code: commentOut(line), construct: new PreprocessorIf(location, line, activeBranch, tree) };
+  } else return { code: commentOut(line), construct: new PreprocessorIf(location, line, null, tree) };
 }
 
 /** Represents a valid preprocessor `#ifdef` or `#ifndef` directive. */
