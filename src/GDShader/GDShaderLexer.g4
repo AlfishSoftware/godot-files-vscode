@@ -83,7 +83,7 @@ KEYWORD_TYPE_NUMERIC
 : 'u'? 'int' | 'float'
 | [iu]? 'vec' [234] | 'mat' [234]
 ;
-KEYWORD_TYPE_SAMPLER: [iu]? 'sampler' ('2D' 'Array'? | '3D') | 'samplerCube' 'Array'?;
+KEYWORD_TYPE_SAMPLER: [iu]? 'sampler' ('2D' 'Array'? | '3D') | 'sampler' ('Cube' 'Array'? | 'ExternalOES');
 
 KEYWORD_HINT_SIMPLE
 : 'source_color'
