@@ -197,8 +197,9 @@
 				"path": "./lang.gdshader/gdshader.tmLanguage.json",
 				"embeddedLanguages": {
 					"meta.embedded.block.gdscript": "gdscript",
-					"meta.embedded.block.gdshader": "godot-shader",
 					"meta.embedded.block.csharp": "csharp",
+					"meta.embedded.block.cpp": "cpp",
+					"meta.embedded.block.gdshader": "godot-shader",
 					"meta.embedded.block.jsonc": "jsonc",
 					"meta.embedded.block.json": "json",
 					"meta.embedded.block.text": "plaintext"
@@ -401,6 +402,11 @@
 					"when": "isWorkspaceTrusted && extension == alfish.godot-files"
 				}
 			]
+		},
+		"configurationDefaults": {
+			"[godot-shader]": {
+				"editor.links": false
+			}
 		},
 		"configuration": [
 			{
