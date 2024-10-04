@@ -103,8 +103,6 @@ Parsing of INI-like files is very simplistic (line-based; doesn't use a robust p
 
 VSCode only recognizes a word token properly when hovering or placing the cursor within its first 32 characters. So, for long paths, you only get the tooltip when hovering this initial part of the path.
 
-For some unknown reason, if you edit code inside GDAsset strings, then things like toggling comments, snippets, etc. won't consider the embedded language's context.
-
 ## Support
 
 This software is free and in the [public domain]. It respects your privacy by not collecting any data.  

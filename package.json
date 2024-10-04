@@ -205,6 +205,16 @@
 				}
 			},
 			{
+				"language": "config-definition",
+				"scopeName": "source.gdasset",
+				"path": "./lang.gdasset/gdasset.tmLanguage.json"
+			},
+			{
+				"language": "godot-asset",
+				"scopeName": "source.gdasset",
+				"path": "./lang.gdasset/gdasset.tmLanguage.json"
+			},
+			{
 				"language": "godot-project",
 				"scopeName": "source.gdasset",
 				"path": "./lang.gdasset/gdasset.tmLanguage.json"
@@ -226,16 +236,6 @@
 					"meta.embedded.block.gdshader": "godot-shader",
 					"meta.embedded.block.gdscript": "gdscript"
 				}
-			},
-			{
-				"language": "godot-asset",
-				"scopeName": "source.gdasset",
-				"path": "./lang.gdasset/gdasset.tmLanguage.json"
-			},
-			{
-				"language": "config-definition",
-				"scopeName": "source.gdasset",
-				"path": "./lang.gdasset/gdasset.tmLanguage.json"
 			}
 		],
 		"snippets": [
