@@ -194,7 +194,15 @@
 			{
 				"language": "godot-shader",
 				"scopeName": "source.gdshader.a",
-				"path": "./lang.gdshader/gdshader.tmLanguage.json"
+				"path": "./lang.gdshader/gdshader.tmLanguage.json",
+				"embeddedLanguages": {
+					"meta.embedded.block.gdscript": "gdscript",
+					"meta.embedded.block.gdshader": "godot-shader",
+					"meta.embedded.block.csharp": "csharp",
+					"meta.embedded.block.jsonc": "jsonc",
+					"meta.embedded.block.json": "json",
+					"meta.embedded.block.text": "plaintext"
+				}
 			},
 			{
 				"language": "godot-project",
@@ -206,7 +214,7 @@
 				"scopeName": "source.gdasset",
 				"path": "./lang.gdasset/gdasset.tmLanguage.json",
 				"embeddedLanguages": {
-					"meta.embedded.block.gdshader": "gdshader",
+					"meta.embedded.block.gdshader": "godot-shader",
 					"meta.embedded.block.gdscript": "gdscript"
 				}
 			},
@@ -215,7 +223,7 @@
 				"scopeName": "source.gdasset",
 				"path": "./lang.gdasset/gdasset.tmLanguage.json",
 				"embeddedLanguages": {
-					"meta.embedded.block.gdshader": "gdshader",
+					"meta.embedded.block.gdshader": "godot-shader",
 					"meta.embedded.block.gdscript": "gdscript"
 				}
 			},
