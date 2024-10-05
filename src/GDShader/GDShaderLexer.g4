@@ -97,8 +97,8 @@ KEYWORD_HINT_SIMPLE
 	)
 | 'filter_' ('nearest' | 'linear') ('_mipmap' '_anisotropic'?)?
 | 'repeat_' ('en' | 'dis') 'able'
-| 'instance_index'
 ;
+KEYWORD_HINT_INSTANCE_INDEX: 'instance_index';
 KEYWORD_HINT_RANGE: 'hint_range';
 KEYWORD_HINT_ENUM: 'hint_enum';
 

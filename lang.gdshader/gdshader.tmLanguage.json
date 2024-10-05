@@ -54,6 +54,7 @@
       ],
       "end": "\\*/"
     },
+    
     "bbTag": {
       "patterns": [
         { "include": "#bbTagChar" },
@@ -72,7 +73,18 @@
         { "include": "#bbTagFormattingBold" },
         { "include": "#bbTagFormattingItalic" },
         { "include": "#bbTagFormattingUnderline" },
-        { "include": "#bbTagFormattingStrikethrough" }
+        { "include": "#bbTagFormattingStrikethrough" },
+        { "include": "#bbTagApiParam" },
+        { "include": "#bbTagApiOperator" },
+        { "include": "#bbTagApiAnnotation" },
+        { "include": "#bbTagApiProperty" },
+        { "include": "#bbTagApiConstant" },
+        { "include": "#bbTagApiEnum" },
+        { "include": "#bbTagApiMethod" },
+        { "include": "#bbTagApiConstructor" },
+        { "include": "#bbTagApiSignal" },
+        { "include": "#bbTagApiThemeItem" },
+        { "include": "#bbTagApiClass" }
       ]
     },
     "bbTagChar": {
@@ -354,6 +366,175 @@
       "patterns": [
         { "include": "#bbTag" }
       ]
+    },
+    "bbTagApiParam": {
+      "name": "meta.tag.bb-code.api.param.gdshader",
+      "match": "(\\[)(param)\\s+([a-z_A-Z]\\w*)(\\])",
+      "captures": {
+        "1": { "name": "punctuation.definition.tag.gdshader" },
+        "2": { "name": "entity.name.tag.gdshader" },
+        "3": { "name": "variable.parameter.gdshader" },
+        "4": { "name": "punctuation.definition.tag.gdshader" }
+      }
+    },
+    "bbTagApiOperator": {
+      "name": "meta.tag.bb-code.api.operator.gdshader",
+      "comment": "No idea how to link to `operator []` in BBCode.",
+      "match": "(\\[)(operator)\\s+((?:(?:@[A-Z]|[A-Z_a-z])\\w*\\.)*)(operator (?:unary[-+]|[-+*<>=&|]{2}|[!<>]=|[-+*/!<>%&^|~]))(\\])",
+      "captures": {
+        "1": { "name": "punctuation.definition.tag.gdshader" },
+        "2": { "name": "entity.name.tag.gdshader" },
+        "3": {
+          "patterns": [
+            { "match": "[.]", "name": "punctuation.accessor.gdshader" },
+            { "match": "@?\\b[A-Z_a-z]\\w*\\b", "name": "entity.name.type.class.gdshader" }
+          ]
+        },
+        "4": { "name": "entity.name.function.operator.gdshader" },
+        "5": { "name": "punctuation.definition.tag.gdshader" }
+      }
+    },
+    "bbTagApiAnnotation": {
+      "name": "meta.tag.bb-code.api.annotation.gdshader",
+      "match": "(\\[)(annotation)\\s+((?:(?:@[A-Z]|[A-Z_a-z])\\w*\\.)*)(@[a-z_]\\w*)(\\])",
+      "captures": {
+        "1": { "name": "punctuation.definition.tag.gdshader" },
+        "2": { "name": "entity.name.tag.gdshader" },
+        "3": {
+          "patterns": [
+            { "match": "[.]", "name": "punctuation.accessor.gdshader" },
+            { "match": "@?\\b[A-Z_a-z]\\w*\\b", "name": "entity.name.type.class.gdshader" }
+          ]
+        },
+        "4": { "name": "entity.name.function.decorator.gdshader" },
+        "5": { "name": "punctuation.definition.tag.gdshader" }
+      }
+    },
+    "bbTagApiProperty": {
+      "name": "meta.tag.bb-code.api.property.gdshader",
+      "match": "(\\[)(member)\\s+((?:(?:@[A-Z]|[A-Z_a-z])\\w*\\.)*)([a-z_A-Z]\\w*)(\\])",
+      "captures": {
+        "1": { "name": "punctuation.definition.tag.gdshader" },
+        "2": { "name": "entity.name.tag.gdshader" },
+        "3": {
+          "patterns": [
+            { "match": "[.]", "name": "punctuation.accessor.gdshader" },
+            { "match": "@?\\b[A-Z_a-z]\\w*\\b", "name": "entity.name.type.class.gdshader" }
+          ]
+        },
+        "4": { "name": "variable.other.property.gdshader" },
+        "5": { "name": "punctuation.definition.tag.gdshader" }
+      }
+    },
+    "bbTagApiConstant": {
+      "name": "meta.tag.bb-code.api.constant.gdshader",
+      "match": "(\\[)(constant)\\s+((?:(?:@[A-Z]|[A-Z_a-z])\\w*\\.)*)([a-z_A-Z]\\w*)(\\])",
+      "captures": {
+        "1": { "name": "punctuation.definition.tag.gdshader" },
+        "2": { "name": "entity.name.tag.gdshader" },
+        "3": {
+          "patterns": [
+            { "match": "[.]", "name": "punctuation.accessor.gdshader" },
+            { "match": "@?\\b[A-Z_a-z]\\w*\\b", "name": "entity.name.type.class.gdshader" }
+          ]
+        },
+        "4": { "name": "variable.other.constant.gdshader" },
+        "5": { "name": "punctuation.definition.tag.gdshader" }
+      }
+    },
+    "bbTagApiEnum": {
+      "name": "meta.tag.bb-code.api.enum.gdshader",
+      "match": "(\\[)(enum)\\s+((?:(?:@[A-Z]|[A-Z_a-z])\\w*\\.)*)([a-z_A-Z]\\w*)(\\])",
+      "captures": {
+        "1": { "name": "punctuation.definition.tag.gdshader" },
+        "2": { "name": "entity.name.tag.gdshader" },
+        "3": {
+          "patterns": [
+            { "match": "[.]", "name": "punctuation.accessor.gdshader" },
+            { "match": "@?\\b[A-Z_a-z]\\w*\\b", "name": "entity.name.type.class.gdshader" }
+          ]
+        },
+        "4": { "name": "entity.name.type.enum.gdshader" },
+        "5": { "name": "punctuation.definition.tag.gdshader" }
+      }
+    },
+    "bbTagApiMethod": {
+      "name": "meta.tag.bb-code.api.method.gdshader",
+      "match": "(\\[)(method)\\s+((?:(?:@[A-Z]|[A-Z_a-z])\\w*\\.)*)([a-z_A-Z]\\w*)(\\])",
+      "captures": {
+        "1": { "name": "punctuation.definition.tag.gdshader" },
+        "2": { "name": "entity.name.tag.gdshader" },
+        "3": {
+          "patterns": [
+            { "match": "[.]", "name": "punctuation.accessor.gdshader" },
+            { "match": "@?\\b[A-Z_a-z]\\w*\\b", "name": "entity.name.type.class.gdshader" }
+          ]
+        },
+        "4": { "name": "entity.name.function.member.gdshader" },
+        "5": { "name": "punctuation.definition.tag.gdshader" }
+      }
+    },
+    "bbTagApiConstructor": {
+      "name": "meta.tag.bb-code.api.constructor.gdshader",
+      "match": "(\\[)(constructor)\\s+((?:(?:@[A-Z]|[A-Z_a-z])\\w*\\.)*)([a-z_A-Z]\\w*)(\\])",
+      "captures": {
+        "1": { "name": "punctuation.definition.tag.gdshader" },
+        "2": { "name": "entity.name.tag.gdshader" },
+        "3": {
+          "patterns": [
+            { "match": "[.]", "name": "punctuation.accessor.gdshader" },
+            { "match": "@?\\b[A-Z_a-z]\\w*\\b", "name": "entity.name.type.class.gdshader" }
+          ]
+        },
+        "4": { "name": "entity.name.function.constructor.gdshader" },
+        "5": { "name": "punctuation.definition.tag.gdshader" }
+      }
+    },
+    "bbTagApiSignal": {
+      "name": "meta.tag.bb-code.api.signal.gdshader",
+      "match": "(\\[)(signal)\\s+((?:(?:@[A-Z]|[A-Z_a-z])\\w*\\.)*)([a-z_A-Z]\\w*)(\\])",
+      "captures": {
+        "1": { "name": "punctuation.definition.tag.gdshader" },
+        "2": { "name": "entity.name.tag.gdshader" },
+        "3": {
+          "patterns": [
+            { "match": "[.]", "name": "punctuation.accessor.gdshader" },
+            { "match": "@?\\b[A-Z_a-z]\\w*\\b", "name": "entity.name.type.class.gdshader" }
+          ]
+        },
+        "4": { "name": "variable.other.event.signal.gdshader" },
+        "5": { "name": "punctuation.definition.tag.gdshader" }
+      }
+    },
+    "bbTagApiThemeItem": {
+      "name": "meta.tag.bb-code.api.theme-item.gdshader",
+      "match": "(\\[)(theme_item)\\s+((?:(?:@[A-Z]|[A-Z_a-z])\\w*\\.)*)([a-z_A-Z]\\w*)(\\])",
+      "captures": {
+        "1": { "name": "punctuation.definition.tag.gdshader" },
+        "2": { "name": "entity.name.tag.gdshader" },
+        "3": {
+          "patterns": [
+            { "match": "[.]", "name": "punctuation.accessor.gdshader" },
+            { "match": "@?\\b[A-Z_a-z]\\w*\\b", "name": "entity.name.type.class.gdshader" }
+          ]
+        },
+        "4": { "name": "string.unquoted.theme-item.gdshader" },
+        "5": { "name": "punctuation.definition.tag.gdshader" }
+      }
+    },
+    "bbTagApiClass": {
+      "name": "meta.tag.bb-code.api.class.gdshader",
+      "match": "(\\[)(@?[A-Z]\\w*(?:\\.[A-Z_a-z]\\w*)*)(\\])",
+      "captures": {
+        "1": { "name": "punctuation.definition.tag.gdshader" },
+        "2": {
+          "patterns": [
+            { "match": "[.]", "name": "punctuation.accessor.gdshader" },
+            { "match": "@?\\b[A-Z_a-z]\\w*\\b", "name": "entity.name.type.class.gdshader" }
+          ]
+        },
+        "3": { "name": "punctuation.definition.tag.gdshader" }
+      }
     },
     
     "string": {

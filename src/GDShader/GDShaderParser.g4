@@ -61,10 +61,12 @@ aUniformDef: sharing=KEYWORD_SHARING? 'uniform' aAtomicIntrinsicType (aArraySize
 ;
 aTypeHint
 : hint=KEYWORD_HINT_SIMPLE
-| hint='hint_range' '(' min=aLiteralNumber ',' max=aLiteralNumber (',' step=aLiteralNumber)? ')'
+| hint='instance_index' '(' index=aAbsoluteInteger ')'
+| hint='hint_range' '(' min=aSignedNumber ',' max=aSignedNumber (',' step=aSignedNumber)? ')'
 | hint='hint_enum' '(' (choices+=STRING ',')* choices+=STRING ')'
 ;
-aLiteralNumber: sign='-'? absolute=(FLOAT | INTEGER) | absolute=HEX;
+aAbsoluteInteger: INTEGER | HEX;
+aSignedNumber: sign='-'? absolute=(FLOAT | INTEGER) | absolute=HEX;
 
 aScope: aStatement; // weirdly allows a single aVarDef too, unlike other languages
 
