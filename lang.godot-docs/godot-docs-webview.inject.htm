@@ -80,12 +80,34 @@ document.addEventListener('DOMContentLoaded', () => {
   /**@type {HTMLAnchorElement[]}*/ const versionLinks = [];
   for (let a; a = versionLinksIterator.iterateNext();) versionLinks.push(a);
   for (const a of versionLinks)
-    a.href = a.title = document.baseURI.replace(/(?<=\/%{locale}\/)[^/]+(?=\/)/, a.text);
+    a.href = a.title = otherVersionUri(a.text);
   // Identify language links for hiding
   /**@type {HTMLDListElement | null}*/ const langLinksNode = document.evaluate(
     '//div[contains(@class, "rst-other-versions")]/dl[./dt[text()="Languages"]]',
     document, null, XPathResult.FIRST_ORDERED_NODE_TYPE
   ).singleNodeValue;
   langLinksNode?.classList.add('ide-webview-other-languages');
+  // Show link to stable and latest if not currently on these
+  const switchVer = document.createElement('span'), thisVer = thisVersion();
+  switchVer.innerText = ' \u00A0 • \u00A0 Other versions:';
+  if (thisVer != 'stable') switchVer.append(' ', otherVersionLink('stable'));
+  if (thisVer != 'latest') switchVer.append(' ', otherVersionLink('latest'));
+  document.querySelector(
+    'div.rst-content div[role="navigation"] > ul.wy-breadcrumbs > li:first-child > div:first-child'
+  ).appendChild(switchVer);
+  document.evaluate('//div/div/div[1]/ul/li/div')
 });
+function otherVersionUri(version) {
+  return document.baseURI.replace(/(?<=\/%{locale}\/)[^/]+(?=\/)/, version);
+}
+function otherVersionLink(version) {
+  const href = otherVersionUri(version);
+  const a = document.createElement('a');
+  a.href = href;
+  a.innerText = `[${version}]`;
+  return a;
+}
+function thisVersion() {
+  return document.baseURI.match(/(?<=\/%{locale}\/)[^/]+(?=\/)/)?.[0] ?? '';
+}
 </script><meta http-equiv="Content-Security-Policy" content="%{csp}"/>

@@ -635,7 +635,7 @@ function expansion(
   subMacros.delete(macroIdentifier);
   code = expandCode({ uri: location.uri, code }, subMacros);
   //TODO use another way to show expansion code
-  diagnostics.push({ location, msg: `DEBUG: expands to '${code}'`, id: '' });
+  //diagnostics.push({ location, msg: `DEBUG: expands to '${code}'`, id: '' });
   return { code, construct: new PreprocessorExpansion(location, macro) };
 }
 

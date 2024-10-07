@@ -40,8 +40,8 @@ class GDShaderPreprocessor extends GDShaderPreprocessorBase {
       const location = d.location;
       const range = ideRange(location.start, location.end);
       let severity: DiagnosticSeverity, msg: string;
-      if (/^DEBUG: /.test(d.msg)) { severity = DiagnosticSeverity.Hint; msg = d.msg.substring(7); }
-      else { severity = DiagnosticSeverity.Error; msg = 'Preprocessor Error: ' + d.msg; }
+      //if (/^DEBUG: /.test(d.msg)) { severity = DiagnosticSeverity.Hint; msg = d.msg.substring(7); } else
+      { severity = DiagnosticSeverity.Error; msg = 'Preprocessor Error: ' + d.msg; }
       const diagnostic = new Diagnostic(range, msg, severity);
       diagnostic.source = 'gdshader';
       const errCode = d.id;

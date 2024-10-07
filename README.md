@@ -91,7 +91,7 @@ Each feature will usually stay restricted until the next new feature takes its p
 	- `godot-tools`: Use the *godot-tools* extension to open API docs (offline; requires Godot to be running and connected).
 	- `browser`: Open online documentation URLs in the external browser. Also supports going to the specific Godot version.
 	- `webview`: Load online documentation pages internally within IDE tabs (including tutorials).  
-	Searches and external links are opened in your browser. This advanced viewer supports going to the specific Godot version, and redirecting inherited members to locate their definition in a parent class. There's a few settings for it too. Some features (e.g. translations, user-contributed notes) are not supported in this viewer, but you can use the command to open the page externally.
+	Searches and external links are opened in your browser. This advanced viewer supports redirecting inherited members to locate their definition in a parent class. There's a few settings for it too. Some features (e.g. translations, user-contributed notes) are not supported in this viewer, but you can use the command to open the page externally.
 	
 	![Showcasing a Godot Docs tutorial page on the internal webview](docs/showcase-docs-webview-tutorial.webp)
 

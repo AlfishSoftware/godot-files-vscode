@@ -455,7 +455,7 @@
 						],
 						"enumDescriptions": [
 							"Use your browser to open the documentation URL. Supports going to the specific API version.",
-							"Use a tab in the IDE to open the documentation website. Supports going to the specific API version. Supports redirecting inherited members to their definition.\nNote that any future website changes could potentially break this, so use the browser instead if you notice issues.",
+							"Use a tab in the IDE to open the documentation website. Supports redirecting inherited members to their definition.\nNote that any future website changes could potentially break this, so use the browser instead if you notice issues.",
 							"Use the official godot-tools extension to open API documentation in a tab. Note that this requires the Godot Editor to be running and connected to that extension."
 						]
 					},
