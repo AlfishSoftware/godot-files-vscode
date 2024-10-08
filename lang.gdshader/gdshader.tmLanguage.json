@@ -128,7 +128,7 @@
     },
     "bbTagCodeblockGDScript": {
       "name": "meta.tag.bb-code.codeblock.gdscript.gdshader",
-      "begin": "(\\[)(?:(gdscript)|(codeblock)(?:\\s+(lang)(=)(gdscript)?)?\\s*)(\\])",
+      "begin": "(\\[)(?:(gdscript)|(codeblock)(?:(?:\\s+[\\w-]+)?\\s+(lang)(=)(gdscript)?)?)(?:\\s+[\\w-]+)?\\s*(\\])",
       "end": "(?:^[ \\t]*\\*[ \\t]*)?(\\[/)(\\2)(\\3)()()()(\\])|(?=\\*/)",
       "captures": {
         "1": { "name": "punctuation.definition.tag.gdshader" },
@@ -147,7 +147,7 @@
     },
     "bbTagCodeblockCSharp": {
       "name": "meta.tag.bb-code.codeblock.csharp.gdshader",
-      "begin": "(\\[)(?:(csharp)|(codeblock)\\s+(lang)(=)(csharp)\\s*)(\\])",
+      "begin": "(\\[)(?:(csharp)|(codeblock)(?:\\s+[\\w-]+)?\\s+(lang)(=)(csharp))(?:\\s+[\\w-]+)?\\s*(\\])",
       "end": "(?:^[ \\t]*\\*[ \\t]*)?(\\[/)(\\2)(\\3)()()()(\\])|(?=\\*/)",
       "captures": {
         "1": { "name": "punctuation.definition.tag.gdshader" },
@@ -167,7 +167,7 @@
     },
     "bbTagCodeblockCpp": {
       "name": "meta.tag.bb-code.codeblock.cpp.gdshader",
-      "begin": "(\\[)(codeblock)\\s+(lang)(=)(cpp)\\s*(\\])",
+      "begin": "(\\[)(codeblock)(?:\\s+[\\w-]+)?\\s+(lang)(=)(cpp)(?:\\s+[\\w-]+)?\\s*(\\])",
       "end": "(?:^[ \\t]*\\*[ \\t]*)?(\\[/)(codeblock)()()()(\\])|(?=\\*/)",
       "captures": {
         "1": { "name": "punctuation.definition.tag.gdshader" },
@@ -186,7 +186,7 @@
     },
     "bbTagCodeblockGDShader": {
       "name": "meta.tag.bb-code.codeblock.gdshader.gdshader",
-      "begin": "(\\[)(codeblock)\\s+(lang)(=)(gdshader)\\s*(\\])",
+      "begin": "(\\[)(codeblock)(?:\\s+[\\w-]+)?\\s+(lang)(=)(gdshader)(?:\\s+[\\w-]+)?\\s*(\\])",
       "end": "(?:^[ \\t]*\\*[ \\t]*)?(\\[/)(codeblock)()()()(\\])|(?=\\*/)",
       "captures": {
         "1": { "name": "punctuation.definition.tag.gdshader" },
@@ -205,7 +205,7 @@
     },
     "bbTagCodeblockJSON": {
       "name": "meta.tag.bb-code.codeblock.$5.gdshader",
-      "begin": "(\\[)(codeblock)\\s+(lang)(=)(jsonc?)\\s*(\\])",
+      "begin": "(\\[)(codeblock)(?:\\s+[\\w-]+)?\\s+(lang)(=)(jsonc?)(?:\\s+[\\w-]+)?\\s*(\\])",
       "end": "(?:^[ \\t]*\\*[ \\t]*)?(\\[/)(codeblock)()()()(\\])|(?=\\*/)",
       "captures": {
         "1": { "name": "punctuation.definition.tag.gdshader" },
@@ -224,7 +224,7 @@
     },
     "bbTagCodeblockText": {
       "name": "meta.tag.bb-code.codeblock.text.gdshader",
-      "begin": "(\\[)(codeblock)\\s+(lang)(=)(text)\\s*(\\])",
+      "begin": "(\\[)(codeblock)(?:\\s+[\\w-]+)?\\s+(lang)(=)(text)(?:\\s+[\\w-]+)?\\s*(\\])",
       "end": "(?:^[ \\t]*\\*[ \\t]*)?(\\[/)(codeblock)()()()(\\])|(?=\\*/)",
       "captures": {
         "1": { "name": "punctuation.definition.tag.gdshader" },
@@ -238,7 +238,7 @@
     },
     "bbTagCodeblock": {
       "name": "meta.tag.bb-code.codeblock.$5.gdshader",
-      "begin": "(\\[)(codeblock)\\s+(lang)(=)(\\w[\\w-]*)\\s*(\\])",
+      "begin": "(\\[)(codeblock)(?:\\s+[\\w-]+)?\\s+(lang)(=)(\\w[\\w-]*)(?:\\s+[\\w-]+)?\\s*(\\])",
       "end": "(?:^[ \\t]*\\*[ \\t]*)?(\\[/)(codeblock)()()()(\\])|(?=\\*/)",
       "captures": {
         "1": { "name": "punctuation.definition.tag.gdshader" },
@@ -258,12 +258,12 @@
     "bbTagInterceptCommentLineSlash": {
       "name": "comment.line.double-slash.gdshader",
       "begin": "//",
-      "end": "$|(?=\\*/|\\[/(?:codeblock|csharp|gdshader)\\])"
+      "end": "$|(?=\\*/|\\[/(?:codeblock|csharp)\\])"
     },
     "bbTagInterceptCommentBlock": {
       "name": "comment.block.gdshader",
       "begin": "/(?=\\*)",
-      "end": "(?=\\*/|\\[/(?:codeblock|csharp|gdshader)\\])"
+      "end": "(?=\\*/|\\[/(?:codeblock|csharp)\\])"
     },
     "bbTagFormatting": {
       "name": "meta.tag.bb-code.formatting.$2.gdshader",
