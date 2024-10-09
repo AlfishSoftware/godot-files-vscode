@@ -5,7 +5,7 @@ import {
   DocumentFilter, DocumentSymbolProvider, DefinitionProvider, HoverProvider, DocumentColorProvider, InlayHintsProvider,
 } from 'vscode';
 import GDAsset, { GDResource } from './GDAsset';
-import { supported } from '../ExtensionEntry';
+import GodotFiles from '../ExtensionEntry';
 import { resPathOfDocument, locateResPath } from '../GodotProject';
 import { apiDocs } from '../GodotDocs';
 import { resPathPreview } from '../GodotAssetPreview';
@@ -378,7 +378,7 @@ export default class GDAssetProvider implements
     const settings = workspace.getConfiguration('godotFiles', document);
     const clarifyVectors = settings.get<boolean>('clarifyArrays.vector')!;
     const clarifyColors = settings.get<boolean>('clarifyArrays.color')!;
-    if (!supported || !clarifyVectors && !clarifyColors) return null;
+    if (!GodotFiles.supported || !clarifyVectors && !clarifyColors) return null;
     const gdasset = await this.parsedGDAsset(document, token);
     if (!gdasset || token.isCancellationRequested) return null;
     const hints: InlayHint[] = [];

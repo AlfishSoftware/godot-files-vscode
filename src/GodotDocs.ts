@@ -4,7 +4,7 @@ import {
   WebviewPanel, CustomDocument, CustomDocumentOpenContext, CustomReadonlyEditorProvider,
 } from 'vscode';
 import { isOnline } from './+cross/Platform';
-import { ctx, supported } from './ExtensionEntry';
+import GodotFiles, { ctx } from './ExtensionEntry';
 import { GodotVersion, godotVersionOfDocument, godotVersionOfProject } from './GodotProject';
 const toUTF8 = new TextDecoder();
 
@@ -101,7 +101,7 @@ export async function apiDocs(
   document: TextDocument, className: string, memberName: string, token: CancellationToken | null
 ) {
   const config = workspace.getConfiguration('godotFiles', document);
-  const viewer = supported ? config.get<string>('documentation.viewer')! : 'godot-tools';
+  const viewer = GodotFiles.supported ? config.get<string>('documentation.viewer')! : 'godot-tools';
   if (viewer != 'godot-tools' && await isOnline(onlineDocsHost)) {
     // We could get locale properly, but it seems other locales don't support every version consistently.
     // Also the API will probably still be in english even in those locales.
@@ -177,7 +177,8 @@ async function loadDocsInTab(urlPath: string, urlFragment: string, dotnet: boole
   if (cachedPage) docsPageCache.delete(urlPath);
   let docsPage;
   try {
-    if (!supported) throw new Error('No early access.', { cause: { pageMsg: 'Restricted to early access.' } });
+    if (!GodotFiles.supported)
+      throw new Error('No early access.', { cause: { pageMsg: 'Restricted to early access.' } });
     docsPage = cachedPage ?? await fetchDocsPage(urlPath, token);
   } catch (e) {
     const pageMsg = ((e as Error)?.cause as { pageMsg?: string; })?.pageMsg;
@@ -323,7 +324,7 @@ export async function openApiDocs() {
       ?? (workspaceFolder ? await godotVersionOfProject(workspaceFolder.uri) : null);
   }
   const viewer = workspace.getConfiguration('godotFiles.documentation', configScope).get<string>('viewer')!;
-  const godotTools = !supported || viewer == 'godot-tools';
+  const godotTools = !GodotFiles.supported || viewer == 'godot-tools';
   if (godotTools || !await isOnline(onlineDocsHost)) {
     if (extensions.getExtension('geequlim.godot-tools')?.isActive)
       await commands.executeCommand('godotTools.listGodotClasses');

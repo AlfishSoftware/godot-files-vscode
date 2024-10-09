@@ -13,7 +13,7 @@ import GDShaderPreprocessorBase, {
   PreprocessorDirective, PreprocessorInclude, PreprocessorDefine,
 } from './GDShaderPreprocessor';
 import * as gds from './.antlr/GDShaderParser';
-import { supported } from '../ExtensionEntry';
+import GodotFiles, { refuseGDShaderOfferUntil, openSponsorUrl } from '../ExtensionEntry';
 const toUTF8 = new TextDecoder();
 
 function ideRange(start: CodePosition, end: CodePosition): Range {
@@ -78,6 +78,9 @@ function mapRange(length: number, loc: MappedLocation): Range {
 }
 
 const languageIdGodotShader = 'godot-shader';
+const ms1Day = 86400000; // 1000 * 60 * 60 * 24
+const refusedGDShaderOfferUntil = GodotFiles.refusedGDShaderOfferUntil;
+let offerGDShader = Date.now() > refusedGDShaderOfferUntil;
 export default class GDShaderProvider implements
   DocumentSymbolProvider
 {
@@ -93,13 +96,33 @@ export default class GDShaderProvider implements
   }
   models: { [uri: string]: GDShaderModel | undefined; } = {};
   async provideDocumentSymbols(document: TextDocument, _token: CancellationToken): Promise<DocumentSymbol[]> {
-    if (!supported) return [];
+    const config = workspace.getConfiguration('godotFiles');
+    if (!GodotFiles.supported) {
+      if (offerGDShader && config.get('_debug_.poor') != true) {
+        offerGDShader = false;
+        const neverRefusedBefore = refusedGDShaderOfferUntil == -Infinity;
+        const feature = 'GDShader language features (error squiggles, outline, fading out inactive #if regions)';
+        const m = neverRefusedBefore
+          ? `Do you need ${feature}?`
+          : 'This extension is under risk of being abandoned... 😢 Development cannot continue without donations. '
+          + `If you can, please contribute to the crowdfunding, to get ${feature}, among other things!`;
+        const ok = neverRefusedBefore ? 'See how to enable' : 'Maybe';
+        const no = neverRefusedBefore ? 'Not today' : 'Not this week';
+        window.showInformationMessage(m, ok, no).then(async (r) => {
+          if (r == ok) await openSponsorUrl();
+          else if (r == no) {
+            const refuseUntil = neverRefusedBefore ? ms1Day : ms1Day * 7;
+            await refuseGDShaderOfferUntil(Date.now() + refuseUntil);
+          }
+        });
+      }
+      return [];
+    }
     const uri = document.uri.toString(true);
     const entryCode = document.getText();
     // Preprocess code
     const macros: MacrosDefined = new Map();
-    const predefined: undefined | { [m: string]: string | string[]; } =
-      workspace.getConfiguration('godotFiles').get('_debug_.godotShaderPreDefined');
+    const predefined: undefined | { [m: string]: string | string[]; } = config.get('_debug_.godotShaderPreDefined');
     if (predefined) for (const m in predefined) {
       const d = predefined[m] ?? '';
       const parameterNames = typeof d == 'string' ? null : d.slice(0, d.length - 1);

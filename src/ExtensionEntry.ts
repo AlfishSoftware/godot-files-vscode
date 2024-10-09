@@ -1,17 +1,30 @@
 // Extension Entry
-import { workspace, window, commands, languages, ExtensionContext, Uri } from 'vscode';
+
+// imports that don't depend on this extension at all
+import { workspace, window, commands, languages, env, ExtensionContext, Uri } from 'vscode';
 import { sha512 } from './+cross/Platform';
 import * as pc_Platform from './@pc/Platform';
 const rmSync = pc_Platform.rmSync ?? (() => {});
-import GDAssetProvider from './GDAsset/GDAssetProvider';
-import GDShaderProvider from './GDShader/GDShaderProvider';
-import {
-  GodotDocumentationProvider, openApiDocs, activeDocsFindNext, activeDocsFindPrevious,
-  activeDocsGoBack, activeDocsGoForward, activeDocsReload, activeDocsOpenInBrowser,
-} from './GodotDocs';
 
 export let ctx: ExtensionContext;
-export let supported = false;
+let supported = false;
+export default {
+  get supported() { return supported; },
+  get refusedGDShaderOfferUntil() {
+    return ctx.globalState.get<number>(gs_refusedGDShaderOfferUntil) ?? -Infinity;
+  },
+};
+export async function refuseGDShaderOfferUntil(timestamp: number) {
+  await ctx.globalState.update(gs_refusedGDShaderOfferUntil, timestamp);
+}
+export async function openSponsorUrl() {
+  const url: string = ctx.extension.packageJSON.sponsor.url;
+  if (!await env.openExternal(Uri.parse(url, true)))
+    window.showErrorMessage(`Could not open the URL in the browser: ${url}`);
+}
+
+const gs_supportKey = 'supportKey';
+const gs_refusedGDShaderOfferUntil = 'refusedGDShaderOfferUntil';
 
 /** The extension entry point, which runs when the extension is enabled for the IDE window. */
 export async function activate(context: ExtensionContext) {
@@ -20,13 +33,18 @@ export async function activate(context: ExtensionContext) {
     return;
   }
   ctx = context;
-  // cleanup garbage from older versions; no need to await
-  if (ctx.storageUri) del(ctx.storageUri);
-  del(ctx.globalStorageUri);
   ctx.globalState.setKeysForSync([]);
   // check if supporting
-  if (ctx.globalState.get('supportKey') == checksum) supported = true;
+  if (ctx.globalState.get<string>(gs_supportKey) == checksum) supported = true;
   ctx.subscriptions.push(commands.registerCommand('godotFiles.unlockEarlyAccess', unlockEarlyAccess));
+  
+  // imports that may depend on this extension's state
+  const { default: GDAssetProvider } = await import('./GDAsset/GDAssetProvider');
+  const { default: GDShaderProvider } = await import('./GDShader/GDShaderProvider');
+  const {
+    GodotDocumentationProvider, openApiDocs, activeDocsFindNext, activeDocsFindPrevious,
+    activeDocsGoBack, activeDocsGoForward, activeDocsReload, activeDocsOpenInBrowser,
+  } = await import('./GodotDocs');
   // register multi-platform providers
   ctx.subscriptions.push(
     window.registerCustomEditorProvider(GodotDocumentationProvider.viewType, new GodotDocumentationProvider(), {
@@ -51,17 +69,11 @@ export async function activate(context: ExtensionContext) {
   new GDShaderProvider(ctx);
 }
 
-const deleteRecursive = { recursive: true, useTrash: false };
-/** Permanently delete a file or an entire folder. */
-async function del(uri: Uri) {
-  try { await workspace.fs.delete(uri, deleteRecursive); } catch { /* didn't exist */ }
-}
-
 async function unlockEarlyAccess() {
   if (supported) {
     if (await window.showInformationMessage('Early access is already enabled.', 'OK', 'Disable') == 'Disable') {
       supported = false;
-      ctx.globalState.update('supportKey', undefined);
+      await ctx.globalState.update(gs_supportKey, undefined);
     }
     return;
   }
@@ -71,15 +83,20 @@ async function unlockEarlyAccess() {
     password: true,
     prompt: 'Check the README page for more info.'
   });
-  if (!password) return;
+  const ok = 'Learn more';
+  if (!password) {
+    if (await window.showInformationMessage('You can donate to receive a password.', ok) == ok) await openSponsorUrl();
+    return;
+  }
   const hash = await sha512(password);
   if (hash != checksum) {
-    window.showErrorMessage(
-      'Incorrect password. Paste it exactly like you received when donating.');
+    const msg = 'Incorrect password. Paste it exactly like you received when donating.';
+    if (await window.showErrorMessage(msg, ok) == ok) await openSponsorUrl();
     return;
   }
   supported = true;
-  ctx.globalState.update('supportKey', hash);
+  await ctx.globalState.update(gs_supportKey, hash);
+  await ctx.globalState.update(gs_refusedGDShaderOfferUntil, undefined);
   window.showInformationMessage(
     'Thank you for the support! ❤️\nEarly access is now unlocked, just for you. 😊');
 }
