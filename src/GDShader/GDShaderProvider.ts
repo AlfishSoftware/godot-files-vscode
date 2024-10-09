@@ -2,7 +2,7 @@
 import {
   languages, window, workspace, Uri, FileType, ExtensionContext, CancellationToken, Range,
   TextDocument, DocumentSymbol, SymbolKind, DocumentFilter, DocumentSymbolProvider,
-  Diagnostic, DiagnosticSeverity, DiagnosticRelatedInformation, DecorationRangeBehavior,
+  Diagnostic, DiagnosticSeverity, DiagnosticRelatedInformation, DecorationRangeBehavior, TextEditorDecorationType,
 } from 'vscode';
 import { locateResPath } from '../GodotProject';
 import GDShaderModel from './GDShaderModel';
@@ -64,11 +64,12 @@ class GDShaderPreprocessor extends GDShaderPreprocessorBase {
 }
 const preprocessor = new GDShaderPreprocessor();
 
-const inactiveOpacity = '0.55'; //: number | undefined = settings.inactiveRegionOpacity;
-const inactiveDecoration = window.createTextEditorDecorationType({
+let inactiveOpacity: number;
+const inactiveStyle = {
   rangeBehavior: DecorationRangeBehavior.OpenOpen,
-  opacity: inactiveOpacity,
-});
+  opacity: '',
+};
+let inactiveDecoration: TextEditorDecorationType;
 
 function mapRange(length: number, loc: MappedLocation): Range {
   const { inputPosition, replacement, unit } = loc;
@@ -131,6 +132,13 @@ export default class GDShaderProvider implements
     }
     const unit = await preprocessor.preprocess({ uri, code: entryCode }, macros);
     // Mark inactive ranges
+    let newOpacity = Math.max(0, Math.min(1, config.get<number>('inactiveRegionOpacity', 0.55)));
+    if (isNaN(newOpacity)) newOpacity = 0.55;
+    if (newOpacity != inactiveOpacity) {
+      inactiveOpacity = newOpacity;
+      inactiveStyle.opacity = inactiveOpacity.toFixed(3);
+      inactiveDecoration = window.createTextEditorDecorationType(inactiveStyle);
+    }
     const inactiveRanges = unit.listInactiveRanges().map(r => ideRange(r.start, r.end));
     GDShaderPreprocessor.updateInactiveRegions(document, inactiveRanges);
     // Parse model
