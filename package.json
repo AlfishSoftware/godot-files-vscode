@@ -525,13 +525,35 @@
 			{
 				"title": "GDShader",
 				"properties": {
+					"godotFiles.shader.analysisLevel": {
+						"order": 0,
+						"scope": "language-overridable",
+						"type": "string",
+						"default": "complete",
+						"markdownDescription": "Specify how far the code is analyzed. This will influence dependent features to determine what you can get, such as the type (and amount) of diagnostics (like errors and warnings), which symbols are shown on outline, etc.\n\n🔒 Applies only to GDShader language features, which is exclusive to [early access](command:godotFiles.unlockEarlyAccess). You can restrict this to disable the notification that more features are available on early access.",
+						"enum": [
+							"none",
+							"preprocessor",
+							"lexical",
+							"syntactical",
+							"complete"
+						],
+						"enumDescriptions": [
+							"Disable all programmatic analysis on the code. You'll still get syntax coloring.",
+							"Do only preprocessor analysis on the code. Only features that depend on just the preprocessor will be available, such as preprocessor errors, preprocessor sourcemapping and preprocessor symbols on outline.",
+							"Run the preprocessor and the lexer. Like above, but it will also give you lexical errors.",
+							"Run the preprocessor, then lexer and parser. Like above, but it will also give you syntax errors.",
+							"Run all analyzers available, thus enabling all features that you can get. Currently the same as syntactical."
+						]
+					},
 					"godotFiles.inactiveRegionOpacity": {
+						"order": 1,
 						"scope": "language-overridable",
 						"type": "number",
 						"minimum": 0,
 						"default": 0.55,
 						"maximum": 1,
-						"markdownDescription": "Control transparency of code within inactive regions, such as inside `#if…#endif` directives that evaluate to false.\n\n🔒 Applies only to GDShader language features, which is exclusive to [early access](command:godotFiles.unlockEarlyAccess)."
+						"markdownDescription": "Control transparency of code within inactive regions, such as inside `#if…#endif` directives that evaluate to false. This feature requires an analysis level of `preprocessor` or higher.\n\n🔒 Applies only to GDShader language features, which is exclusive to [early access](command:godotFiles.unlockEarlyAccess)."
 					}
 				}
 			}

@@ -78,10 +78,14 @@ function mapRange(length: number, loc: MappedLocation): Range {
   return ideRange(a, b);
 }
 
+type AnalysisLevel = 'none' | 'preprocessor' | 'lexical' | 'syntactical' | 'complete';
+
 const languageIdGodotShader = 'godot-shader';
+
 const ms1Day = 86400000; // 1000 * 60 * 60 * 24
 const refusedGDShaderOfferUntil = GodotFiles.refusedGDShaderOfferUntil;
 let offerGDShader = Date.now() > refusedGDShaderOfferUntil;
+
 export default class GDShaderProvider implements
   DocumentSymbolProvider
 {
@@ -98,11 +102,16 @@ export default class GDShaderProvider implements
   models: { [uri: string]: GDShaderModel | undefined; } = {};
   async provideDocumentSymbols(document: TextDocument, _token: CancellationToken): Promise<DocumentSymbol[]> {
     const config = workspace.getConfiguration('godotFiles');
+    const analysisLevel = config.get<AnalysisLevel>('shader.analysisLevel', 'complete');
+    if (analysisLevel == 'none') {
+      this.diagnostics.set(document.uri, []);
+      return [];
+    }
     if (!GodotFiles.supported) {
-      if (offerGDShader && config.get('_debug_.poor') != true) {
+      if (offerGDShader) {
         offerGDShader = false;
         const neverRefusedBefore = refusedGDShaderOfferUntil == -Infinity;
-        const feature = 'GDShader language features (error squiggles, outline, fading out inactive #if regions)';
+        const feature = 'GDShader language features (error squiggles, outline, mark inactive #if regions)';
         const m = neverRefusedBefore
           ? `Do you need ${feature}?`
           : 'This extension is under risk of being abandoned... 😢 Development cannot continue without donations. '
@@ -117,6 +126,7 @@ export default class GDShaderProvider implements
           }
         });
       }
+      this.diagnostics.set(document.uri, []);
       return [];
     }
     const uri = document.uri.toString(true);
@@ -131,6 +141,12 @@ export default class GDShaderProvider implements
       macros.set(m, { parameterNames, body });
     }
     const unit = await preprocessor.preprocess({ uri, code: entryCode }, macros);
+    // Report preprocessor diagnostics
+    const documentDiagnostics = GDShaderPreprocessor.ideDiagnostics(unit.diagnostics);
+    // Report preprocessor symbols
+    const symbols: DocumentSymbol[] = [];
+    const langSpec = new GDShaderLanguageSpec(unit);
+    langSpec.addPreprocessorSymbols(symbols);
     // Mark inactive ranges
     let newOpacity = Math.max(0, Math.min(1, config.get<number>('inactiveRegionOpacity', 0.55)));
     if (isNaN(newOpacity)) newOpacity = 0.55;
@@ -141,11 +157,15 @@ export default class GDShaderProvider implements
     }
     const inactiveRanges = unit.listInactiveRanges().map(r => ideRange(r.start, r.end));
     GDShaderPreprocessor.updateInactiveRegions(document, inactiveRanges);
+    // Finish preprocessor
+    if (analysisLevel == 'preprocessor') {
+      this.diagnostics.set(document.uri, documentDiagnostics);
+      return symbols;
+    }
     // Parse model
     const { preprocessedCode } = unit;
-    const model = this.models[uri] = new GDShaderModel(preprocessedCode);
+    const model = this.models[uri] = new GDShaderModel(preprocessedCode, analysisLevel != 'lexical');
     // Report diagnostics
-    const documentDiagnostics = GDShaderPreprocessor.ideDiagnostics(unit.diagnostics);
     diagnosticsFromGrammar(model, (d, errType, length, msg) => {
       const outputPosition = unit.outputOffsetAt(d.line, d.column);
       const rootLoc = unit.sourcemap(outputPosition);
@@ -162,12 +182,11 @@ export default class GDShaderProvider implements
       diagnostic.relatedInformation = info;
       return diagnostic;
     }, documentDiagnostics);
+    // Report parser symbols
+    const { tree } = model;
+    if (tree) langSpec.addParserSymbols(tree, symbols);
+    // Finish parser
     this.diagnostics.set(document.uri, documentDiagnostics);
-    // Build outline
-    const symbols: DocumentSymbol[] = [];
-    const langSpec = new GDShaderLanguageSpec(unit);
-    langSpec.addPreprocessorSymbols(symbols);
-    langSpec.addParserSymbols(model.tree, symbols);
     return symbols;
   }
 }
@@ -217,7 +236,7 @@ class GDShaderLanguageSpec extends LanguageSpec {
       if (directive.parameters && directive.parameters.length)
         s.children = directive.parameters.map(p => {
           const r = ideRange(p.start, p.end);
-          return new DocumentSymbol(p.code, 'const in', SymbolKind.Variable, r, r);
+          return new DocumentSymbol(p.code, 'in #define', SymbolKind.Variable, r, r);
         });
       return s;
     }
