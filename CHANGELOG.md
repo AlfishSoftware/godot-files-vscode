@@ -1,7 +1,7 @@
 # Changelog
 <!-- Types of changes: Security, Removed, Deprecated, Changed, Added, Fixed -->
 
-Features currently in [early access](README.md#early-access) are marked with 🔒 as they're restricted to supporters.  
+Features currently in early access are marked with 🔒 as they're restricted to [supporters].  
 Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're unlocked for everyone since that version.
 
 ## [0.1.0] - 2024-10-14
@@ -159,3 +159,4 @@ Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're
 [0.0.3]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.0.2...v0.0.3
 [0.0.2]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.0.1...v0.0.2
 [0.0.1]: https://github.com/AlfishSoftware/godot-files-vscode/compare/2301cc35...v0.0.1
+[supporters]: https://alfish.itch.io/godot-files-vscode
