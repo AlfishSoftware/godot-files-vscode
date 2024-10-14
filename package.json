@@ -1,7 +1,7 @@
 {
 	"publisher": "alfish",
 	"name": "godot-files",
-	"version": "0.0.11",
+	"version": "0.1.0",
 	"license": "Unlicense",
 	"displayName": "Godot Files",
 	"description": "Better syntax-coloring and additional features for some files supported by Godot Editor.",
@@ -500,7 +500,7 @@
 						"markdownDescription": "Show inline color decorators on `Color(…)` values."
 					},
 					"godotFiles.inlineColors.array": {
-						"order": 100,
+						"order": 101,
 						"scope": "language-overridable",
 						"type": "boolean",
 						"default": true,
@@ -511,14 +511,14 @@
 						"scope": "language-overridable",
 						"type": "boolean",
 						"default": true,
-						"markdownDescription": "Show implied parentheses around each vector in a packed array.\n\n🔒 Exclusive to [early access](command:godotFiles.unlockEarlyAccess)."
+						"description": "Show implied parentheses around each vector in a packed array."
 					},
 					"godotFiles.clarifyArrays.color": {
-						"order": 200,
+						"order": 201,
 						"scope": "language-overridable",
 						"type": "boolean",
 						"default": false,
-						"markdownDescription": "Show implied parentheses around each color in a packed array.\n\n🔒 Exclusive to [early access](command:godotFiles.unlockEarlyAccess)."
+						"description": "Show implied parentheses around each color in a packed array."
 					}
 				}
 			},

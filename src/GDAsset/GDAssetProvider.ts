@@ -5,7 +5,6 @@ import {
   DocumentFilter, DocumentSymbolProvider, DefinitionProvider, HoverProvider, DocumentColorProvider, InlayHintsProvider,
 } from 'vscode';
 import GDAsset, { GDResource } from './GDAsset';
-import GodotFiles from '../ExtensionEntry';
 import { resPathOfDocument, locateResPath } from '../GodotProject';
 import { apiDocs } from '../GodotDocs';
 import { resPathPreview } from '../GodotAssetPreview';
@@ -365,7 +364,7 @@ export default class GDAssetProvider implements
     if (token.isCancellationRequested) return null;
     if (workspace.getConfiguration('godotFiles', document).get<boolean>('hover.previewResource')!) {
       // show link to res:// path if available
-      if (!/^(?:user|uid):\/\//.test(resPath)) { // Locating user:// or uid:// paths is not supported yet
+      if (!/^(?:user|uid):\/\//.test(resPath)) { // Cannot locate user:// or uid:// paths
         const mdPreview = await resPathPreview(resPath, document, token);
         if (token.isCancellationRequested) return null;
         if (mdPreview) hover.push(mdPreview);
@@ -378,7 +377,7 @@ export default class GDAssetProvider implements
     const settings = workspace.getConfiguration('godotFiles', document);
     const clarifyVectors = settings.get<boolean>('clarifyArrays.vector')!;
     const clarifyColors = settings.get<boolean>('clarifyArrays.color')!;
-    if (!GodotFiles.supported || !clarifyVectors && !clarifyColors) return null;
+    if (!clarifyVectors && !clarifyColors) return null;
     const gdasset = await this.parsedGDAsset(document, token);
     if (!gdasset || token.isCancellationRequested) return null;
     const hints: InlayHint[] = [];

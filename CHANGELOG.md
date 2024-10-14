@@ -4,6 +4,26 @@
 Features currently in [early access](README.md#early-access) are marked with 🔒 as they're restricted to supporters.  
 Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're unlocked for everyone since that version.
 
+## [0.1.0] - 2024-10-14
+### Changed
+- GDShader: Disable url detection by default, since in BBCode it incorrectly includes the `[/url]` end tag too.
+### Added
+- 🔒 GDShader: Standalone preprocessor for IDEs, with sourcemapping for ranges within `#include` and macro expansions.
+- 🔒 GDShader: Preprocessor error diagnostics.
+- 🔒 GDShader: Preprocessor symbol definitions in outline and breadcrumbs.
+- 🔒 GDShader: Preprocessor marking inactive `#if…#endif` regions with less opacity.
+- 🔒 GDShader: Lexer and parser with ANTLR4 grammars, also independent from Godot Editor.
+- 🔒 GDShader: Lexical and syntactical error diagnostics.
+- 🔒 GDShader: Syntactical symbol definitions in outline and breadcrumbs.
+- GDShader: Add syntax coloring for documentation comment blocks and BBCode tags, including embedded code support.
+- GDShader: Add `hint_enum` and `samplerExternalOES` type keyword to syntax coloring.
+- Docs Webview: Add links to `stable` and `latest` versions, since it no longer supports the panel below the sidebar.
+### Fixed
+- GDAsset: Fix issue of embedded languages not being recognized for toggling comments and snippets.
+- GDAsset: Fix outline symbol detail to prioritize `instance` and `instance_placeholder` over `index`.
+- GDShader: Fix syntax coloring for concatenation token and macro parameter commas.
+- Fix potential null-safety bugs from out-of-bounds indexing by using stricter checks.
+
 ## [0.0.10] - 2024-07-30
 ### Changed
 - Docs: Use a simpler URI in IDE tabs.  
@@ -65,7 +85,7 @@ Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're
 ## [0.0.6] - 2023-10-02
 ### Added
 - ***v0.0.8*** 🔓 GDAsset: Inline color decorators on `Color(…)` values and within arrays.
-- 🔒 GDAsset: Inlay hints surrounding items with implied parentheses in packed arrays of vectors or colors.
+- ***v0.1.0*** 🔓 GDAsset: Inlay hints surrounding items with implied parentheses in packed arrays of vectors or colors.
 ### Fixed
 - GDAsset: Add `.woff2` as a supported font preview format.
 
@@ -127,7 +147,8 @@ Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're
 - GDAsset: Image and font previews by hovering references and paths.
 - GDAsset: Hover resource references to show GDScript preload code.
 
-[Unreleased]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.0.10...develop
+[Unreleased]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.1.0...develop
+[0.1.0]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.0.10...v0.1.0
 [0.0.10]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.0.9...v0.0.10
 [0.0.9]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.0.8...v0.0.9
 [0.0.8]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.0.7...v0.0.8
