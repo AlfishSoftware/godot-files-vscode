@@ -1,21 +1,21 @@
 # Godot Files
 
-Better syntax-coloring and additional features for some files supported by Godot Editor.  
+Basic GDShader support, better syntax-coloring and additional features for some Godot files.  
 This is *not* meant to replace the official [godot-tools] extension, but to improve on its supported files. This plugin is designed so it can work alongside it, but it's completely independent. If you're using GDScript, you'll likely want to install godot-tools too; if not, just this one is enough.
+
+[godot-tools]: https://github.com/godotengine/godot-vscode-plugin
 
 > 🥺 Please help prevent this extension from being abandoned by [donating to the crowdfunding][donate]!  
 > 🔑 With a donation, you can **unlock early access and other rewards**! More info below.
 
-[godot-tools]: https://github.com/godotengine/godot-vscode-plugin
+![Showcasing various features, like GDShader errors, hovering, navigating and documentation pages](docs/showcase-all.png "* Features showcased here include those restricted to early access.")
 
 **Compatibility**:
 
 - Godot: 3.x LTS and 4.0 to 4.x; official and flathub builds
 - godot-tools: v2.3.0
 
-This extension also works on browser IDEs ([vscode.dev](https://vscode.dev) and [github.dev](https://github.dev)), with limited functionality.
-
-![Screenshot of godot-files extension for VSCode on a tscn file, showing syntax-coloring, outline and hover preview feature](docs/showcase-gdasset.webp)
+🌐 This extension also works on browser IDEs ([vscode.dev](https://vscode.dev) and [github.dev](https://github.dev)), with limited functionality.
 
 ## Features
 Features are supported on these languages:
@@ -36,13 +36,14 @@ Includes better (more specific) grammars for syntax-coloring on all supported te
 
 #### Embedded Code
 Syntax-coloring of valid embedded code is supported.
-- **GDShader**: in `codeblock`-type BBCode tags in documentation comments (including `[gdscript]` and `[csharp]` tags).  
-	Note that you should always put the inner code in its own lines verbatim, without the leading `*`, or any extra leading indentation.
 - **GDAsset**: in asset strings for GDScript and GDShader resources.  
 	😎 It even handles both inner and outer languages' escape sequences gracefully, and colors them differently:  
 	![Showcasing how embedded code escape sequences are handled gracefully](docs/showcase-embedded-code-escapes.webp)
+- **GDShader**: in `codeblock`-type BBCode tags in documentation comments (including `[gdscript]` and `[csharp]` tags).  
+	Note that you should always put the inner code in its own lines verbatim, without the leading `*`, or any extra leading indentation.  
+	![Showcasing how you should embed code in GDShader docs BBCode](docs/showcase-gdshader-docs-embed-code.webp)
 
-The inner code doesn't break the container code syntax, as long as it's valid code (without partial contructs like unterminated strings, unterminated comments or mismatched brackets). Some cases are being handled, but it's not viable to try to safeguard against every possible case of invalid code; this is a limitation of the IDE.
+The inner code doesn't break the container code syntax, as long as it's valid code (without partial contructs like unterminated strings/comments, mismatched brackets, etc). Some cases are being handled, but it's not viable to try to safeguard against every possible case of invalid code; this is a limitation of the IDE.
 
 ### Document Symbols
 Symbol definitions are provided for:
@@ -55,15 +56,16 @@ The IDE uses this in many places, like the **Outline** view, in **Breadcrumbs** 
 ### Features in GDAsset files
 These features are supported in textual Scene and Resource files.
 
-- Navigate to definition of `SubResource` and `ExtResource` references, and to resource paths.  
+- **Navigate to the definition** of `SubResource` and `ExtResource` references, and to resource paths.  
 	![Showcasing navigate to definition](docs/showcase-goto-definition.png)  
 	Going to the definition of a built-in engine type (on `type="SomeType"` or `some_field = SomeType(...)`) will open its Godot API Documentation. This will be handled by the *godot-tools* extension, unless you're online and enabled [early access][donate] (see below).
 
-- Hover resource references or paths to show code for loading in GDScript (`preload(…)`, `load(…)` or `FileAccess.open(…)`).  
+- **See GDScript code for loading** a resource reference or path by hovering (`preload(…)`, `load(…)` or `FileAccess.open(…)`).  
 	![Showcasing code for loading when previewing user path](docs/showcase-user-path-load.webp)
 
-- Hover image and font resource paths or their `ExtResource` references to preview them directly.  
-	🔧 You can disable resource previews when hovering with the setting `godotFiles.hover.previewResource`.
+- **Preview images and fonts** by hovering their resource paths or `ExtResource` references.  
+	🔧 You can disable resource previews when hovering with the setting `godotFiles.hover.previewResource`.  
+	💻 On browser IDEs, this may only work for small files (approx. 74kB or less).
 	
 	![Showcasing image preview](docs/showcase-image-preview.png)  
 	✳️ Images supported: SVG, PNG, WebP, JPEG, BMP, GIF.
@@ -72,9 +74,10 @@ These features are supported in textual Scene and Resource files.
 	![Showcasing font preview](docs/showcase-font-preview.webp)  
 	✳️ Fonts supported: TTF, OTF, WOFF, WOFF2.
 
-- Hover references to any (external) resource file to preview its thumbnail as generated by the Godot Editor.  
+- **Preview the thumbnail of a resource file** as generated by the Godot Editor by hovering its external reference.  
 	Godot doesn't need to be running because it updates thumbnail files into the cache whenever a resource is saved.  
 	🔧 The setting `godotFiles.hover.previewResource` also applies here.  
+	💻 This feature is not available on browser IDEs, as it depends on the thumbnail cache that Godot writes on your PC.  
 	⚠️ If you're using Godot in [self-contained mode](https://docs.godotengine.org/en/stable/tutorials/io/data_paths.html#self-contained-mode), this requires adding the cache path with the setting `godotFiles.godotCachePath`.
 	
 	It works for scenes:  
@@ -83,15 +86,15 @@ These features are supported in textual Scene and Resource files.
 	As well as any other resource files that have a thumbnail in Godot Editor:  
 	![Showcasing thumbnail preview of a material resource](docs/showcase-material-thumb.webp)
 
-- Inline color decorators on `Color(…)` values and within arrays. Hover to edit the color or see its hex value.  
+- **Edit a color by hovering its inline decorator** on `Color(…)` values or within an array. You can also see its hex value.  
 	🔧 You can disable this feature with the settings under `godotFiles.inlineColors` (`.single` and `.array`).  
 	![Showcasing inline color decorators](docs/showcase-color-decorators.webp)  
 	✳️ The displayed color (and its hex value) can't consider advanced cases like HDR and color space changes (e.g. between sRGB and linear).
 
 #### Latest feature no longer restricted
-This is now out of 🌟 early access 🌟:
+🌟 This is now out of early access:
 
-- Inlay hints surrounding items with implied parentheses in packed arrays of vectors or colors.  
+- **See implied parentheses in packed arrays** of vectors or colors with the inlay hints that surround items.  
 	✳️ This is *not* supported syntax in asset files! These parentheses are only shown for clarity.  
 	🔧 You can toggle this feature with the settings under `godotFiles.clarifyArrays` (`.vector` and `.color`).  
 	![Showcasing implied parentheses in array items as inlay hints](docs/showcase-parentheses-hint-in-arrays.webp)
@@ -103,7 +106,7 @@ If you want **more features**, check the sections **Early Access**, **Crowdfundi
 Features in early access are ready for use, but **restricted to supporters** at first.  
 Each feature will stay restricted until the next new feature takes its place in a future version, usually months later.
 
-🔑 To unlock all features as soon as they arrive, please [donate] and copy the password, then use the ***Unlock features in early access*** command (right-click this extension in the panel) and paste it in the prompt. Doing this **just once will permanently unlock** everything in early access, even across updates.
+🔑 To unlock all features as soon as they arrive, please [donate] and copy the password, then use the ***Unlock features in early access*** command (right-click this extension in the Extensions panel) and paste it in the prompt. Doing this **just once will permanently unlock** everything in early access, even across updates.
 
 The features below are currently restricted.
 
@@ -120,6 +123,8 @@ Searches and external links are opened in your browser. This advanced viewer sup
 
 ### GDShader Language Features
 After a huge effort, basic support for GDShader language features is finally available! 🎉  
+It's completely independent from Godot Editor and **doesn't require Godot to be running** or even available, so it works on browser IDEs too.
+
 🔧 The setting `godotFiles.shader.analysisLevel` can be used to restrict how far the analysis goes, which affects all of these features.
 - 🔒 Standalone **GDShader Preprocessor** for IDEs.
 	- 🔒 Preprocessor error diagnostics (squiggles).
@@ -132,11 +137,11 @@ After a huge effort, basic support for GDShader language features is finally ava
 	- 🔒 Syntactical error diagnostics (squiggles).
 	- 🔒 Syntactical symbol definitions in outline and breadcrumbs.
 
-These are completely independent from Godot Editor and don't require Godot to be running or even available, so they work on browser IDEs too.
+Note that you will only get error squiggles for the checks above, as analyzers for **semantic errors are not implemented yet** (so no type errors, name errors, control flow errors, usage errors, etc). This means files that show no errors here can still raise errors in the Godot Editor. This work is only the beginning.
 
 The preprocessor produces sourcemapping for all ranges within `#include` and macro expansions, so e.g. errors from an included file refer to the actual source.
 
-Note that you will only get error squiggles for the checks above, as no analyzers for any sort of semantic errors are implemented yet (e.g. type errors, name errors, control flow errors, usage errors, etc). So files that show no errors here can still raise errors in the Godot Editor. This work is only the beginning.
+![Showcasing how GDShader preprocessor can sourcemap errors back to the included file](docs/showcase-gdshader-srcmap-error.png)
 
 ## Crowdfunding
 

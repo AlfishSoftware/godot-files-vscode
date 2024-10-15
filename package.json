@@ -4,7 +4,7 @@
 	"version": "0.1.0",
 	"license": "Unlicense",
 	"displayName": "Godot Files",
-	"description": "Better syntax-coloring and additional features for some files supported by Godot Editor.",
+	"description": "Basic GDShader support, better syntax-coloring and additional features for some Godot files.",
 	"icon": "icon.webp",
 	"repository": {
 		"type": "git",
