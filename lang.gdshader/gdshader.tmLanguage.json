@@ -895,7 +895,7 @@
     
     "literalFloat": {
       "name": "constant.numeric.float.gdshader",
-      "match": "\\b(?:\\d+[eE][-+]?\\d+|(?:\\d*[.]\\d+|\\d+[.])(?:[eE][-+]?\\d+)?)[fF]?"
+      "match": "(?:\\b\\d+[eE][-+]?\\d+|(?:(?:\\b\\d+)?[.]\\d+|\\b\\d+[.])(?:[eE][-+]?\\d+)?)[fF]?"
     },
     "literalInt": {
       "name": "constant.numeric.integer.gdshader",

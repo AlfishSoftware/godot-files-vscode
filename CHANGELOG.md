@@ -21,7 +21,7 @@ Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're
 ### Fixed
 - GDAsset: Fix issue of embedded languages not being recognized for toggling comments and snippets.
 - GDAsset: Fix outline symbol detail to prioritize `instance` and `instance_placeholder` over `index`.
-- GDShader: Fix syntax coloring for concatenation token and macro parameter commas.
+- GDShader: Fix syntax coloring for concatenation token, macro parameter commas and numbers starting with a point.
 - Fix potential null-safety bugs from out-of-bounds indexing by using stricter checks.
 
 ## [0.0.10] - 2024-07-30
