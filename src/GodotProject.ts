@@ -38,7 +38,7 @@ export async function godotVersionOfProject(projectDirUri: Uri): Promise<GodotVe
     const features = m[1].split(/\s*,\s*/g).map(s => s.replace(/^"([^"\\]*)"$/, '$1'));
     if (features.includes('C#')) dotnet = true;
     m = features.map(s => s.match(/^((\d+)\.(\d+).*)$/)).find(m => m)!;
-    if (m && m[1]) return { api: m[1], major: +m[2], minor: +m[3], dotnet };
+    if (m && m[1]) return { api: m[1], major: +m[2]!, minor: +m[3]!, dotnet };
   }
   if (!dotnet) try {
     m = projMeta.match(/^\[dotnet\]\s*^\s*project\/assembly_name\s*=\s*"([^"\\]*)"\s*(?:[;#].*)?$/) ??
@@ -46,8 +46,8 @@ export async function godotVersionOfProject(projectDirUri: Uri): Promise<GodotVe
     const csProjName = m![1] + '.csproj';
     const csProj = toUTF8.decode(await workspace.fs.readFile(Uri.joinPath(projectDirUri, csProjName)));
     dotnet = true;
-    m = csProj.match(/^<Project\s+Sdk\s*=\s*["']Godot\.NET\.Sdk\/((\d+)\.(\d+))(?:[^"'\\]*?)?["']>/i)!;
-    return { api: m[1], major: +m[2], minor: +m[3], dotnet };
+    if (m = csProj.match(/^<Project\s+Sdk\s*=\s*["']Godot\.NET\.Sdk\/((\d+)\.(\d+))(?:[^"'\\]*?)?["']>/i))
+      return { api: m[1], major: +m[2]!, minor: +m[3]!, dotnet };
   } catch { /**/ }
   m = projMeta.match(/^\s*config_version\s*=\s*(\d+)\s*(?:[;#].*)?$/m);
   if (!m || !m[1]) return null;
@@ -95,12 +95,11 @@ const uriRegex = /^[a-zA-Z][a-zA-Z0-9.+-]*:\/\/[^\x00-\x1F "<>\\^`{|}\x7F-\x9F]*
 interface UriFound { uri: Uri; stat: FileStat; }
 /** Locates a resource by path string referenced in an asset document.
  * @param resPath Path of resource to locate. Can be relative to the document or to its project's root.
- * @param document Asset where path is. Its location and project are used as context to resolve the res path.
+ * @param assetUri Location of asset where path is. Its path and project are used as context to resolve the res path.
  * @returns Uri of the resource if it's found, or that URI as a string if file is not found.
  * @throws Error if any error happens other than FileNotFound.
  */
-export async function locateResPath(resPath: string, document: TextDocument): Promise<string | UriFound> {
-  const assetUri = document.uri;
+export async function locateResPath(resPath: string, assetUri: Uri): Promise<string | UriFound> {
   let resUri: Uri;
   resPath = resPath.replace(/::[^:/\\]*$/, '');
   if (resPath.startsWith('res://')) {
@@ -121,7 +120,7 @@ export async function locateResPath(resPath: string, document: TextDocument): Pr
     return { uri: resUri, stat: resStat };
   } catch (err) {
     if ((err as FileSystemError)?.code == 'FileNotFound')
-      return resUri.toString();
+      return resUri.toString(true);
     throw err;
   }
 }

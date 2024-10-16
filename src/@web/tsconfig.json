@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "ESNext",
-    "module": "None",
+    "module": "CommonJS",
     "lib": [
       "ESNext", "WebWorker",
     ],
@@ -10,6 +10,7 @@
     "noImplicitThis": true,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
+    "noUncheckedIndexedAccess": true,
     "strict": true,
     "noImplicitAny": true,
     // JS

@@ -5,18 +5,18 @@ import {
   DocumentFilter, DocumentSymbolProvider, DefinitionProvider, HoverProvider, DocumentColorProvider, InlayHintsProvider,
 } from 'vscode';
 import GDAsset, { GDResource } from './GDAsset';
-import { supported } from '../ExtensionEntry';
 import { resPathOfDocument, locateResPath } from '../GodotProject';
 import { apiDocs } from '../GodotDocs';
 import { resPathPreview } from '../GodotAssetPreview';
 
-function sectionSymbol(document: TextDocument, match: RegExpMatchArray, range: Range, gdasset: GDAsset) {
-  const [, /* header */, tag, rest] = match;
+function sectionSymbol(
+  document: TextDocument, tag: string, rest: string, range: Range, gdasset: GDAsset
+) {
   const attributes: { [field: string]: string | undefined; } = {};
   let id: string | undefined;
   for (const assignment of rest.matchAll(/\b([\w-]+)\b\s*=\s*(?:(\d+)|"([^"\\]*)"|((?:Ext|Sub)Resource\s*\(.*?\)))/g)) {
-    const value = assignment[2] ?? assignment[4] ?? GDAssetProvider.unescapeString(assignment[3]);
-    attributes[assignment[1]] = value;
+    const value = assignment[2] ?? assignment[4] ?? GDAssetProvider.unescapeString(assignment[3]!);
+    attributes[assignment[1]!] = value;
     if (assignment[1] == 'id') id = value;
   }
   const symbol = new DocumentSymbol(tag, rest, SymbolKind.Namespace, range, range);
@@ -63,15 +63,15 @@ function sectionSymbol(document: TextDocument, match: RegExpMatchArray, range: R
         symbol.name = attributes.name ? GDAsset.nodeCode(`/root/${gdasset.rootNode = attributes.name}`) : tag;
       else symbol.name = gdasset.nodePath(`${attributes.parent}/${attributes.name}`);
       if (attributes.type) symbol.detail = attributes.type;
-      else if (attributes.index)
-        symbol.detail = '@' + attributes.index;
       else if (attributes.instance_placeholder) {
         const path = attributes.instance_placeholder;
         symbol.detail = `InstancePlaceholder # ${GDAsset.filename(path)?.title ?? path}`;
       } else if (attributes.instance) {
         const path = gdasset.resCall(attributes.instance)?.resource?.path ?? '?';
         symbol.detail = `# ${GDAsset.filename(path)?.title ?? path}`;
-      } else symbol.detail = '';
+      } else if (attributes.index)
+        symbol.detail = '@' + attributes.index;
+      else symbol.detail = 'Node';
       symbol.kind = SymbolKind.Object;
       break;
     case 'connection':
@@ -156,9 +156,9 @@ export default class GDAssetProvider implements
         if (currentSection && previousEnd)
           currentSection.range = new Range(currentSection.range.start, previousEnd);
         if (gdasset)
-          currentSection = sectionSymbol(document, match, range, gdasset);
+          currentSection = sectionSymbol(document, match[2]!, match[3]!, range, gdasset);
         else {
-          const [, /* header */, tag, rest] = match;
+          const /* group1: header, */ tag = match[2]!, rest = match[3]!;
           const kind = rest ? SymbolKind.Object : SymbolKind.Namespace;
           currentSection = new DocumentSymbol(tag, rest, kind, range, range);
         }
@@ -171,7 +171,7 @@ export default class GDAssetProvider implements
         /^\s*(((?:[\p{L}\w-]+[./])*[\p{L}\w-]+)(?:\s*\[([\w\\/.:!@$%+-]+)\])?)\s*=/u
       ))) {
         // Property Assignment
-        const [, prop, key, index] = match;
+        const prop = match[1]!, key = match[2]!, index = match[3];
         let s = currentSection?.children ?? symbols;
         if (index) {
           const p = `${key}[]`;
@@ -191,7 +191,7 @@ export default class GDAssetProvider implements
       } else if ((match = text.match(/^(\s*)([;#].*)?$/))) {
         // No more non-ignored tokens until end of line; only Line Comment or Whitespace
         if (gdasset && match[2]) {
-          j += match[1].length;
+          j += match[1]!.length;
           gdasset.comments.push({ range: new Range(i, j, i, range.end.character), value: match[2] });
         }
         previousEnd = range.end;
@@ -247,7 +247,7 @@ export default class GDAssetProvider implements
     const word = document.getText(wordRange);
     let match;
     if (isPathWord(word, wordRange, document)) {
-      const resLoc = await locateResPath(word, document);
+      const resLoc = await locateResPath(word, document.uri);
       if (typeof resLoc != 'string')
         return new Location(resLoc.uri, new Position(0, 0));
       return null;
@@ -255,7 +255,7 @@ export default class GDAssetProvider implements
     if (gdasset.isInString(wordRange)) return null;
     if ((match = word.match(/^((?:Ext|Sub)Resource)\s*\(\s*(?:(\d+)|"([^"\\]*)")\s*\)$/))) {
       const keyword = match[1] as 'ExtResource' | 'SubResource';
-      const id = match[2] ?? GDAssetProvider.unescapeString(match[3]);
+      const id = match[2] ?? GDAssetProvider.unescapeString(match[3]!);
       const s = gdasset.refs[keyword][id]?.symbol;
       if (!s) return null;
       if (keyword == 'ExtResource') {
@@ -278,7 +278,7 @@ export default class GDAssetProvider implements
       for (let i = line.lineNumber - 1; i >= 0; i--) {
         const textLine = document.lineAt(i).text;
         if ((match = textLine.match(regexSectionClass)))
-          return await apiDocs(document, match[1], word, token);
+          return await apiDocs(document, match[1]!, word, token);
         if (!(match = textLine.match(regexSectionNoClass))) continue;
         let className;
         const sectionTag = match[1];
@@ -309,7 +309,7 @@ export default class GDAssetProvider implements
         const line = document.lineAt(position).text;
         const match = /^\[\s*ext_resource\s+.*?\bid\s*=\s*(?:(\d+)\b|"([^"\\]*)")/.exec(line);
         if (!match) return null;
-        res = gdasset.refs.ExtResource[match[1] ?? GDAssetProvider.unescapeString(match[2])];
+        res = gdasset.refs.ExtResource[match[1] ?? GDAssetProvider.unescapeString(match[2]!)];
         resPath = res?.path ?? '';
         if (!resPath) return null;
       } else {
@@ -322,7 +322,7 @@ export default class GDAssetProvider implements
       let id = null;
       const match = /^(.*?)::([^\\/:]*)$/.exec(resPath);
       if (match) {
-        [resPath, id] = [match[1], match[2]];
+        [resPath, id] = [match[1]!, match[2]!];
         if (!res && resPath == await resPathOfDocument(document)) {
           res = gdasset.refs.SubResource[id];
           return new Hover(gdCodeLoad(resPath, id, res?.type, document.languageId), wordRange);
@@ -335,7 +335,8 @@ export default class GDAssetProvider implements
       const match
         = /^\[\s*sub_resource\s+type\s*=\s*"([^"\\]*)"\s*id\s*=\s*(?:(\d+)\b|"([^"\\]*)")/.exec(line);
       if (!match) return null;
-      const [, type, idN, idS] = match, id = idN ?? GDAssetProvider.unescapeString(idS);
+      const type = match[1]!, idN = match[2], idS = match[3];
+      const id = idN ?? GDAssetProvider.unescapeString(idS!);
       resPath = await resPathOfDocument(document);
       return new Hover(gdCodeLoad(resPath, id, type, document.languageId), wordRange);
     } else if (word == 'gd_resource') {
@@ -363,7 +364,7 @@ export default class GDAssetProvider implements
     if (token.isCancellationRequested) return null;
     if (workspace.getConfiguration('godotFiles', document).get<boolean>('hover.previewResource')!) {
       // show link to res:// path if available
-      if (!/^(?:user|uid):\/\//.test(resPath)) { // Locating user:// or uid:// paths is not supported yet
+      if (!/^(?:user|uid):\/\//.test(resPath)) { // Cannot locate user:// or uid:// paths
         const mdPreview = await resPathPreview(resPath, document, token);
         if (token.isCancellationRequested) return null;
         if (mdPreview) hover.push(mdPreview);
@@ -376,7 +377,7 @@ export default class GDAssetProvider implements
     const settings = workspace.getConfiguration('godotFiles', document);
     const clarifyVectors = settings.get<boolean>('clarifyArrays.vector')!;
     const clarifyColors = settings.get<boolean>('clarifyArrays.color')!;
-    if (!supported || !clarifyVectors && !clarifyColors) return null;
+    if (!clarifyVectors && !clarifyColors) return null;
     const gdasset = await this.parsedGDAsset(document, token);
     if (!gdasset || token.isCancellationRequested) return null;
     const hints: InlayHint[] = [];
@@ -386,10 +387,10 @@ export default class GDAssetProvider implements
     for (const m of reqSrc.matchAll(/\b(P(?:acked|ool)(?:Vector([234])|Color)Array)(\s*\(\s*)([\s,\w.+-]*?)\s*\)/g)) {
       const dim = m[2];
       if (dim && !clarifyVectors || !dim && !clarifyColors) continue;
-      const ctorStart = reqStart + m.index!;
+      const ctorStart = reqStart + m.index;
       const ctorRange = new Range(document.positionAt(ctorStart), document.positionAt(ctorStart + m[0].length));
       if (gdasset.isNonCode(ctorRange)) continue;
-      const [, type, , paren, allArgs] = m;
+      const type = m[1]!, paren = m[3]!, allArgs = m[4]!;
       const typeEnd = ctorStart + type.length;
       const argsStart = typeEnd + paren.length;
       // let i = 0;
@@ -422,21 +423,21 @@ export default class GDAssetProvider implements
     const colors: ColorInformation[] = [];
     // locate all color code using regex, skipping occurrences inside a comment or string
     for (const m of document.getText().matchAll(/\b((?:Color|P(?:acked|ool)ColorArray)\s*\(\s*)([\s,\w.+-]*?)\s*\)/g)) {
-      const prefix = m[1], isSingle = prefix[0] == 'C';
+      const prefix = m[1]!, isSingle = prefix[0] == 'C';
       if (isSingle && !inlineColorSingles || !isSingle && !inlineColorArrays) continue;
-      let start = m.index!;
+      let start = m.index;
       const ctorRange = new Range(document.positionAt(start), document.positionAt(start + m[0].length));
       if (gdasset.isNonCode(ctorRange)) continue;
       if (isSingle) { // Color(...)
-        const [red, green, blue, alpha] = m[2].split(/\s*,\s*/, 4).map(GDAsset.floatValue);
+        const [red, green, blue, alpha] = m[2]!.split(/\s*,\s*/, 4).map(GDAsset.floatValue);
         colors.push(new ColorInformation(ctorRange, new Color(red ?? NaN, green ?? NaN, blue ?? NaN, alpha ?? NaN)));
         continue;
       }
       // PackedColorArray(...) | PoolColorArray(...)
       start += prefix.length;
-      for (const c of m[2].matchAll(regex4Floats)) {
+      for (const c of m[2]!.matchAll(regex4Floats)) {
         const args = c[0];
-        const itemPos = start + c.index!;
+        const itemPos = start + c.index;
         const itemRange = new Range(document.positionAt(itemPos), document.positionAt(itemPos + args.length));
         const [red, green, blue, alpha] = args.split(/\s*,\s*/, 4).map(GDAsset.floatValue);
         colors.push(new ColorInformation(itemRange, new Color(red ?? NaN, green ?? NaN, blue ?? NaN, alpha ?? 1)));

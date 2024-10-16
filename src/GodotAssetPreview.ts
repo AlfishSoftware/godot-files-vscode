@@ -19,7 +19,7 @@ export async function resPathPreview(resPath: string, document: TextDocument, to
   md.supportHtml = true;
   let resLoc;
   try {
-    resLoc = await locateResPath(resPath, document);
+    resLoc = await locateResPath(resPath, document.uri);
     if (token.isCancellationRequested) return null;
   } catch (err) {
     const errName = (err as Error)?.name ?? 'Error';
@@ -38,7 +38,7 @@ export async function resPathPreview(resPath: string, document: TextDocument, to
   let match = /\.(svg|png|webp|jpe?g|bmp|gif)$/i.exec(resPath);
   if (match) {
     // link to image, and try to render it if possible
-    const ext = match[1].toLowerCase();
+    const ext = match[1]!.toLowerCase();
     const type = ext == 'svg' ? 'svg+xml' : ext == 'jpg' ? 'jpeg' : ext;
     const encodedBytesSize = Math.ceil(resStat.size / 3) * 4;
     const imgDataUrlSize = 19 + type.length + encodedBytesSize;
@@ -72,7 +72,7 @@ export async function resPathPreview(resPath: string, document: TextDocument, to
     return md.appendMarkdown(`[File](${resUriStr}) (${byteUnits(resStat.size)})`);
   }
   // font file; we should embed it as base64 URI inside a font test SVG
-  const type = match[1].toLowerCase();
+  const type = match[1]!.toLowerCase();
   const fontDataUrlSize = 18 + type.length + Math.ceil(resStat.size / 3) * 4;
   const encodedImgSize = 275 + fontDataUrlSize + encodeDataURIText(fontTest).length;
   const imgDataUrlSize = 19 + encodedImgSize;

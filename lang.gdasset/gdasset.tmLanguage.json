@@ -337,7 +337,7 @@
 		},
 		"codeAssignmentShader": {
 			"begin": "(?<=\\b(?:code|(?:\\b\\w+\\b/)*expression)\\s*=\\s*)\"",
-			"contentName": "meta.embedded.block.gdshader source.gdshader",
+			"contentName": "meta.embedded.block.gdshader source.gdshader.a",
 			"patterns": [
 				{
 					"name": "comment.line.double-slash.gdshader",
@@ -386,14 +386,12 @@
 					"captures": {
 						"0": {
 							"patterns": [
-								{ "include": "source.gdshader.a" },
-								{ "include": "source.gdshader" }
+								{ "include": "source.gdshader.a" }
 							]
 						}
 					}
 				},
-				{ "include": "source.gdshader.a" },
-				{ "include": "source.gdshader" }
+				{ "include": "source.gdshader.a" }
 			],
 			"end": "\"",
 			"captures": {

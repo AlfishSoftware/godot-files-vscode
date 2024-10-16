@@ -1,10 +1,10 @@
 {
 	"publisher": "alfish",
 	"name": "godot-files",
-	"version": "0.0.10",
+	"version": "0.1.0",
 	"license": "Unlicense",
 	"displayName": "Godot Files",
-	"description": "Better syntax-coloring and additional features for some files supported by Godot Editor.",
+	"description": "Basic GDShader support, better syntax-coloring and additional features for some Godot files.",
 	"icon": "icon.webp",
 	"repository": {
 		"type": "git",
@@ -48,9 +48,9 @@
 			{
 				"id": "godot-shader",
 				"aliases": [
+					"GDShader",
 					"Godot Shader",
-					"Godot Shading Language",
-					"GDShader"
+					"Godot Shading Language"
 				],
 				"extensions": [
 					".gdshader",
@@ -194,7 +194,26 @@
 			{
 				"language": "godot-shader",
 				"scopeName": "source.gdshader.a",
-				"path": "./lang.gdshader/gdshader.tmLanguage.json"
+				"path": "./lang.gdshader/gdshader.tmLanguage.json",
+				"embeddedLanguages": {
+					"meta.embedded.block.gdscript": "gdscript",
+					"meta.embedded.block.csharp": "csharp",
+					"meta.embedded.block.cpp": "cpp",
+					"meta.embedded.block.gdshader": "godot-shader",
+					"meta.embedded.block.jsonc": "jsonc",
+					"meta.embedded.block.json": "json",
+					"meta.embedded.block.text": "plaintext"
+				}
+			},
+			{
+				"language": "config-definition",
+				"scopeName": "source.gdasset",
+				"path": "./lang.gdasset/gdasset.tmLanguage.json"
+			},
+			{
+				"language": "godot-asset",
+				"scopeName": "source.gdasset",
+				"path": "./lang.gdasset/gdasset.tmLanguage.json"
 			},
 			{
 				"language": "godot-project",
@@ -206,7 +225,7 @@
 				"scopeName": "source.gdasset",
 				"path": "./lang.gdasset/gdasset.tmLanguage.json",
 				"embeddedLanguages": {
-					"meta.embedded.block.gdshader": "gdshader",
+					"meta.embedded.block.gdshader": "godot-shader",
 					"meta.embedded.block.gdscript": "gdscript"
 				}
 			},
@@ -215,19 +234,9 @@
 				"scopeName": "source.gdasset",
 				"path": "./lang.gdasset/gdasset.tmLanguage.json",
 				"embeddedLanguages": {
-					"meta.embedded.block.gdshader": "gdshader",
+					"meta.embedded.block.gdshader": "godot-shader",
 					"meta.embedded.block.gdscript": "gdscript"
 				}
-			},
-			{
-				"language": "godot-asset",
-				"scopeName": "source.gdasset",
-				"path": "./lang.gdasset/gdasset.tmLanguage.json"
-			},
-			{
-				"language": "config-definition",
-				"scopeName": "source.gdasset",
-				"path": "./lang.gdasset/gdasset.tmLanguage.json"
 			}
 		],
 		"snippets": [
@@ -394,6 +403,11 @@
 				}
 			]
 		},
+		"configurationDefaults": {
+			"[godot-shader]": {
+				"editor.links": false
+			}
+		},
 		"configuration": [
 			{
 				"title": "Godot Files",
@@ -441,7 +455,7 @@
 						],
 						"enumDescriptions": [
 							"Use your browser to open the documentation URL. Supports going to the specific API version.",
-							"Use a tab in the IDE to open the documentation website. Supports going to the specific API version. Supports redirecting inherited members to their definition.\nNote that any future website changes could potentially break this, so use the browser instead if you notice issues.",
+							"Use a tab in the IDE to open the documentation website. Supports redirecting inherited members to their definition.\nNote that any future website changes could potentially break this, so use the browser instead if you notice issues.",
 							"Use the official godot-tools extension to open API documentation in a tab. Note that this requires the Godot Editor to be running and connected to that extension."
 						]
 					},
@@ -486,7 +500,7 @@
 						"markdownDescription": "Show inline color decorators on `Color(…)` values."
 					},
 					"godotFiles.inlineColors.array": {
-						"order": 100,
+						"order": 101,
 						"scope": "language-overridable",
 						"type": "boolean",
 						"default": true,
@@ -497,38 +511,76 @@
 						"scope": "language-overridable",
 						"type": "boolean",
 						"default": true,
-						"markdownDescription": "Show implied parentheses around each vector in a packed array.\n\n🔒 Exclusive to [early access](command:godotFiles.unlockEarlyAccess)."
+						"description": "Show implied parentheses around each vector in a packed array."
 					},
 					"godotFiles.clarifyArrays.color": {
-						"order": 200,
+						"order": 201,
 						"scope": "language-overridable",
 						"type": "boolean",
 						"default": false,
-						"markdownDescription": "Show implied parentheses around each color in a packed array.\n\n🔒 Exclusive to [early access](command:godotFiles.unlockEarlyAccess)."
+						"description": "Show implied parentheses around each color in a packed array."
+					}
+				}
+			},
+			{
+				"title": "GDShader",
+				"properties": {
+					"godotFiles.shader.analysisLevel": {
+						"order": 0,
+						"scope": "language-overridable",
+						"type": "string",
+						"default": "complete",
+						"markdownDescription": "Specify how far the code is analyzed. This will influence dependent features to determine what you can get, such as the type (and amount) of diagnostics (like errors and warnings), which symbols are shown on outline, etc.\n\n🔒 Applies only to GDShader language features, which is exclusive to [early access](command:godotFiles.unlockEarlyAccess). You can restrict this to disable the notification that more features are available on early access.",
+						"enum": [
+							"none",
+							"preprocessor",
+							"lexical",
+							"syntactical",
+							"complete"
+						],
+						"enumDescriptions": [
+							"Disable all programmatic analysis on the code. You'll still get syntax coloring.",
+							"Do only preprocessor analysis on the code. Only features that depend on just the preprocessor will be available, such as preprocessor errors, preprocessor sourcemapping and preprocessor symbols on outline.",
+							"Run the preprocessor and the lexer. Like above, but it will also give you lexical errors.",
+							"Run the preprocessor, then lexer and parser. Like above, but it will also give you syntax errors.",
+							"Run all analyzers available, thus enabling all features that you can get. Currently the same as syntactical."
+						]
+					},
+					"godotFiles.inactiveRegionOpacity": {
+						"order": 1,
+						"scope": "language-overridable",
+						"type": "number",
+						"minimum": 0,
+						"default": 0.55,
+						"maximum": 1,
+						"markdownDescription": "Control transparency of code within inactive regions, such as inside `#if…#endif` directives that evaluate to false. This feature requires an analysis level of `preprocessor` or higher.\n\n🔒 Applies only to GDShader language features, which is exclusive to [early access](command:godotFiles.unlockEarlyAccess)."
 					}
 				}
 			}
 		]
 	},
 	"devDependencies": {
-		"@types/vscode": "^1.89.0",
+		"@types/vscode": "^1.93.0",
 		"ts-loader": "^9.5.1",
-		"typescript": "^5.5.4",
-		"webpack": "^5.93.0",
+		"typescript": "^5.6.3",
+		"webpack": "^5.95.0",
 		"webpack-cli": "^5.1.4"
 	},
+	"dependencies": {
+		"antlr4": "~4.13.2"
+	},
 	"engines": {
-		"vscode": "^1.89.0"
+		"vscode": "^1.93.0"
 	},
 	"scripts": {
 		"watch-pc": "tsc -watch -p ./src/",
 		"watch-web": "webpack --watch",
-		"compile": "npm run compile-pc && npm run compile-web",
+		"compile": "npm run compile-grammars && npm run compile-pc && npm run compile-web",
+		"compile-grammars": "node ./dev/antlr4.mjs",
 		"compile-pc": "tsc -p ./src/",
 		"compile-web": "webpack",
 		"package-web": "webpack --mode production",
 		"open-in-browser": "npm run compile-web && vscode-test-web --quality=stable --browser=none --extensionDevelopmentPath=. .",
-		"cleanup-production": "npm prune --omit=dev --no-audit",
-		"vscode:prepublish": "npm run compile-pc && npm run package-web && npm run cleanup-production"
+		"vscode:prepublish": "npm run compile-grammars && npm run compile-pc && npm run package-web"
 	}
 }

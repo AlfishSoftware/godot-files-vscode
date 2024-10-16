@@ -5,5 +5,4 @@ version=$(node -p "require('./package.json').version")
 vsix="./build/$publisher.$name-$version.dev.vsix"
 npm ci &&
 vsce package --out "$vsix" --githubBranch develop &&
-unzip -l -vqq "$vsix" | awk '{print $8}' &&
-npm i
+unzip -l -vqq "$vsix" | awk '{print $8}'
