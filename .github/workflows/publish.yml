@@ -9,7 +9,7 @@ jobs:
     if: >-
       github.event.release && !github.event.release.draft && github.event.release.assets[0]
       && endsWith(github.event.release.assets[0].name, '.vsix')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout ${{ github.repository }} ${{ github.ref_type }} ${{ github.ref_name }}
         uses: actions/checkout@v4
