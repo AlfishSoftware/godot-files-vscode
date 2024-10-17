@@ -1,7 +1,7 @@
 {
 	"publisher": "alfish",
 	"name": "godot-files",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"license": "Unlicense",
 	"displayName": "Godot Files",
 	"description": "Basic GDShader support, better syntax-coloring and additional features for some Godot files.",
@@ -98,6 +98,10 @@
 					".tres",
 					".gdns"
 				],
+				"filenamePatterns": [
+					"*.tres",
+					"*.gdns"
+				],
 				"icon": {
 					"dark": "./lang.gdasset/godot-resource.dark.svg",
 					"light": "./lang.gdasset/godot-resource.light.svg"
@@ -117,6 +121,9 @@
 				"extensions": [
 					".tscn",
 					".escn"
+				],
+				"filenamePatterns": [
+					"*.[te]scn"
 				],
 				"icon": {
 					"dark": "./lang.gdasset/godot-scene.dark.svg",
@@ -146,7 +153,11 @@
 				],
 				"filenamePatterns": [
 					"**/.godot/**/*.cfg",
-					"**/.godot/imported/*.md5"
+					"**/.godot/imported/*.md5",
+					"*.import",
+					"*.gdnlib",
+					"*.tet",
+					"*.remap"
 				],
 				"icon": {
 					"dark": "./lang.gdasset/godot-asset.dark.svg",
