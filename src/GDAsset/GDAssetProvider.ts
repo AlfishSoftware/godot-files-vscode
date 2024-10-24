@@ -60,7 +60,7 @@ function sectionSymbol(
     }
     case 'node':
       if (attributes.parent == undefined)
-        symbol.name = attributes.name ? GDAsset.nodeCode(`/root/${gdasset.rootNode = attributes.name}`) : tag;
+        symbol.name = attributes.name ? GDAsset.nodeCode(`../${gdasset.rootNode = attributes.name}`) : tag;
       else symbol.name = gdasset.nodePath(`${attributes.parent}/${attributes.name}`);
       if (attributes.type) symbol.detail = attributes.type;
       else if (attributes.instance_placeholder) {

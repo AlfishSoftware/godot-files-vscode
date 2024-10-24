@@ -9,6 +9,7 @@ Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're
 - GDShader: Add `#error` directive to preprocessor and to syntax coloring.
 ### Fixed
 - Stronger pattern to match files with more priority than other extensions like godot-tools.
+- GDAsset: Use `$"../etc"` instead of `$"/root/etc"` in the outline, as scenes are not always under root.
 
 ## [0.1.0] - 2024-10-16
 ### Changed
