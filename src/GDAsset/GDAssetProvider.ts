@@ -1,9 +1,9 @@
 // GDAsset Features
 import {
-  workspace, Uri, CancellationToken, TextDocument, Range, Position, Color, TextEdit, MarkdownString,
+  workspace, window, Uri, CancellationToken, TextDocument, Range, Position, Color, TextEdit, MarkdownString,
   DocumentSymbol, SymbolKind, Definition, Location, Hover, ColorInformation, ColorPresentation,
   DocumentFilter, DocumentSymbolProvider, DefinitionProvider, HoverProvider, DocumentColorProvider, InlayHintsProvider,
-  InlayHint, InlayHintKind, InlayHintLabelPart,
+  ThemeColor, ThemableDecorationAttachmentRenderOptions, InlayHint, InlayHintKind, InlayHintLabelPart,
 } from 'vscode';
 import GDAsset, { GDResource } from './GDAsset';
 import { resPathOfDocument, locateResPath } from '../GodotProject';
@@ -246,6 +246,11 @@ export default class GDAssetProvider implements
     }
     if (currentSection && previousEnd)
       currentSection.range = new Range(currentSection.range.start, previousEnd);
+    if (gdasset) {
+      GDAssetProvider.updateDecorations(document, {
+        vectorParentheses: this.decorateVectorParentheses(document, gdasset),
+      });
+    }
     return symbols;
   }
   
@@ -388,17 +393,15 @@ export default class GDAssetProvider implements
   async provideInlayHints(document: TextDocument, range: Range, token: CancellationToken
   ): Promise<InlayHint[] | null> {
     const settings = workspace.getConfiguration('godotFiles', document);
-    const clarifyVectors = settings.get<boolean>('clarifyArrays.vector')!;
-    const clarifyColors = settings.get<boolean>('clarifyArrays.color')!;
     const clarifyClasses = settings.get<string>('clarifyReferences.class')!;
-    if (!clarifyVectors && !clarifyColors && clarifyClasses == 'never') return null;
+    if (clarifyClasses == 'never') return null;
     const gdasset = await this.parsedGDAsset(document, token);
     if (!gdasset || token.isCancellationRequested) return null;
     const hints: InlayHint[] = [];
-    // locate all packed vector arrays using regex, skipping occurrences inside a comment or string
     const reqStart = document.offsetAt(range.start);
     const reqSrc = document.getText(range);
-    if (clarifyClasses != 'never') for (const m of reqSrc.matchAll(
+    // locate all calls using regex, skipping occurrences inside a comment or string
+    for (const m of reqSrc.matchAll(
       /\b(?<=(instance[ \t]*=)?[ \t]*)((?:Ext|Sub)Resource|NodePath)[ \t]*\(\s*(?:(\d+)|"([^"\r\n]*)")\s*\)(?=([ \t]*\])?[ \t]*([^;\r\n]?))/g
     )) {
       const matchStart = reqStart + m.index, matchEnd = matchStart + m[0].length;
@@ -432,14 +435,24 @@ export default class GDAssetProvider implements
         }
       }
     }
-    //TODO try another method to overcome 43 chars per line limitation, maybe decorations with css?
-    if (clarifyVectors || clarifyColors) for (const m of reqSrc.matchAll(
-      /\b(P(?:acked|ool)(?:Vector([234])|Color)Array)(\s*\(\s*)([\s,\w.+-]*?)\s*\)/g
-    )) {
+    return hints;
+  }
+  decorateVectorParentheses(document: TextDocument, gdasset: GDAsset): Range[] {
+    const settings = workspace.getConfiguration('godotFiles', document);
+    const clarifyVectors = settings.get<boolean>('clarifyArrays.vector')!;
+    const clarifyColors = settings.get<boolean>('clarifyArrays.color')!;
+    if (!clarifyVectors && !clarifyColors) return [];
+    const maxChars = workspace.getConfiguration('editor', document).get<number>('maxTokenizationLineLength')!;
+    const ranges: Range[] = [];
+    const src = document.getText();
+    // locate all packed vector arrays using regex, skipping occurrences inside a comment or string
+    for (const m of src.matchAll(/\b(P(?:acked|ool)(?:Vector([234])|Color)Array)(\s*\(\s*)([\s,\w.+-]*?)\s*\)/g)) {
+      const charLength = m[0].length;
+      if (charLength >= maxChars) continue;
       const dim = m[2];
       if (dim && !clarifyVectors || !dim && !clarifyColors) continue;
-      const ctorStart = reqStart + m.index;
-      const ctorRange = new Range(document.positionAt(ctorStart), document.positionAt(ctorStart + m[0].length));
+      const ctorStart = m.index;
+      const ctorRange = new Range(document.positionAt(ctorStart), document.positionAt(ctorStart + charLength));
       if (gdasset.isNonCode(ctorRange)) continue;
       const type = m[1]!, paren = m[3]!, allArgs = m[4]!;
       const typeEnd = ctorStart + type.length;
@@ -450,18 +463,10 @@ export default class GDAssetProvider implements
         const args = c[0];
         const itemPos = argsStart + c.index!;
         const itemRange = new Range(document.positionAt(itemPos), document.positionAt(itemPos + args.length));
-        const head = new InlayHint(itemRange.start, '(');
-        // head.tooltip = `[${i++}]`; // would need to provide 0-based indices for all types of array
-        const tail = new InlayHint(itemRange.end, ')');
-        // tail.tooltip = `vector #${i}`; // would need to provide 1-based indices for all types of array
-        hints.push(head, tail);
+        ranges.push(itemRange);
       }
-      //TODO would need to provide size for all arrays and dictionary
-      // const arrayHead = new InlayHint(document.positionAt(typeEnd), `[${i}]`);
-      // arrayHead.tooltip = i == 0 ? 'empty' : `${i} vector${i == 1 ? '' : 's'}`;
-      // hints.push(arrayHead);
     }
-    return hints;
+    return ranges;
   }
   
   async provideDocumentColors(document: TextDocument, token: CancellationToken): Promise<ColorInformation[] | null> {
@@ -516,7 +521,26 @@ export default class GDAssetProvider implements
     function ok(c: number) { return c >= 0 && c <= 1; }
     function hex(c: number) { return Math.round(c * 255).toString(16).toUpperCase().replace(/^.$/s, '0$&'); }
   }
+  
+  static updateDecorations(document: TextDocument, decorations: DecorationRanges): void {
+    for (const editor of window.visibleTextEditors.filter(e => e.document == document)) {
+      editor.setDecorations(parenthesesDecoration, decorations.vectorParentheses);
+    }
+  }
 }
+
+interface DecorationRanges {
+  vectorParentheses: Range[];
+}
+const themeColorInlayFg = new ThemeColor('editorInlayHint.foreground');
+const themeColorInlayBg = new ThemeColor('editorInlayHint.background');
+const themeInlay: ThemableDecorationAttachmentRenderOptions = {
+  color: themeColorInlayFg, backgroundColor: themeColorInlayBg,
+  fontWeight: 'normal', fontStyle: 'normal', textDecoration: 'none',
+};
+const parenthesesDecoration = window.createTextEditorDecorationType({
+  before: { ...themeInlay, contentText: '(' }, after: { ...themeInlay, contentText: ')' },
+});
 
 const regex2Floats = /(?:[\w.+-]+\s*,\s*)?[\w.+-]+/g;
 const regex3Floats = /(?:[\w.+-]+\s*,\s*){0,2}[\w.+-]+/g;
