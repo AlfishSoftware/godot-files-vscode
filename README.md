@@ -1,21 +1,24 @@
 # Godot Files
 
-Basic GDShader support, better syntax-coloring and additional features for some Godot files.  
-This is *not* meant to replace the official [godot-tools] extension, but to improve on its supported files. This plugin is designed so it can work alongside it, but it's completely independent. If you're using GDScript, you'll likely want to install godot-tools too; if not, just this one is enough.
+**Basic GDShader support, better syntax-coloring and additional features for some Godot files.**  
+Godot Editor does NOT need to be running for any features here.
 
 [godot-tools]: https://github.com/godotengine/godot-vscode-plugin
 
-> 🥺 Please help prevent this extension from being abandoned by [donating to the crowdfunding][donate]!  
+> 🥺 Please help prevent this extension from being abandoned in 2025-01-31 by [donating to the crowdfunding goal][donate]!  
 > 🔑 With a donation, you can **unlock early access and other rewards**! More info below.
 
 ![Showcasing various features, like GDShader errors, hovering, navigating and documentation pages](docs/showcase-all.png "* Features showcased here include those restricted to early access.")
 
+This is not meant to fully replace the official [godot-tools] extension, but to improve on its supported files. This plugin is designed so it can work alongside it, but it's completely independent. If you're using GDScript, you'll likely want to install godot-tools too; if not, just this one is enough.  
+🔧 You can use the setting `files.associations` to set your preferred extension to handle `*.tscn`, `*.tres`, etc.
+
 **Compatibility**:
 
-- Godot: 3.x LTS and 4.0 to 4.x; official and flathub builds
-- godot-tools: v2.3.0
+- **Godot**: 3.x LTS and 4.0 to 4.x; official and flathub builds
+- **godot-tools**: v2.3.0; *("view documentation" feature can use godot-tools)*
 
-🌐 This extension also works on browser IDEs ([vscode.dev](https://vscode.dev) and [github.dev](https://github.dev)), with limited functionality.
+🌐 This extension also works on browser IDEs ([vscode.dev](https://vscode.dev) and [github.dev](https://github.dev)), with minor limitations.
 
 ## Features
 Features are supported on these languages:
@@ -43,7 +46,7 @@ Syntax-coloring of valid embedded code is supported.
 	Note that you should always put the inner code in its own lines verbatim, without the leading `*`, or any extra leading indentation.  
 	![Showcasing how you should embed code in GDShader docs BBCode](docs/showcase-gdshader-docs-embed-code.webp)
 
-The inner code doesn't break the container code syntax, as long as it's valid code (without partial contructs like unterminated strings/comments, mismatched brackets, etc). Some cases are being handled, but it's not viable to try to safeguard against every possible case of invalid code; this is a limitation of the IDE.
+The inner code doesn't break the container code syntax, as long as it's valid code (without partial constructs like unterminated strings/comments, mismatched brackets, etc). Some cases are being handled, but it's not viable to try to safeguard against every possible case of invalid code; this is a limitation of the IDE.
 
 ### Document Symbols
 Symbol definitions are provided for:
@@ -58,7 +61,7 @@ These features are supported in textual Scene and Resource files.
 
 - **Navigate to the definition** of `SubResource` and `ExtResource` references, and to resource paths.  
 	![Showcasing navigate to definition](docs/showcase-goto-definition.png)  
-	Going to the definition of a built-in engine type (on `type="SomeType"` or `some_field = SomeType(...)`) will open its Godot API Documentation. This will be handled by the *godot-tools* extension, unless you're online and enabled [early access][donate] (see below).
+	Going to the definition of a built-in engine type (on `type="SomeType"`, `some_field = SomeType(...)` or in inlay hints) will open its Godot API Documentation. This will be handled by the *godot-tools* extension, unless you're online and enabled [early access][donate] (see below).
 
 - **See GDScript code for loading** a resource reference or path by hovering (`preload(…)`, `load(…)` or `FileAccess.open(…)`).  
 	![Showcasing code for loading when previewing user path](docs/showcase-user-path-load.webp)
@@ -85,6 +88,12 @@ These features are supported in textual Scene and Resource files.
 	
 	As well as any other resource files that have a thumbnail in Godot Editor:  
 	![Showcasing thumbnail preview of a material resource](docs/showcase-material-thumb.webp)
+
+- 🌟 **New**:  
+	**See inferred class and path of resource references** in inlay hints. You can <kbd>Ctrl</kbd>+Click them to navigate. You can also hover paths.  
+	✳️ Paths are only shown at the end of a line (so not within arrays, you can still hover the code itself to see the path in this case).  
+	🔧 You can control this feature in the settings under `godotFiles.clarifyReferences` (`.class` and `.filePath`). By default, the class is only hinted where it cannot be inferred from the context, so in Godot 4 it will typically not be shown for `SubResource`, as it's already in the id (unless you set it to `always`).  
+	![Showcasing classes and paths as inlay hints on resource references](docs/showcase-inlay-hints-resource-refs.webp)
 
 - **Edit a color by hovering its inline decorator** on `Color(…)` values or within an array. You can also see its hex value.  
 	🔧 You can disable this feature with the settings under `godotFiles.inlineColors` (`.single` and `.array`).  

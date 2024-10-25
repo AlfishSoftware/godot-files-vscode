@@ -1336,7 +1336,7 @@ function parseExpressionAtom(uri: string, expr: ExpressionTokens): ExpressionAto
         const msg = `unexpected extra code around condition atom`, { start, end } = errToken;
         throw { location: { uri, start, end }, msg, id: 'PConditionSyntax' } as PreprocessorDiagnostic;
       }
-      if (token instanceof ExpressionTokens) {
+      if (token instanceof ParenthesizedTokens) {
         const inner = parseExpressionTree(uri, token);
         if (inner instanceof ExpressionTree) return new ParenthesizedExpression(token.open, inner, token.close);
         if (inner) throw inner;

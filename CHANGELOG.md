@@ -14,7 +14,7 @@ Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're
 - Stronger pattern to match files with more priority than other extensions like godot-tools.
 - GDAsset: Bypass max limit of 44 inlay hint characters shown per line on vector|color array parentheses.  
 	This feature will still respect `editor.maxTokenizationLineLength` to avoid potential performance issues.
-- GDAsset: Use `$"../etc"` instead of `$"/root/etc"` in the outline, as scenes are not always under root.
+- GDAsset: Use `$"../TopNode"` instead of `$"/root/TopNode"` in the outline, as scenes are not always under root.
 
 ## [0.1.0] - 2024-10-16
 ### Changed

@@ -392,9 +392,10 @@ export default class GDAssetProvider implements
   
   async provideInlayHints(document: TextDocument, range: Range, token: CancellationToken
   ): Promise<InlayHint[] | null> {
-    const settings = workspace.getConfiguration('godotFiles', document);
-    const clarifyClasses = settings.get<string>('clarifyReferences.class')!;
-    if (clarifyClasses == 'never') return null;
+    const settings = workspace.getConfiguration('godotFiles.clarifyReferences', document);
+    const sClass = settings.get<string>('class') ?? 'auto';
+    const sFilePaths = settings.get<string>('filePath')!;
+    if (sClass == 'never' && sFilePaths == 'none') return null;
     const gdasset = await this.parsedGDAsset(document, token);
     if (!gdasset || token.isCancellationRequested) return null;
     const hints: InlayHint[] = [];
@@ -416,8 +417,8 @@ export default class GDAssetProvider implements
         const resource = gdasset.refs[fn][id];
         if (!resource) continue;
         const { type, typeRange, pathRange } = resource, { end } = matchRange;
-        if (clarifyClasses != 'auto' ||
-          !(instancing && type == 'PackedScene') && type != 'Resource' && !id.startsWith(type + '_')
+        if (sClass == 'always' ||
+          sClass == 'auto' && !(instancing && type == 'PackedScene') && type != 'Resource' && !id.startsWith(type + '_')
         ) {
           const typePos = end;
           hints.push(new InlayHint(typePos, ' as '));
@@ -426,7 +427,7 @@ export default class GDAssetProvider implements
           const typeHint = new InlayHint(typePos, [typeLabel], InlayHintKind.Type);
           hints.push(typeHint);
         }
-        if (pathRange && eol) {
+        if (pathRange && eol && sFilePaths != 'none') {
           const pathPos = bracket ? end.translate(0, bracket.length) : end;
           const { path } = resource, pathLabel = new InlayHintLabelPart(path);
           pathLabel.location = new Location(document.uri, pathRange);
@@ -438,9 +439,9 @@ export default class GDAssetProvider implements
     return hints;
   }
   decorateVectorParentheses(document: TextDocument, gdasset: GDAsset): Range[] {
-    const settings = workspace.getConfiguration('godotFiles', document);
-    const clarifyVectors = settings.get<boolean>('clarifyArrays.vector')!;
-    const clarifyColors = settings.get<boolean>('clarifyArrays.color')!;
+    const settings = workspace.getConfiguration('godotFiles.clarifyArrays', document);
+    const clarifyVectors = settings.get<boolean>('vector')!;
+    const clarifyColors = settings.get<boolean>('color')!;
     if (!clarifyVectors && !clarifyColors) return [];
     const maxChars = workspace.getConfiguration('editor', document).get<number>('maxTokenizationLineLength')!;
     const ranges: Range[] = [];

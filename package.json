@@ -503,26 +503,12 @@
 						"default": true,
 						"description": "Disable if you don't want tooltips to show an image preview of the resource or a link to it."
 					},
-					"godotFiles.inlineColors.single": {
-						"order": 100,
-						"scope": "language-overridable",
-						"type": "boolean",
-						"default": true,
-						"markdownDescription": "Show inline color decorators on `Color(…)` values."
-					},
-					"godotFiles.inlineColors.array": {
-						"order": 101,
-						"scope": "language-overridable",
-						"type": "boolean",
-						"default": true,
-						"description": "Show inline color decorators on color values within packed arrays."
-					},
 					"godotFiles.clarifyReferences.class": {
 						"order": 200,
 						"scope": "language-overridable",
 						"type": "string",
 						"default": "auto",
-						"markdownDescription": "Show engine classes inside square brackets as inlay hints on `ExtResource(…)` and `SubResource(…)` references.",
+						"markdownDescription": "Show implied engine classes as inlay hints on `ExtResource(…)` and `SubResource(…)` references.",
 						"enum": [
 							"never",
 							"auto",
@@ -534,19 +520,48 @@
 							"Always show these inlay hints."
 						]
 					},
-					"godotFiles.clarifyArrays.vector": {
+					"godotFiles.clarifyReferences.filePath": {
 						"order": 201,
+						"scope": "language-overridable",
+						"type": "string",
+						"default": "exact",
+						"markdownDescription": "Show implied file paths as inlay hints after `ExtResource(…)` references.",
+						"enum": [
+							"none",
+							"exact"
+						],
+						"enumDescriptions": [
+							"Disable showing these inlay hints.",
+							"Show the path reference exactly as declared."
+						]
+					},
+					"godotFiles.clarifyArrays.vector": {
+						"order": 210,
 						"scope": "language-overridable",
 						"type": "boolean",
 						"default": true,
 						"description": "Show implied parentheses around each vector in a packed array."
 					},
 					"godotFiles.clarifyArrays.color": {
-						"order": 202,
+						"order": 211,
 						"scope": "language-overridable",
 						"type": "boolean",
 						"default": false,
 						"description": "Show implied parentheses around each color in a packed array."
+					},
+					"godotFiles.inlineColors.single": {
+						"order": 220,
+						"scope": "language-overridable",
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "Show inline color decorators on `Color(…)` values."
+					},
+					"godotFiles.inlineColors.array": {
+						"order": 221,
+						"scope": "language-overridable",
+						"type": "boolean",
+						"default": true,
+						"description": "Show inline color decorators on color values within packed arrays."
 					}
 				}
 			},
