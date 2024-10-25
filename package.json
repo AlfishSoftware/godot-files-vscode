@@ -515,17 +515,34 @@
 						"scope": "language-overridable",
 						"type": "boolean",
 						"default": true,
-						"description": "Show inline color decorators on color values within arrays."
+						"description": "Show inline color decorators on color values within packed arrays."
+					},
+					"godotFiles.clarifyReferences.class": {
+						"order": 200,
+						"scope": "language-overridable",
+						"type": "string",
+						"default": "auto",
+						"markdownDescription": "Show engine classes inside square brackets as inlay hints on `ExtResource(…)` and `SubResource(…)` references.",
+						"enum": [
+							"never",
+							"auto",
+							"always"
+						],
+						"enumDescriptions": [
+							"Disable showing these inlay hints.",
+							"Show inlay hints, except when the class is obvious from the context.",
+							"Always show these inlay hints."
+						]
 					},
 					"godotFiles.clarifyArrays.vector": {
-						"order": 200,
+						"order": 201,
 						"scope": "language-overridable",
 						"type": "boolean",
 						"default": true,
 						"description": "Show implied parentheses around each vector in a packed array."
 					},
 					"godotFiles.clarifyArrays.color": {
-						"order": 201,
+						"order": 202,
 						"scope": "language-overridable",
 						"type": "boolean",
 						"default": false,

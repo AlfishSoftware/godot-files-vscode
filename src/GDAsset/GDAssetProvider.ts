@@ -1,8 +1,9 @@
 // GDAsset Features
 import {
   workspace, Uri, CancellationToken, TextDocument, Range, Position, Color, TextEdit, MarkdownString,
-  DocumentSymbol, SymbolKind, Definition, Location, Hover, ColorInformation, ColorPresentation, InlayHint,
+  DocumentSymbol, SymbolKind, Definition, Location, Hover, ColorInformation, ColorPresentation,
   DocumentFilter, DocumentSymbolProvider, DefinitionProvider, HoverProvider, DocumentColorProvider, InlayHintsProvider,
+  InlayHint, InlayHintKind, InlayHintLabelPart,
 } from 'vscode';
 import GDAsset, { GDResource } from './GDAsset';
 import { resPathOfDocument, locateResPath } from '../GodotProject';
@@ -13,12 +14,22 @@ function sectionSymbol(
   document: TextDocument, tag: string, rest: string, range: Range, gdasset: GDAsset
 ) {
   const attributes: { [field: string]: string | undefined; } = {};
-  let id: string | undefined;
+  let id: string | undefined, typeRange: Range | undefined;
   for (const assignment of rest.matchAll(/\b([\w-]+)\b\s*=\s*(?:(\d+)|"([^"\\]*)"|((?:Ext|Sub)Resource\s*\(.*?\)))/g)) {
     const value = assignment[2] ?? assignment[4] ?? GDAssetProvider.unescapeString(assignment[3]!);
     attributes[assignment[1]!] = value;
     if (assignment[1] == 'id') id = value;
+    else if (assignment[1] == 'type' && assignment[3] != null) {
+      const rangeText = document.getText(range);
+      const matchStart = rangeText.indexOf(assignment[0], tag.length + 2);
+      const typeStart = assignment[0].indexOf('"', 5) + 1;
+      const typeEnd = typeStart + value.length;
+      const start = range.start.translate(0, matchStart + typeStart);
+      const end = range.start.translate(0, matchStart + typeEnd);
+      typeRange = new Range(start, end);
+    }
   }
+  if (!typeRange) typeRange = new Range(range.start, range.start);
   const symbol = new DocumentSymbol(tag, rest, SymbolKind.Namespace, range, range);
   switch (tag) {
     case 'gd_scene': {
@@ -27,7 +38,7 @@ function sectionSymbol(
       symbol.name = fileTitle;
       symbol.detail = 'PackedScene';
       symbol.kind = SymbolKind.File;
-      gdasset.resource = { path: `${fileTitle}${ext ?? ''}`, type: 'PackedScene', symbol };
+      gdasset.resource = { path: `${fileTitle}${ext ?? ''}`, type: 'PackedScene', typeRange, symbol };
       break;
     }
     case 'gd_resource': {
@@ -36,12 +47,12 @@ function sectionSymbol(
       const type = attributes.type ?? '';
       symbol.detail = type;
       symbol.kind = SymbolKind.File;
-      gdasset.resource = { path: fileName, type, symbol };
+      gdasset.resource = { path: fileName, type, typeRange, symbol };
       break;
     }
     case 'ext_resource': {
       const type = attributes.type ?? '';
-      if (id) gdasset.refs.ExtResource[id] = { path: attributes.path ?? '?', type, symbol };
+      if (id) gdasset.refs.ExtResource[id] = { path: attributes.path ?? '?', type, typeRange, symbol };
       symbol.name = attributes.path ?? tag;
       symbol.detail = type;
       symbol.kind = SymbolKind.Variable;
@@ -51,7 +62,7 @@ function sectionSymbol(
       const type = attributes.type ?? '';
       if (id) {
         const subPath = '::' + id;
-        gdasset.refs.SubResource[id] = { path: `${gdasset.resource?.path ?? ''}${subPath}`, type, symbol };
+        gdasset.refs.SubResource[id] = { path: `${gdasset.resource?.path ?? ''}${subPath}`, type, typeRange, symbol };
         symbol.name = subPath;
       }
       symbol.detail = type;
@@ -373,18 +384,46 @@ export default class GDAssetProvider implements
     return new Hover(hover, wordRange);
   }
   
-  async provideInlayHints(document: TextDocument, range: Range, token: CancellationToken): Promise<InlayHint[] | null> {
+  async provideInlayHints(document: TextDocument, range: Range, token: CancellationToken
+  ): Promise<InlayHint[] | null> {
     const settings = workspace.getConfiguration('godotFiles', document);
     const clarifyVectors = settings.get<boolean>('clarifyArrays.vector')!;
     const clarifyColors = settings.get<boolean>('clarifyArrays.color')!;
-    if (!clarifyVectors && !clarifyColors) return null;
+    const clarifyClasses = settings.get<string>('clarifyReferences.class')!;
+    if (!clarifyVectors && !clarifyColors && clarifyClasses == 'never') return null;
     const gdasset = await this.parsedGDAsset(document, token);
     if (!gdasset || token.isCancellationRequested) return null;
     const hints: InlayHint[] = [];
     // locate all packed vector arrays using regex, skipping occurrences inside a comment or string
     const reqStart = document.offsetAt(range.start);
     const reqSrc = document.getText(range);
-    for (const m of reqSrc.matchAll(/\b(P(?:acked|ool)(?:Vector([234])|Color)Array)(\s*\(\s*)([\s,\w.+-]*?)\s*\)/g)) {
+    if (clarifyClasses != 'never') for (const m of reqSrc.matchAll(
+      /\b((?:Ext|Sub)Resource|NodePath)\s*\(\s*(?:(\d+)|"([^"\r\n]*)")\s*\)/g
+    )) {
+      const matchStart = reqStart + m.index, matchEnd = matchStart + m[0].length;
+      const matchRange = new Range(document.positionAt(matchStart), document.positionAt(matchEnd));
+      if (gdasset.isNonCode(matchRange)) continue;
+      const fn = m[1] as 'ExtResource' | 'SubResource' | 'NodePath';
+      const typePos = matchStart + fn.length;
+      if (fn == 'NodePath') {
+        continue; //TODO
+        //const nodePath = GDAssetProvider.unescapeString(m[3] ?? '');
+      } else {
+        const id = m[2] ?? GDAssetProvider.unescapeString(m[3]!);
+        const resource = gdasset.refs[fn][id];
+        if (!resource) continue;
+        const { type } = resource;
+        if (clarifyClasses == 'auto' && id.startsWith(type + '_')) continue;
+        const typeLabel = new InlayHintLabelPart(type);
+        typeLabel.location = new Location(document.uri, resource.typeRange);
+        const label = [new InlayHintLabelPart('['), typeLabel, new InlayHintLabelPart(']')];
+        const hint = new InlayHint(document.positionAt(typePos), label, InlayHintKind.Type);
+        hints.push(hint);
+      }
+    }
+    if (clarifyVectors || clarifyColors) for (const m of reqSrc.matchAll(
+      /\b(P(?:acked|ool)(?:Vector([234])|Color)Array)(\s*\(\s*)([\s,\w.+-]*?)\s*\)/g
+    )) {
       const dim = m[2];
       if (dim && !clarifyVectors || !dim && !clarifyColors) continue;
       const ctorStart = reqStart + m.index;

@@ -6,7 +6,9 @@ Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're
 
 ## [Unreleased]
 ### Added
+- GDAsset: Show engine classes as inlay hints on `ExtResource(…)` and `SubResource(…)` references.
 - GDShader: Add `#error` directive to preprocessor and to syntax coloring.
+- Docs: Add text content provider for doc URI, so it shows the webpage URL when peeking a class/member definition.
 ### Fixed
 - Stronger pattern to match files with more priority than other extensions like godot-tools.
 - GDAsset: Use `$"../etc"` instead of `$"/root/etc"` in the outline, as scenes are not always under root.

@@ -8,7 +8,7 @@ import GodotFiles, { ctx } from './ExtensionEntry';
 import { GodotVersion, godotVersionOfDocument, godotVersionOfProject } from './GodotProject';
 const toUTF8 = new TextDecoder();
 
-const onlineDocsHost = 'docs.godotengine.org';
+export const onlineDocsHost = 'docs.godotengine.org';
 const latestApiGodot3 = '3.6';
 const latestApiGodot2 = '2.1';
 function apiVersion(gdVersion: GodotVersion | null) {

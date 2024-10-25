@@ -41,12 +41,14 @@ export async function activate(context: ExtensionContext) {
   // imports that may depend on this extension's state
   const { default: GDAssetProvider } = await import('./GDAsset/GDAssetProvider');
   const { default: GDShaderProvider } = await import('./GDShader/GDShaderProvider');
+  const { default: GodotContentTextProvider } = await import('./GodotContentTextProvider');
   const {
     GodotDocumentationProvider, openApiDocs, activeDocsFindNext, activeDocsFindPrevious,
     activeDocsGoBack, activeDocsGoForward, activeDocsReload, activeDocsOpenInBrowser,
   } = await import('./GodotDocs');
   // register multi-platform providers
   ctx.subscriptions.push(
+    workspace.registerTextDocumentContentProvider(ctx.extension.id, new GodotContentTextProvider()),
     window.registerCustomEditorProvider(GodotDocumentationProvider.viewType, new GodotDocumentationProvider(), {
       webviewOptions: { retainContextWhenHidden: true, enableFindWidget: true }
     }),

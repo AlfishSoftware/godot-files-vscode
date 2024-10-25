@@ -230,6 +230,8 @@ Parsing of INI-like files is very simplistic (line-based; doesn't use a robust p
 
 VSCode only recognizes a word token properly when hovering or placing the cursor within its first 32 characters. So, for long paths, you only get the tooltip when hovering this initial part of the path.
 
+VSCode seems to impose a max limit of inlay hints characters shown per line (43 characters?) and this doesn't appear to be configurable.
+
 ---
 
 ## Potential Future Development

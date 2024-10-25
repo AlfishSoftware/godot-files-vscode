@@ -5,6 +5,7 @@ import GDAssetProvider from './GDAssetProvider';
 export class GDResource {
   path!: string;
   type!: string;
+  typeRange!: Range;
   symbol!: DocumentSymbol;
 }
 
