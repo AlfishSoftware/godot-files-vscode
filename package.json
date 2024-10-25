@@ -530,7 +530,7 @@
 						],
 						"enumDescriptions": [
 							"Disable showing these inlay hints.",
-							"Show inlay hints, except when the class is obvious from the context.",
+							"Show inlay hints only when the class cannot be inferred from the context.",
 							"Always show these inlay hints."
 						]
 					},

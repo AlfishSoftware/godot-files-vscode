@@ -4,8 +4,9 @@ import GDAssetProvider from './GDAssetProvider';
 
 export class GDResource {
   path!: string;
+  pathRange?: Range;
   type!: string;
-  typeRange!: Range;
+  typeRange?: Range;
   symbol!: DocumentSymbol;
 }
 

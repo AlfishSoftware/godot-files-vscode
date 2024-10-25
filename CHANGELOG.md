@@ -7,6 +7,7 @@ Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're
 ## [Unreleased]
 ### Added
 - GDAsset: Show engine classes as inlay hints on `ExtResource(…)` and `SubResource(…)` references.
+- GDAsset: Show file paths as inlay hints on `ExtResource(…)` references.
 - GDShader: Add `#error` directive to preprocessor and to syntax coloring.
 - Docs: Add text content provider for doc URI, so it shows the webpage URL when peeking a class/member definition.
 ### Fixed

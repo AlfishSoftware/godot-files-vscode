@@ -103,7 +103,7 @@ function otherVersionUri(version) {
 function otherVersionLink(version) {
   const href = otherVersionUri(version);
   const a = document.createElement('a');
-  a.href = href;
+  a.href = href.replaceAll('classes/', 'classes%2F'); // to avoid the docs icon ::after the link
   a.innerText = `[${version}]`;
   return a;
 }

@@ -14,22 +14,23 @@ function sectionSymbol(
   document: TextDocument, tag: string, rest: string, range: Range, gdasset: GDAsset
 ) {
   const attributes: { [field: string]: string | undefined; } = {};
-  let id: string | undefined, typeRange: Range | undefined;
+  let id: string | undefined, typeRange: Range | undefined, pathRange: Range | undefined;
   for (const assignment of rest.matchAll(/\b([\w-]+)\b\s*=\s*(?:(\d+)|"([^"\\]*)"|((?:Ext|Sub)Resource\s*\(.*?\)))/g)) {
     const value = assignment[2] ?? assignment[4] ?? GDAssetProvider.unescapeString(assignment[3]!);
-    attributes[assignment[1]!] = value;
-    if (assignment[1] == 'id') id = value;
-    else if (assignment[1] == 'type' && assignment[3] != null) {
+    const attr = assignment[1]!;
+    attributes[attr] = value;
+    if (attr == 'id') id = value;
+    else if (assignment[3] != null && /^(?:type|path)$/.test(attr)) {
       const rangeText = document.getText(range);
       const matchStart = rangeText.indexOf(assignment[0], tag.length + 2);
-      const typeStart = assignment[0].indexOf('"', 5) + 1;
-      const typeEnd = typeStart + value.length;
-      const start = range.start.translate(0, matchStart + typeStart);
-      const end = range.start.translate(0, matchStart + typeEnd);
-      typeRange = new Range(start, end);
+      const valueStart = assignment[0].indexOf('"', attr.length + 1) + 1;
+      const { start } = range, valueRange = new Range(
+        start.translate(0, matchStart + valueStart),
+        start.translate(0, matchStart + valueStart + assignment[3].length),
+      );
+      if (attr == 'type') typeRange = valueRange; else pathRange = valueRange;
     }
   }
-  if (!typeRange) typeRange = new Range(range.start, range.start);
   const symbol = new DocumentSymbol(tag, rest, SymbolKind.Namespace, range, range);
   switch (tag) {
     case 'gd_scene': {
@@ -38,7 +39,7 @@ function sectionSymbol(
       symbol.name = fileTitle;
       symbol.detail = 'PackedScene';
       symbol.kind = SymbolKind.File;
-      gdasset.resource = { path: `${fileTitle}${ext ?? ''}`, type: 'PackedScene', typeRange, symbol };
+      gdasset.resource = { path: `${fileTitle}${ext ?? ''}`, type: 'PackedScene', symbol };
       break;
     }
     case 'gd_resource': {
@@ -52,7 +53,7 @@ function sectionSymbol(
     }
     case 'ext_resource': {
       const type = attributes.type ?? '';
-      if (id) gdasset.refs.ExtResource[id] = { path: attributes.path ?? '?', type, typeRange, symbol };
+      if (id) gdasset.refs.ExtResource[id] = { path: attributes.path ?? '?', pathRange, type, typeRange, symbol };
       symbol.name = attributes.path ?? tag;
       symbol.detail = type;
       symbol.kind = SymbolKind.Variable;
@@ -61,8 +62,8 @@ function sectionSymbol(
     case 'sub_resource': {
       const type = attributes.type ?? '';
       if (id) {
-        const subPath = '::' + id;
-        gdasset.refs.SubResource[id] = { path: `${gdasset.resource?.path ?? ''}${subPath}`, type, typeRange, symbol };
+        const subPath = '::' + id, path = `${gdasset.resource?.path ?? ''}${subPath}`;
+        gdasset.refs.SubResource[id] = { path, type, typeRange, symbol };
         symbol.name = subPath;
       }
       symbol.detail = type;
@@ -398,29 +399,40 @@ export default class GDAssetProvider implements
     const reqStart = document.offsetAt(range.start);
     const reqSrc = document.getText(range);
     if (clarifyClasses != 'never') for (const m of reqSrc.matchAll(
-      /\b((?:Ext|Sub)Resource|NodePath)\s*\(\s*(?:(\d+)|"([^"\r\n]*)")\s*\)/g
+      /\b(?<=(instance[ \t]*=)?[ \t]*)((?:Ext|Sub)Resource|NodePath)[ \t]*\(\s*(?:(\d+)|"([^"\r\n]*)")\s*\)(?=([ \t]*\])?[ \t]*([^;\r\n]?))/g
     )) {
       const matchStart = reqStart + m.index, matchEnd = matchStart + m[0].length;
       const matchRange = new Range(document.positionAt(matchStart), document.positionAt(matchEnd));
       if (gdasset.isNonCode(matchRange)) continue;
-      const fn = m[1] as 'ExtResource' | 'SubResource' | 'NodePath';
-      const typePos = matchStart + fn.length;
+      const bracket = m[5], instancing = !!(m[1] && bracket);
+      const fn = m[2] as 'ExtResource' | 'SubResource' | 'NodePath', eol = !m[6] && (!bracket || instancing);
       if (fn == 'NodePath') {
         continue; //TODO
-        //const nodePath = GDAssetProvider.unescapeString(m[3] ?? '');
       } else {
-        const id = m[2] ?? GDAssetProvider.unescapeString(m[3]!);
+        const id = m[3] ?? GDAssetProvider.unescapeString(m[4]!);
         const resource = gdasset.refs[fn][id];
         if (!resource) continue;
-        const { type } = resource;
-        if (clarifyClasses == 'auto' && id.startsWith(type + '_')) continue;
-        const typeLabel = new InlayHintLabelPart(type);
-        typeLabel.location = new Location(document.uri, resource.typeRange);
-        const label = [new InlayHintLabelPart('['), typeLabel, new InlayHintLabelPart(']')];
-        const hint = new InlayHint(document.positionAt(typePos), label, InlayHintKind.Type);
-        hints.push(hint);
+        const { type, typeRange, pathRange } = resource, { end } = matchRange;
+        if (clarifyClasses != 'auto' ||
+          !(instancing && type == 'PackedScene') && type != 'Resource' && !id.startsWith(type + '_')
+        ) {
+          const typePos = end;
+          hints.push(new InlayHint(typePos, ' as '));
+          const typeLabel = new InlayHintLabelPart(type);
+          if (typeRange) typeLabel.location = new Location(document.uri, typeRange);
+          const typeHint = new InlayHint(typePos, [typeLabel], InlayHintKind.Type);
+          hints.push(typeHint);
+        }
+        if (pathRange && eol) {
+          const pathPos = bracket ? end.translate(0, bracket.length) : end;
+          const { path } = resource, pathLabel = new InlayHintLabelPart(path);
+          pathLabel.location = new Location(document.uri, pathRange);
+          const pathHint = new InlayHint(pathPos, [new InlayHintLabelPart('; '), pathLabel]);
+          hints.push(pathHint);
+        }
       }
     }
+    //TODO try another method to overcome 43 chars per line limitation, maybe decorations with css?
     if (clarifyVectors || clarifyColors) for (const m of reqSrc.matchAll(
       /\b(P(?:acked|ool)(?:Vector([234])|Color)Array)(\s*\(\s*)([\s,\w.+-]*?)\s*\)/g
     )) {
