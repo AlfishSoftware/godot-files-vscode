@@ -105,7 +105,11 @@ function tokenRange(symbol: Token) {
 
 export default abstract class LanguageSpec {
   abstract parserDefinitions(tree: ParserRule): DefinitionConstruct[] | DefinitionConstruct | null | string;
+  #parserDefinitions(
+    tree: ParserRule
+  ) { return this['parserDefinitions'](tree); }
   abstract sourcemap(range: Range): Range | null;
+  #sourcemap(range: Range): Range | null { return this['sourcemap'](range); }
   addParserSymbols(tree: ParseTree, symbols: DocumentSymbol[]): void {
     if (!(tree instanceof ParserRuleContext)) return;
     const branches = tree.children ?? [];
@@ -113,13 +117,13 @@ export default abstract class LanguageSpec {
     for (const child of branches) {
       this.addParserSymbols(child, subSymbols);
     }
-    const defConstructs = this.parserDefinitions(tree);
+    const defConstructs = this.#parserDefinitions(tree);
     if (defConstructs == null) {
       symbols.push(...subSymbols); // excluding a rule means any sub-symbols it may have are promoted to its level
       return; // but the rule itself is not included
     }
     if (typeof defConstructs == 'string') {
-      const range = this.sourcemap(ruleRange(tree));
+      const range = this.#sourcemap(ruleRange(tree));
       if (!range) return;
       const ruleName = tree.constructor.name.replace(/Context$/, '');
       const symbol = new DocumentSymbol(defConstructs, ruleName, SymbolKind.Object, range, range);
@@ -138,10 +142,10 @@ export default abstract class LanguageSpec {
     const constructName = typeof id == 'string' ? id
       : id instanceof Token ? id.text : id?.getText() ?? '-';
     const subRangeOutput = treeRange(defConstruct.range);
-    const subRange = subRangeOutput ? this.sourcemap(subRangeOutput) : this.sourcemap(ruleRange(tree));
+    const subRange = subRangeOutput ? this.#sourcemap(subRangeOutput) : this.#sourcemap(ruleRange(tree));
     if (!subRange) return;
     const idRangeOutput = treeRange(id);
-    const idRange = idRangeOutput ? this.sourcemap(idRangeOutput) : subRange;
+    const idRange = idRangeOutput ? this.#sourcemap(idRangeOutput) : subRange;
     if (!idRange) return;
     const symbol = new DocumentSymbol(constructName, defConstruct.detail, defConstruct.kind, subRange, idRange);
     if (defConstruct.isDeprecated) symbol.tags = [SymbolTag.Deprecated];

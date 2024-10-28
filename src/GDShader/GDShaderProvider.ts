@@ -102,7 +102,7 @@ export default class GDShaderProvider implements
   models: { [uri: string]: GDShaderModel | undefined; } = {};
   async provideDocumentSymbols(document: TextDocument, _token: CancellationToken): Promise<DocumentSymbol[]> {
     const config = workspace.getConfiguration('godotFiles');
-    const analysisLevel = config.get<AnalysisLevel>('shader.analysisLevel', 'complete');
+    const analysisLevel = config.get<AnalysisLevel>('shader.analysisLevel') ?? 'complete';
     if (analysisLevel == 'none') {
       this.diagnostics.set(document.uri, []);
       return [];

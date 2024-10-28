@@ -1,7 +1,7 @@
 {
 	"publisher": "alfish",
 	"name": "godot-files",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"license": "Unlicense",
 	"displayName": "Godot Files",
 	"description": "Basic GDShader support, better syntax-coloring and additional features for some Godot files.",
@@ -98,6 +98,10 @@
 					".tres",
 					".gdns"
 				],
+				"filenamePatterns": [
+					"*.tres",
+					"*.gdns"
+				],
 				"icon": {
 					"dark": "./lang.gdasset/godot-resource.dark.svg",
 					"light": "./lang.gdasset/godot-resource.light.svg"
@@ -117,6 +121,9 @@
 				"extensions": [
 					".tscn",
 					".escn"
+				],
+				"filenamePatterns": [
+					"*.[te]scn"
 				],
 				"icon": {
 					"dark": "./lang.gdasset/godot-scene.dark.svg",
@@ -146,7 +153,11 @@
 				],
 				"filenamePatterns": [
 					"**/.godot/**/*.cfg",
-					"**/.godot/imported/*.md5"
+					"**/.godot/imported/*.md5",
+					"*.import",
+					"*.gdnlib",
+					"*.tet",
+					"*.remap"
 				],
 				"icon": {
 					"dark": "./lang.gdasset/godot-asset.dark.svg",
@@ -492,33 +503,65 @@
 						"default": true,
 						"description": "Disable if you don't want tooltips to show an image preview of the resource or a link to it."
 					},
-					"godotFiles.inlineColors.single": {
-						"order": 100,
+					"godotFiles.clarifyReferences.class": {
+						"order": 200,
 						"scope": "language-overridable",
-						"type": "boolean",
-						"default": true,
-						"markdownDescription": "Show inline color decorators on `Color(…)` values."
+						"type": "string",
+						"default": "auto",
+						"markdownDescription": "Show implied engine classes as inlay hints on `ExtResource(…)` and `SubResource(…)` references.",
+						"enum": [
+							"never",
+							"auto",
+							"always"
+						],
+						"enumDescriptions": [
+							"Disable showing these inlay hints.",
+							"Show inlay hints only when the class cannot be inferred from the context.",
+							"Always show these inlay hints."
+						]
 					},
-					"godotFiles.inlineColors.array": {
-						"order": 101,
+					"godotFiles.clarifyReferences.filePath": {
+						"order": 201,
 						"scope": "language-overridable",
-						"type": "boolean",
-						"default": true,
-						"description": "Show inline color decorators on color values within arrays."
+						"type": "string",
+						"default": "exact",
+						"markdownDescription": "Show implied file paths as inlay hints after `ExtResource(…)` references.",
+						"enum": [
+							"none",
+							"exact"
+						],
+						"enumDescriptions": [
+							"Disable showing these inlay hints.",
+							"Show the path reference exactly as declared."
+						]
 					},
 					"godotFiles.clarifyArrays.vector": {
-						"order": 200,
+						"order": 210,
 						"scope": "language-overridable",
 						"type": "boolean",
 						"default": true,
 						"description": "Show implied parentheses around each vector in a packed array."
 					},
 					"godotFiles.clarifyArrays.color": {
-						"order": 201,
+						"order": 211,
 						"scope": "language-overridable",
 						"type": "boolean",
 						"default": false,
 						"description": "Show implied parentheses around each color in a packed array."
+					},
+					"godotFiles.inlineColors.single": {
+						"order": 220,
+						"scope": "language-overridable",
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "Show inline color decorators on `Color(…)` values."
+					},
+					"godotFiles.inlineColors.array": {
+						"order": 221,
+						"scope": "language-overridable",
+						"type": "boolean",
+						"default": true,
+						"description": "Show inline color decorators on color values within packed arrays."
 					}
 				}
 			},

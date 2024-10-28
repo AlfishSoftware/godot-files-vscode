@@ -579,6 +579,8 @@ export const preprocessorErrorTypes = {
   PEvalDiv: docsUrl + '#if',
   
   PPragmaExtra: docsUrl + '#pragma',
+  
+  PErrorDirective: docsUrl + '#error',
 };
 
 /** Represents a parsed preprocessor construct from which code is replaced. */
@@ -739,6 +741,8 @@ async function directive(
       return ifDirective(tokens, diagnostics, isActive(branchingStack), location, line, macros);
     case 'pragma':
       return pragmaDirective(tokens, diagnostics, isActive(branchingStack), location, line);
+    case 'error':
+      return errorDirective(tokens, diagnostics, isActive(branchingStack), location, line);
     default:
       const msg = `invalid or unsupported directive '#${directiveKeyword}' in: '${line}'`;
       diagnostics.push({ location, msg, id: 'PDirectiveMiss' });
@@ -1332,7 +1336,7 @@ function parseExpressionAtom(uri: string, expr: ExpressionTokens): ExpressionAto
         const msg = `unexpected extra code around condition atom`, { start, end } = errToken;
         throw { location: { uri, start, end }, msg, id: 'PConditionSyntax' } as PreprocessorDiagnostic;
       }
-      if (token instanceof ExpressionTokens) {
+      if (token instanceof ParenthesizedTokens) {
         const inner = parseExpressionTree(uri, token);
         if (inner instanceof ExpressionTree) return new ParenthesizedExpression(token.open, inner, token.close);
         if (inner) throw inner;
@@ -1507,7 +1511,6 @@ export class PragmaDirective extends PreprocessorDirective {
     super(location, mainRange, line);
   }
 }
-
 function pragmaDirective(
   tokens: readonly PreprocessorToken[], diagnostics: PreprocessorDiagnostic[], activeParent: boolean,
   location: CodeLocation, line: string
@@ -1535,4 +1538,32 @@ function pragmaDirective(
     }
   }
   return { code: line, construct: new PragmaDirective(location, mainRange, line, command, afterCommand) };
+}
+
+export class ErrorDirective extends PreprocessorDirective {
+  constructor(location: CodeLocation, mainRange: CodeRange, line: string,
+    readonly message: string,
+  ) {
+    super(location, mainRange, line);
+  }
+}
+function errorDirective(
+  tokens: readonly PreprocessorToken[], diagnostics: PreprocessorDiagnostic[], activeParent: boolean,
+  location: CodeLocation, line: string
+): PreprocessedOutput<ErrorDirective | PreprocessorProblem> {
+  const n = tokens.length;
+  let i = 3, mainRange: CodeRange;
+  while (i < n && /^[ \t]*$/.test(tokens[i]!.code)) i++; // skip initial whitespace until first code token
+  let j = n - 1, message = '';
+  if (i >= n) mainRange = location;
+  else {
+    while (j > i && /^[ \t]*$/.test(tokens[j]!.code)) j--; // skip final whitespace until last code token
+    mainRange = { start: tokens[i]!.start, end: tokens[j]!.end };
+    for (let k = i; k <= j; k++) message += tokens[k]!.code;
+  }
+  const msg = message || '#error';
+  const construct = new ErrorDirective(location, mainRange, line, message);
+  if (activeParent)
+    diagnostics.push({ location, msg, id: 'PErrorDirective' });
+  return { code: commentOut(line), construct };
 }

@@ -4,7 +4,9 @@ import GDAssetProvider from './GDAssetProvider';
 
 export class GDResource {
   path!: string;
+  pathRange?: Range;
   type!: string;
+  typeRange?: Range;
   symbol!: DocumentSymbol;
 }
 
@@ -31,7 +33,7 @@ export default class GDAsset {
   rootNode: string | undefined = undefined;
   nodePath(n: string) {
     if (!this.rootNode || !n) return n;
-    if (n == '.') return GDAsset.nodeCode('/root/' + this.rootNode);
+    if (n == '.') return GDAsset.nodeCode('../' + this.rootNode);
     if (n.startsWith('./')) return GDAsset.nodeCode(n.substring(2));
     return GDAsset.nodeCode(n);
   }

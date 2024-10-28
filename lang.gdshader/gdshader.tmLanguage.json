@@ -18,10 +18,15 @@
     },
     "text": {
       "patterns": [
+        { "include": "#comment" },
+        { "include": "#string" }
+      ]
+    },
+    "comment": {
+      "patterns": [
         { "include": "#commentLine" },
         { "include": "#commentBlockDocumentation" },
-        { "include": "#commentBlock" },
-        { "include": "#string" }
+        { "include": "#commentBlock" }
       ]
     },
     "code": {
@@ -595,7 +600,8 @@
         { "include": "#directivePragma" },
         { "include": "#directiveDefineMacro" },
         { "include": "#directiveDefine" },
-        { "include": "#directiveConditional" }
+        { "include": "#directiveConditional" },
+        { "include": "#directiveError" }
       ]
     },
     "directiveInclude": {
@@ -661,6 +667,20 @@
       "captures": {
         "1": { "name": "punctuation.definition.directive.gdshader" }
       }
+    },
+    "directiveError": {
+      "name": "meta.preprocessor.error.gdshader",
+      "begin": "((\\#)error)\\b\\s*",
+      "beginCaptures": {
+        "1": { "name": "keyword.control.directive.error.gdshader" },
+        "2": { "name": "punctuation.definition.directive.gdshader" }
+      },
+      "end": "(?<!\\\\)$",
+      "patterns": [
+        { "include": "#text" },
+        { "include": "#lineContinuation" },
+        { "match": "[^\\\\/\"\\r\\n]+|/|\"", "name": "string.unquoted.error-msg.gdshader" }
+      ]
     },
     "parenthesisedPreprocessor": {
       "name": "meta.parenthesis.gdshader",

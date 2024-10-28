@@ -1,8 +1,9 @@
 // GDAsset Features
 import {
-  workspace, Uri, CancellationToken, TextDocument, Range, Position, Color, TextEdit, MarkdownString,
-  DocumentSymbol, SymbolKind, Definition, Location, Hover, ColorInformation, ColorPresentation, InlayHint,
+  workspace, window, Uri, CancellationToken, TextDocument, Range, Position, Color, TextEdit, MarkdownString,
+  DocumentSymbol, SymbolKind, Definition, Location, Hover, ColorInformation, ColorPresentation,
   DocumentFilter, DocumentSymbolProvider, DefinitionProvider, HoverProvider, DocumentColorProvider, InlayHintsProvider,
+  ThemeColor, ThemableDecorationAttachmentRenderOptions, InlayHint, InlayHintKind, InlayHintLabelPart,
 } from 'vscode';
 import GDAsset, { GDResource } from './GDAsset';
 import { resPathOfDocument, locateResPath } from '../GodotProject';
@@ -13,11 +14,22 @@ function sectionSymbol(
   document: TextDocument, tag: string, rest: string, range: Range, gdasset: GDAsset
 ) {
   const attributes: { [field: string]: string | undefined; } = {};
-  let id: string | undefined;
+  let id: string | undefined, typeRange: Range | undefined, pathRange: Range | undefined;
   for (const assignment of rest.matchAll(/\b([\w-]+)\b\s*=\s*(?:(\d+)|"([^"\\]*)"|((?:Ext|Sub)Resource\s*\(.*?\)))/g)) {
     const value = assignment[2] ?? assignment[4] ?? GDAssetProvider.unescapeString(assignment[3]!);
-    attributes[assignment[1]!] = value;
-    if (assignment[1] == 'id') id = value;
+    const attr = assignment[1]!;
+    attributes[attr] = value;
+    if (attr == 'id') id = value;
+    else if (assignment[3] != null && /^(?:type|path)$/.test(attr)) {
+      const rangeText = document.getText(range);
+      const matchStart = rangeText.indexOf(assignment[0], tag.length + 2);
+      const valueStart = assignment[0].indexOf('"', attr.length + 1) + 1;
+      const { start } = range, valueRange = new Range(
+        start.translate(0, matchStart + valueStart),
+        start.translate(0, matchStart + valueStart + assignment[3].length),
+      );
+      if (attr == 'type') typeRange = valueRange; else pathRange = valueRange;
+    }
   }
   const symbol = new DocumentSymbol(tag, rest, SymbolKind.Namespace, range, range);
   switch (tag) {
@@ -36,12 +48,12 @@ function sectionSymbol(
       const type = attributes.type ?? '';
       symbol.detail = type;
       symbol.kind = SymbolKind.File;
-      gdasset.resource = { path: fileName, type, symbol };
+      gdasset.resource = { path: fileName, type, typeRange, symbol };
       break;
     }
     case 'ext_resource': {
       const type = attributes.type ?? '';
-      if (id) gdasset.refs.ExtResource[id] = { path: attributes.path ?? '?', type, symbol };
+      if (id) gdasset.refs.ExtResource[id] = { path: attributes.path ?? '?', pathRange, type, typeRange, symbol };
       symbol.name = attributes.path ?? tag;
       symbol.detail = type;
       symbol.kind = SymbolKind.Variable;
@@ -50,8 +62,8 @@ function sectionSymbol(
     case 'sub_resource': {
       const type = attributes.type ?? '';
       if (id) {
-        const subPath = '::' + id;
-        gdasset.refs.SubResource[id] = { path: `${gdasset.resource?.path ?? ''}${subPath}`, type, symbol };
+        const subPath = '::' + id, path = `${gdasset.resource?.path ?? ''}${subPath}`;
+        gdasset.refs.SubResource[id] = { path, type, typeRange, symbol };
         symbol.name = subPath;
       }
       symbol.detail = type;
@@ -60,7 +72,7 @@ function sectionSymbol(
     }
     case 'node':
       if (attributes.parent == undefined)
-        symbol.name = attributes.name ? GDAsset.nodeCode(`/root/${gdasset.rootNode = attributes.name}`) : tag;
+        symbol.name = attributes.name ? GDAsset.nodeCode(`../${gdasset.rootNode = attributes.name}`) : tag;
       else symbol.name = gdasset.nodePath(`${attributes.parent}/${attributes.name}`);
       if (attributes.type) symbol.detail = attributes.type;
       else if (attributes.instance_placeholder) {
@@ -234,6 +246,11 @@ export default class GDAssetProvider implements
     }
     if (currentSection && previousEnd)
       currentSection.range = new Range(currentSection.range.start, previousEnd);
+    if (gdasset) {
+      GDAssetProvider.updateDecorations(document, {
+        vectorParentheses: this.decorateVectorParentheses(document, gdasset),
+      });
+    }
     return symbols;
   }
   
@@ -373,22 +390,70 @@ export default class GDAssetProvider implements
     return new Hover(hover, wordRange);
   }
   
-  async provideInlayHints(document: TextDocument, range: Range, token: CancellationToken): Promise<InlayHint[] | null> {
-    const settings = workspace.getConfiguration('godotFiles', document);
-    const clarifyVectors = settings.get<boolean>('clarifyArrays.vector')!;
-    const clarifyColors = settings.get<boolean>('clarifyArrays.color')!;
-    if (!clarifyVectors && !clarifyColors) return null;
+  async provideInlayHints(document: TextDocument, range: Range, token: CancellationToken
+  ): Promise<InlayHint[] | null> {
+    const settings = workspace.getConfiguration('godotFiles.clarifyReferences', document);
+    const sClass = settings.get<string>('class') ?? 'auto';
+    const sFilePaths = settings.get<string>('filePath')!;
+    if (sClass == 'never' && sFilePaths == 'none') return null;
     const gdasset = await this.parsedGDAsset(document, token);
     if (!gdasset || token.isCancellationRequested) return null;
     const hints: InlayHint[] = [];
-    // locate all packed vector arrays using regex, skipping occurrences inside a comment or string
     const reqStart = document.offsetAt(range.start);
     const reqSrc = document.getText(range);
-    for (const m of reqSrc.matchAll(/\b(P(?:acked|ool)(?:Vector([234])|Color)Array)(\s*\(\s*)([\s,\w.+-]*?)\s*\)/g)) {
+    // locate all calls using regex, skipping occurrences inside a comment or string
+    for (const m of reqSrc.matchAll(
+      /\b(?<=(instance[ \t]*=)?[ \t]*)((?:Ext|Sub)Resource|NodePath)[ \t]*\(\s*(?:(\d+)|"([^"\r\n]*)")\s*\)(?=([ \t]*\])?[ \t]*([^;\r\n]?))/g
+    )) {
+      const matchStart = reqStart + m.index, matchEnd = matchStart + m[0].length;
+      const matchRange = new Range(document.positionAt(matchStart), document.positionAt(matchEnd));
+      if (gdasset.isNonCode(matchRange)) continue;
+      const bracket = m[5], instancing = !!(m[1] && bracket);
+      const fn = m[2] as 'ExtResource' | 'SubResource' | 'NodePath', eol = !m[6] && (!bracket || instancing);
+      if (fn == 'NodePath') {
+        continue; //TODO
+      } else {
+        const id = m[3] ?? GDAssetProvider.unescapeString(m[4]!);
+        const resource = gdasset.refs[fn][id];
+        if (!resource) continue;
+        const { type, typeRange, pathRange } = resource, { end } = matchRange;
+        if (sClass == 'always' ||
+          sClass == 'auto' && !(instancing && type == 'PackedScene') && type != 'Resource' && !id.startsWith(type + '_')
+        ) {
+          const typePos = end;
+          hints.push(new InlayHint(typePos, ' as '));
+          const typeLabel = new InlayHintLabelPart(type);
+          if (typeRange) typeLabel.location = new Location(document.uri, typeRange);
+          const typeHint = new InlayHint(typePos, [typeLabel], InlayHintKind.Type);
+          hints.push(typeHint);
+        }
+        if (pathRange && eol && sFilePaths != 'none') {
+          const pathPos = bracket ? end.translate(0, bracket.length) : end;
+          const { path } = resource, pathLabel = new InlayHintLabelPart(path);
+          pathLabel.location = new Location(document.uri, pathRange);
+          const pathHint = new InlayHint(pathPos, [new InlayHintLabelPart('; '), pathLabel]);
+          hints.push(pathHint);
+        }
+      }
+    }
+    return hints;
+  }
+  decorateVectorParentheses(document: TextDocument, gdasset: GDAsset): Range[] {
+    const settings = workspace.getConfiguration('godotFiles.clarifyArrays', document);
+    const clarifyVectors = settings.get<boolean>('vector')!;
+    const clarifyColors = settings.get<boolean>('color')!;
+    if (!clarifyVectors && !clarifyColors) return [];
+    const maxChars = workspace.getConfiguration('editor', document).get<number>('maxTokenizationLineLength')!;
+    const ranges: Range[] = [];
+    const src = document.getText();
+    // locate all packed vector arrays using regex, skipping occurrences inside a comment or string
+    for (const m of src.matchAll(/\b(P(?:acked|ool)(?:Vector([234])|Color)Array)(\s*\(\s*)([\s,\w.+-]*?)\s*\)/g)) {
+      const charLength = m[0].length;
+      if (charLength >= maxChars) continue;
       const dim = m[2];
       if (dim && !clarifyVectors || !dim && !clarifyColors) continue;
-      const ctorStart = reqStart + m.index;
-      const ctorRange = new Range(document.positionAt(ctorStart), document.positionAt(ctorStart + m[0].length));
+      const ctorStart = m.index;
+      const ctorRange = new Range(document.positionAt(ctorStart), document.positionAt(ctorStart + charLength));
       if (gdasset.isNonCode(ctorRange)) continue;
       const type = m[1]!, paren = m[3]!, allArgs = m[4]!;
       const typeEnd = ctorStart + type.length;
@@ -399,18 +464,10 @@ export default class GDAssetProvider implements
         const args = c[0];
         const itemPos = argsStart + c.index!;
         const itemRange = new Range(document.positionAt(itemPos), document.positionAt(itemPos + args.length));
-        const head = new InlayHint(itemRange.start, '(');
-        // head.tooltip = `[${i++}]`; // would need to provide 0-based indices for all types of array
-        const tail = new InlayHint(itemRange.end, ')');
-        // tail.tooltip = `vector #${i}`; // would need to provide 1-based indices for all types of array
-        hints.push(head, tail);
+        ranges.push(itemRange);
       }
-      //TODO would need to provide size for all arrays and dictionary
-      // const arrayHead = new InlayHint(document.positionAt(typeEnd), `[${i}]`);
-      // arrayHead.tooltip = i == 0 ? 'empty' : `${i} vector${i == 1 ? '' : 's'}`;
-      // hints.push(arrayHead);
     }
-    return hints;
+    return ranges;
   }
   
   async provideDocumentColors(document: TextDocument, token: CancellationToken): Promise<ColorInformation[] | null> {
@@ -465,7 +522,26 @@ export default class GDAssetProvider implements
     function ok(c: number) { return c >= 0 && c <= 1; }
     function hex(c: number) { return Math.round(c * 255).toString(16).toUpperCase().replace(/^.$/s, '0$&'); }
   }
+  
+  static updateDecorations(document: TextDocument, decorations: DecorationRanges): void {
+    for (const editor of window.visibleTextEditors.filter(e => e.document == document)) {
+      editor.setDecorations(parenthesesDecoration, decorations.vectorParentheses);
+    }
+  }
 }
+
+interface DecorationRanges {
+  vectorParentheses: Range[];
+}
+const themeColorInlayFg = new ThemeColor('editorInlayHint.foreground');
+const themeColorInlayBg = new ThemeColor('editorInlayHint.background');
+const themeInlay: ThemableDecorationAttachmentRenderOptions = {
+  color: themeColorInlayFg, backgroundColor: themeColorInlayBg,
+  fontWeight: 'normal', fontStyle: 'normal', textDecoration: 'none',
+};
+const parenthesesDecoration = window.createTextEditorDecorationType({
+  before: { ...themeInlay, contentText: '(' }, after: { ...themeInlay, contentText: ')' },
+});
 
 const regex2Floats = /(?:[\w.+-]+\s*,\s*)?[\w.+-]+/g;
 const regex3Floats = /(?:[\w.+-]+\s*,\s*){0,2}[\w.+-]+/g;

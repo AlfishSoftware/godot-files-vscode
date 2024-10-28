@@ -4,6 +4,18 @@
 Features currently in early access are marked with 🔒 as they're restricted to [supporters].  
 Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're unlocked for everyone since that version.
 
+## [0.1.1] - 2024-10-28
+### Added
+- GDAsset: Show engine classes as inlay hints on `ExtResource(…)` and `SubResource(…)` references.
+- GDAsset: Show file paths as inlay hints on `ExtResource(…)` references.
+- GDShader: Add `#error` directive to preprocessor and to syntax coloring.
+- Docs: Add text content provider for doc URI, so it shows the webpage URL when peeking a class/member definition.
+### Fixed
+- Stronger pattern to match files with more priority than other extensions like godot-tools.
+- GDAsset: Bypass max limit of 44 inlay hint characters shown per line on vector|color array parentheses.  
+	This feature will still respect `editor.maxTokenizationLineLength` to avoid potential performance issues.
+- GDAsset: Use `$"../TopNode"` instead of `$"/root/TopNode"` in the outline, as scenes are not always under root.
+
 ## [0.1.0] - 2024-10-16
 ### Changed
 - GDShader: Disable url detection by default, since in BBCode it incorrectly includes the `[/url]` end tag too.
@@ -147,7 +159,8 @@ Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're
 - GDAsset: Image and font previews by hovering references and paths.
 - GDAsset: Hover resource references to show GDScript preload code.
 
-[Unreleased]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.1.0...develop
+[Unreleased]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.1.1...develop
+[0.1.1]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.0.10...v0.1.0
 [0.0.10]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.0.9...v0.0.10
 [0.0.9]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.0.8...v0.0.9
