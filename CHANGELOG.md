@@ -4,7 +4,7 @@
 Features currently in early access are marked with 🔒 as they're restricted to [supporters].  
 Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're unlocked for everyone since that version.
 
-## [Unreleased]
+## [0.1.1] - 2024-10-28
 ### Added
 - GDAsset: Show engine classes as inlay hints on `ExtResource(…)` and `SubResource(…)` references.
 - GDAsset: Show file paths as inlay hints on `ExtResource(…)` references.
@@ -159,7 +159,8 @@ Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're
 - GDAsset: Image and font previews by hovering references and paths.
 - GDAsset: Hover resource references to show GDScript preload code.
 
-[Unreleased]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.1.0...develop
+[Unreleased]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.1.1...develop
+[0.1.1]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.0.10...v0.1.0
 [0.0.10]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.0.9...v0.0.10
 [0.0.9]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.0.8...v0.0.9
