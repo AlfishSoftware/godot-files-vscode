@@ -394,6 +394,7 @@ export default class GDAssetProvider implements
   ): Promise<InlayHint[] | null> {
     const settings = workspace.getConfiguration('godotFiles.clarifyReferences', document);
     const sClass = settings.get<string>('class') ?? 'auto';
+    const sAsOperator = settings.get<string>('asOperator') ?? ':>';
     const sFilePaths = settings.get<string>('filePath')!;
     if (sClass == 'never' && sFilePaths == 'none') return null;
     const gdasset = await this.parsedGDAsset(document, token);
@@ -421,7 +422,7 @@ export default class GDAssetProvider implements
           sClass == 'auto' && !(instancing && type == 'PackedScene') && type != 'Resource' && !id.startsWith(type + '_')
         ) {
           const typePos = end;
-          hints.push(new InlayHint(typePos, ' as '));
+          if (sAsOperator) hints.push(new InlayHint(typePos, sAsOperator));
           const typeLabel = new InlayHintLabelPart(type);
           if (typeRange) typeLabel.location = new Location(document.uri, typeRange);
           const typeHint = new InlayHint(typePos, [typeLabel], InlayHintKind.Type);

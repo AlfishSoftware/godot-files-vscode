@@ -4,6 +4,10 @@
 Features currently in early access are marked with 🔒 as they're restricted to [supporters].  
 Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're unlocked for everyone since that version.
 
+## [0.1.2]
+### Changed
+- GDAsset: Allow configuring `as` operator in inlay hints to arbitrary strings. The default is now `#`.
+
 ## [0.1.1] - 2024-10-28
 ### Added
 - GDAsset: Show engine classes as inlay hints on `ExtResource(…)` and `SubResource(…)` references.
