@@ -5,7 +5,7 @@ Godot Editor does NOT need to be running for any features here.
 
 [godot-tools]: https://github.com/godotengine/godot-vscode-plugin
 
-> 🥺 Please help prevent this extension from being abandoned in 2025-01-31 by [donating to the crowdfunding goal][donate]!  
+> 🥺 Please help prevent this extension from being abandoned in 2025-02-28 by [donating to the crowdfunding goal][donate]!  
 > 🔑 With a donation, you can **unlock early access and other rewards**! More info below.
 
 ![Showcasing various features, like GDShader errors, hovering, navigating and documentation pages](docs/showcase-all.png "* Features showcased here include those restricted to early access.")
@@ -43,7 +43,7 @@ Syntax-coloring of valid embedded code is supported.
 	😎 It even handles both inner and outer languages' escape sequences gracefully, and colors them differently:  
 	![Showcasing how embedded code escape sequences are handled gracefully](docs/showcase-embedded-code-escapes.webp)
 - **GDShader**: in `codeblock`-type BBCode tags in documentation comments (including `[gdscript]` and `[csharp]` tags).  
-	Note that you should always put the inner code in its own lines verbatim, without the leading `*`, or any extra leading indentation.  
+	✳️ Note that you should always put the inner code in its own lines verbatim, without the leading `*`, or any extra leading indentation.  
 	![Showcasing how you should embed code in GDShader docs BBCode](docs/showcase-gdshader-docs-embed-code.webp)
 
 The inner code doesn't break the container code syntax, as long as it's valid code (without partial constructs like unterminated strings/comments, mismatched brackets, etc). Some cases are being handled, but it's not viable to try to safeguard against every possible case of invalid code; this is a limitation of the IDE.
@@ -91,8 +91,8 @@ These features are supported in textual Scene and Resource files.
 
 - 🌟 **New**:  
 	**See inferred class and path of resource references** in inlay hints. You can <kbd>Ctrl</kbd>+Click them to navigate. You can also hover paths.  
-	✳️ Paths are only shown at the end of a line (so not within arrays, you can still hover the code itself to see the path in this case).  
-	🔧 You can control this feature in the settings under `godotFiles.clarifyReferences` (`.class` and `.filePath`). By default, the class is only hinted where it cannot be inferred from the context, so in Godot 4 it will typically not be shown for `SubResource`, as it's already in the id (unless you set it to `always`).  
+	✳️ Paths are only shown at the end of a line (so not within arrays, but you can still hover the id to see the path in this case).  
+	🔧 You can control this feature in the settings under `godotFiles.clarifyReferences` (`.class`, `.asOperator` and `.filePath`). By default, `.filePath` shows the minimal unique subpath (usually just the file name; folders are only shown to differentiate files with the same name). The class is not hinted where it can be inferred from the context, so in Godot 4 it won't be shown for `SubResource`, as it's already in the id (unless you set `.class` to `always`).  
 	![Showcasing classes and paths as inlay hints on resource references](docs/showcase-inlay-hints-resource-refs.webp)
 
 - **Edit a color by hovering its inline decorator** on `Color(…)` values or within an array. You can also see its hex value.  
@@ -121,7 +121,7 @@ The features below are currently restricted.
 
 ### Godot Documentation Viewer
 Browse the online Godot Documentation directly from the IDE.  
-⚙️ You can use the command ***Godot Files: Open Godot API Documentation*** to show the page listing all classes.  
+⚙️ You can use the command ***Godot Files: Open Godot API Documentation*** to show the page listing all classes. Default shortcut: <kbd>Ctrl</kbd> <kbd>F1</kbd>; macOS: <kbd>⌥</kbd> <kbd>⌘</kbd> <kbd>D</kbd>.  
 🔧 The setting `godotFiles.documentation.viewer` lets you choose your preferred viewer for when you're online:
 - `godot-tools`: Use the *godot-tools* extension to open API docs (offline; requires Godot to be running and connected).
 - 🔒 `browser`: Open online documentation URLs in the external browser. Also supports going to the specific Godot version.

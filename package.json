@@ -1,7 +1,7 @@
 {
 	"publisher": "alfish",
 	"name": "godot-files",
-	"version": "0.1.1",
+	"version": "0.1.2",
 	"license": "Unlicense",
 	"displayName": "Godot Files",
 	"description": "Basic GDShader support, better syntax-coloring and additional features for some Godot files.",
@@ -520,18 +520,46 @@
 							"Always show these inlay hints."
 						]
 					},
-					"godotFiles.clarifyReferences.filePath": {
+					"godotFiles.clarifyReferences.asOperator": {
 						"order": 201,
 						"scope": "language-overridable",
 						"type": "string",
-						"default": "exact",
+						"default": "#",
+						"markdownDescription": "The postfix \"as\" operator to use in inlay hints before implied engine classes.\n\nThe IDE imposes a limitation of 43 characters per line in inlay hints before collapsing text into `…`, so using a short string like `:>` (as in F#) is a good idea. If using a keyword like `as`, surround it with a space before and after it.",
+						"anyOf": [
+							{
+								"enum": [
+									"#",
+									":>",
+									" as "
+								],
+								"markdownEnumDescriptions": [
+									"A single `#` character, to save the most space.",
+									"A short symbolic operator, resembling F#. Saves space while implying `as` semantics.",
+									"The `as` keyword, like it's used in C# and GDScript. Longer, but accurate and self-explanatory."
+								]
+							},
+							{
+								"maxLength": 15
+							}
+						]
+					},
+					"godotFiles.clarifyReferences.filePath": {
+						"order": 202,
+						"scope": "language-overridable",
+						"type": "string",
+						"default": "minimal",
 						"markdownDescription": "Show implied file paths as inlay hints after `ExtResource(…)` references.",
 						"enum": [
 							"none",
+							"filename",
+							"minimal",
 							"exact"
 						],
-						"enumDescriptions": [
+						"markdownEnumDescriptions": [
 							"Disable showing these inlay hints.",
+							"Show only the file name (with extension), even when different files have the same name.",
+							"Show the minimum path segments needed to have unique paths for different files, collapsing the common parents into `…/`. This means it usually shows just the file name (with extension), and parent folders are shown only as needed to distinguish files with the same name.",
 							"Show the path reference exactly as declared."
 						]
 					},
@@ -603,17 +631,17 @@
 		]
 	},
 	"devDependencies": {
-		"@types/vscode": "^1.93.0",
+		"@types/vscode": "^1.95.0",
 		"ts-loader": "^9.5.1",
-		"typescript": "^5.6.3",
-		"webpack": "^5.95.0",
+		"typescript": "^5.7.2",
+		"webpack": "^5.96.1",
 		"webpack-cli": "^5.1.4"
 	},
 	"dependencies": {
 		"antlr4": "~4.13.2"
 	},
 	"engines": {
-		"vscode": "^1.93.0"
+		"vscode": "^1.95.0"
 	},
 	"scripts": {
 		"watch-pc": "tsc -watch -p ./src/",
