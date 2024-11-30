@@ -50,6 +50,22 @@ export default class GDAsset {
     ExtResource: {} as { [id: string]: GDResource | undefined },
     SubResource: {} as { [id: string]: GDResource | undefined },
   };
+  pathsByMinimalForm: Map<string, string> = new Map();
+  addMinimalPath(pathSegments: string[], nSegments = 1) {
+    const minimalPath = pathSegments.slice(-nSegments).join('/');
+    const path = pathSegments.join('/');
+    const otherPath = this.pathsByMinimalForm.get(minimalPath);
+    if (otherPath == path) return;
+    if (otherPath == undefined || !otherPath && nSegments >= pathSegments.length) {
+      this.pathsByMinimalForm.set(minimalPath, path);
+      return;
+    }
+    if (otherPath) {
+      this.pathsByMinimalForm.set(minimalPath, '');
+      this.addMinimalPath(otherPath.split('/'), nSegments + 1);
+    }
+    this.addMinimalPath(pathSegments, nSegments + 1);
+  }
   strings: { range: Range, value: string; }[] = [];
   comments: { range: Range, value: string; }[] = [];
   isInString(place: Position | Range) {

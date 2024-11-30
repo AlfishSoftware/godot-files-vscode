@@ -382,7 +382,7 @@
 				{ "include": "#characterEscape" },
 				{
 					"comment": "Break source because it interferes with escaped quote pattern.",
-					"match": "^\\s*\\#define\\s+\\w+\\b|.+?(?:[\\[{(]|(?=\\\\))",
+					"match": "^\\s*\\#define\\s+\\w+\\b|.*?[\\[{(]|[^\\\\]+?(?=\\\\)",
 					"captures": {
 						"0": {
 							"patterns": [
@@ -696,7 +696,7 @@
 					}
 				},
 				{
-					"match": "(?<=^\\s*\\[ext_resource\\s+[^\\n;#]*?)\\b(path)\\s*(=)\\s*(\")(.+?)(\")",
+					"match": "(?<=^\\s*\\[ext_resource\\s+[^\\n;#]*?)\\b(path)\\s*(=)\\s*(\")(.*?)(\")",
 					"captures": {
 						"1": { "name": "entity.other.attribute-name.path.link.gdasset" },
 						"2": { "name": "punctuation.separator.key-value.gdasset" },

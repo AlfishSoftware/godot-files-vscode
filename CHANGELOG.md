@@ -4,9 +4,12 @@
 Features currently in early access are marked with 🔒 as they're restricted to [supporters].  
 Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're unlocked for everyone since that version.
 
-## [0.1.2]
-### Changed
-- GDAsset: Allow configuring `as` operator in inlay hints to arbitrary strings. The default is now `#`.
+## [0.1.2] - 2024-11-30
+### Added
+- GDAsset: New default setting showing inlay hint paths as the minimal unique subpath (usually just the file name).  
+	This greatly helps overcome the 43 chars/line limitation on inlay hints, which was cutting long paths at the end.  
+	You can also show just the file names if you don't need them to be necessarily unique.
+- GDAsset: Allow configuring `as` operator in inlay hints to arbitrary strings. The default is now `#` to save space.
 
 ## [0.1.1] - 2024-10-28
 ### Added
@@ -163,7 +166,8 @@ Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're
 - GDAsset: Image and font previews by hovering references and paths.
 - GDAsset: Hover resource references to show GDScript preload code.
 
-[Unreleased]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.1.1...develop
+[Unreleased]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.1.2...develop
+[0.1.2]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.0.10...v0.1.0
 [0.0.10]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.0.9...v0.0.10

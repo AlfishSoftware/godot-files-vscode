@@ -548,14 +548,18 @@
 						"order": 202,
 						"scope": "language-overridable",
 						"type": "string",
-						"default": "exact",
+						"default": "minimal",
 						"markdownDescription": "Show implied file paths as inlay hints after `ExtResource(…)` references.",
 						"enum": [
 							"none",
+							"filename",
+							"minimal",
 							"exact"
 						],
-						"enumDescriptions": [
+						"markdownEnumDescriptions": [
 							"Disable showing these inlay hints.",
+							"Show only the file name (with extension), even when different files have the same name.",
+							"Show the minimum path segments needed to have unique paths for different files, collapsing the common parents into `…/`. This means it usually shows just the file name (with extension), and parent folders are shown only as needed to distinguish files with the same name.",
 							"Show the path reference exactly as declared."
 						]
 					},

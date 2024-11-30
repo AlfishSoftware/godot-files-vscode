@@ -43,7 +43,7 @@ function sectionSymbol(
       break;
     }
     case 'gd_resource': {
-      const fileName = document.uri.path.replace(/^\/(.*\/)*/, ''); // with ext
+      const fileName = document.uri.path.replace(/^\/(?:.*\/)*/, ''); // with ext
       symbol.name = fileName;
       const type = attributes.type ?? '';
       symbol.detail = type;
@@ -53,7 +53,11 @@ function sectionSymbol(
     }
     case 'ext_resource': {
       const type = attributes.type ?? '';
-      if (id) gdasset.refs.ExtResource[id] = { path: attributes.path ?? '?', pathRange, type, typeRange, symbol };
+      if (id) {
+        const path = attributes.path ?? '?';
+        if (attributes.path) gdasset.addMinimalPath(path.split(/[/\\]/g));
+        gdasset.refs.ExtResource[id] = { path, pathRange, type, typeRange, symbol };
+      }
       symbol.name = attributes.path ?? tag;
       symbol.detail = type;
       symbol.kind = SymbolKind.Variable;
@@ -394,7 +398,7 @@ export default class GDAssetProvider implements
   ): Promise<InlayHint[] | null> {
     const settings = workspace.getConfiguration('godotFiles.clarifyReferences', document);
     const sClass = settings.get<string>('class') ?? 'auto';
-    const sAsOperator = settings.get<string>('asOperator') ?? ':>';
+    const sAsOperator = settings.get<string>('asOperator') ?? '#';
     const sFilePaths = settings.get<string>('filePath')!;
     if (sClass == 'never' && sFilePaths == 'none') return null;
     const gdasset = await this.parsedGDAsset(document, token);
@@ -430,7 +434,18 @@ export default class GDAssetProvider implements
         }
         if (pathRange && eol && sFilePaths != 'none') {
           const pathPos = bracket ? end.translate(0, bracket.length) : end;
-          const { path } = resource, pathLabel = new InlayHintLabelPart(path);
+          let shownPath = resource.path;
+          switch (sFilePaths) {
+            case 'filename': shownPath = shownPath.replace(/^(?:[^/\\]*[/\\])+/, ''); break;
+            case 'exact': break;
+            default: for (const [minimalPath, exactPath] of gdasset.pathsByMinimalForm) {
+              if (shownPath != exactPath) continue;
+              // replace shown path with its minimal form if using `minimal` setting
+              if (shownPath != minimalPath) shownPath = '…/' + minimalPath;
+              break;
+            }
+          }
+          const pathLabel = new InlayHintLabelPart(shownPath);
           pathLabel.location = new Location(document.uri, pathRange);
           const pathHint = new InlayHint(pathPos, [new InlayHintLabelPart('; '), pathLabel]);
           hints.push(pathHint);
