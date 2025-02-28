@@ -4,6 +4,12 @@
 Features currently in early access are marked with 🔒 as they're restricted to [supporters].  
 Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're unlocked for everyone since that version.
 
+## [0.1.3] - 2025-02-28
+### Changed
+- Docs: Use `browser` viewer instead of `godot-tools` as a fallback to `webview` (default viewer).
+### Fixed
+- Docs: Force the `browser` viewer fallback to `webview` on web IDEs because of cross-origin issue.
+
 ## [0.1.2] - 2024-11-30
 ### Added
 - GDAsset: New default setting showing inlay hint paths as the minimal unique subpath (usually just the file name).  
@@ -86,7 +92,7 @@ Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're
 - GDAsset: Open docs when going to definition of a built-in type in GDAsset.
 - Docs: Command to open Godot API docs listing all classes.
 - Docs: Add a viewer which delegates documentation handling to the `godot-tools` extension via `gddoc:` URI.
-- 🔒 Docs: Add a simple `browser` viewer, which opens the online docs URL in the external browser.
+- ***v0.1.3*** 🔓 Docs: Add a simple `browser` viewer, which opens the online docs URL in the external browser.
 - 🔒 Docs: Add an advanced `webview` viewer, which loads the online docs internally within tabs in the IDE.
 ### Fixed
 - Fix GDAsset quotes escaping on embedded GDScript for new grammar (from godot-tools v2) and raw/triple-quoted strings.
@@ -166,7 +172,8 @@ Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're
 - GDAsset: Image and font previews by hovering references and paths.
 - GDAsset: Hover resource references to show GDScript preload code.
 
-[Unreleased]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.1.2...develop
+[Unreleased]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.1.3...develop
+[0.1.3]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.0.10...v0.1.0

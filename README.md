@@ -1,11 +1,12 @@
 # Godot Files
 
-**Basic GDShader support, better syntax-coloring and additional features for some Godot files.**  
+**Additional features for some Godot files, better syntax-coloring and very basic GDShader support.**  
 Godot Editor does NOT need to be running for any features here.
 
 [godot-tools]: https://github.com/godotengine/godot-vscode-plugin
 
-> 🥺 Please help prevent this extension from being abandoned in 2025-02-28 by [donating to the crowdfunding goal][donate]!  
+> ⏳ Thanks to the 2 top contributors, the crowdfunding deadline was delayed by 2 more months. But progress is currently paused.  
+> 🥺 Please help development by [donating to the crowdfunding goal][donate] so I can resume work here on new features!  
 > 🔑 With a donation, you can **unlock early access and other rewards**! More info below.
 
 ![Showcasing various features, like GDShader errors, hovering, navigating and documentation pages](docs/showcase-all.png "* Features showcased here include those restricted to early access.")
@@ -16,14 +17,61 @@ This is not meant to fully replace the official [godot-tools] extension, but to 
 **Compatibility**:
 
 - **Godot**: 3.x LTS and 4.0 to 4.x; official and flathub builds
-- **godot-tools**: v2.3.0; *("view documentation" feature can use godot-tools)*
+- **godot-tools**: v2.4.0; *("view documentation" feature can use godot-tools)*
 
 🌐 This extension also works on browser IDEs ([vscode.dev](https://vscode.dev) and [github.dev](https://github.dev)), with minor limitations.
+
+## Special Thanks
+❤️ Huge thanks to everyone who has donated so far!
+
+[![Logo 00](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-00.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-00.html)
+[![Logo 01](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-01.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-01.html)
+<!--
+[![Logo 02](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-02.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-02.html)
+[![Logo 03](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-03.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-03.html)
+[![Logo 04](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-04.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-04.html)
+[![Logo 05](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-05.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-05.html)
+-->
+
+[![User 00](https://avatars.githubusercontent.com/u/3393799?s=64)](https://github.com/Ushio-Aria)
+[![User 01](https://avatars.githubusercontent.com/u/13101208?s=64)](https://github.com/CyberSer0)
+[![User 02](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-02.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-02.html)
+[![User 03](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-03.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-03.html)
+[![User 04](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-04.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-04.html)
+[![User 05](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-05.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-05.html)
+[![User 06](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-06.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-06.html)
+[![User 07](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-07.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-07.html)
+<!--
+[![User 08](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-08.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-08.html)
+[![User 09](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-09.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-09.html)
+[![User 10](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-10.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-10.html)
+[![User 11](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-11.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-11.html)
+[![User 12](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-12.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-12.html)
+[![User 13](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-13.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-13.html)
+[![User 14](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-14.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-14.html)
+[![User 15](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-15.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-15.html)
+[![User 16](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-16.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-16.html)
+[![User 17](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-17.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-17.html)
+[![User 18](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-18.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-18.html)
+[![User 19](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-19.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-19.html)
+[![User 20](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-20.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-20.html)
+[![User 21](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-21.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-21.html)
+[![User 22](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-22.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-22.html)
+[![User 23](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-23.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-23.html)
+[![User 24](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-24.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-24.html)
+[![User 25](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-25.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-25.html)
+[![User 26](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-26.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-26.html)
+[![User 27](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-27.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-27.html)
+[![User 28](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-28.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-28.html)
+[![User 29](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-29.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-29.html)
+-->
+
+There are donation tiers if you also want to [get your logo or GitHub user listed][rewards] right here.
 
 ## Features
 Features are supported on these languages:
 - **GDShader** files: `*.gdshader`, `*.gdshaderinc`.  
-	> 🔒 GDShader Language features are finally available on [early access][donate]! See below.
+	> 🔒 Very basic GDShader Language features are available on [early access][donate]. See below.
 - "**GDAsset**" files (this term is used here to describe all INI-like files used by Godot):  
 	`project.godot`, `*.tscn`, `*.escn`, `*.tres`, `*.gdns`, `*.gdnlib`, `*.import`, `*.tet`, `*.remap`.
 - "**Configuration Properties**" (`config-definition`), used for other specific non-Godot INI-like files:  
@@ -59,12 +107,19 @@ The IDE uses this in many places, like the **Outline** view, in **Breadcrumbs** 
 ### Features in GDAsset files
 These features are supported in textual Scene and Resource files.
 
-- **Navigate to the definition** of `SubResource` and `ExtResource` references, and to resource paths.  
-	![Showcasing navigate to definition](docs/showcase-goto-definition.png)  
-	Going to the definition of a built-in engine type (on `type="SomeType"`, `some_field = SomeType(...)` or in inlay hints) will open its Godot API Documentation. This will be handled by the *godot-tools* extension, unless you're online and enabled [early access][donate] (see below).
+#### Automatically shown
 
-- **See GDScript code for loading** a resource reference or path by hovering (`preload(…)`, `load(…)` or `FileAccess.open(…)`).  
-	![Showcasing code for loading when previewing user path](docs/showcase-user-path-load.webp)
+- **See inferred class and path of resource references** in inlay hints. You can <kbd>Ctrl</kbd>+Click them to navigate. You can also hover paths.  
+	✳️ Paths are only shown at the end of a line (so not within arrays, but you can still hover the id to see the path in this case).  
+	🔧 You can control this feature in the settings under `godotFiles.clarifyReferences` (`.class`, `.asOperator` and `.filePath`). By default, `.filePath` shows the minimal unique subpath (usually just the file name; folders are only shown to differentiate files with the same name). The class is not hinted where it can be inferred from the context, so in Godot 4 it won't be shown for `SubResource`, as it's already in the id (unless you set `.class` to `always`).  
+	![Showcasing classes and paths as inlay hints on resource references](docs/showcase-inlay-hints-resource-refs.webp)
+
+- **See implied parentheses in packed arrays** of vectors or colors that surround items, similar to inlay hints.  
+	🔧 You can toggle this feature with the settings under `godotFiles.clarifyArrays` (`.vector` and `.color`).  
+	✳️ This feature respects `editor.maxTokenizationLineLength` to avoid potential performance issues on very long lines.  
+	![Showcasing implied parentheses in array items as inlay hints](docs/showcase-parentheses-hint-in-arrays.webp)
+
+#### Hovering
 
 - **Preview images and fonts** by hovering their resource paths or `ExtResource` references.  
 	🔧 You can disable resource previews when hovering with the setting `godotFiles.hover.previewResource`.  
@@ -89,24 +144,24 @@ These features are supported in textual Scene and Resource files.
 	As well as any other resource files that have a thumbnail in Godot Editor:  
 	![Showcasing thumbnail preview of a material resource](docs/showcase-material-thumb.webp)
 
-- 🌟 **New**:  
-	**See inferred class and path of resource references** in inlay hints. You can <kbd>Ctrl</kbd>+Click them to navigate. You can also hover paths.  
-	✳️ Paths are only shown at the end of a line (so not within arrays, but you can still hover the id to see the path in this case).  
-	🔧 You can control this feature in the settings under `godotFiles.clarifyReferences` (`.class`, `.asOperator` and `.filePath`). By default, `.filePath` shows the minimal unique subpath (usually just the file name; folders are only shown to differentiate files with the same name). The class is not hinted where it can be inferred from the context, so in Godot 4 it won't be shown for `SubResource`, as it's already in the id (unless you set `.class` to `always`).  
-	![Showcasing classes and paths as inlay hints on resource references](docs/showcase-inlay-hints-resource-refs.webp)
+- **See GDScript code for loading** a resource reference or path by hovering (`preload(…)`, `load(…)` or `FileAccess.open(…)`).  
+	![Showcasing code for loading when previewing user path](docs/showcase-user-path-load.webp)
 
 - **Edit a color by hovering its inline decorator** on `Color(…)` values or within an array. You can also see its hex value.  
 	🔧 You can disable this feature with the settings under `godotFiles.inlineColors` (`.single` and `.array`).  
 	![Showcasing inline color decorators](docs/showcase-color-decorators.webp)  
 	✳️ The displayed color (and its hex value) can't consider advanced cases like HDR and color space changes (e.g. between sRGB and linear).
 
+#### Commands
+
+- **Navigate to the definition** of `SubResource` and `ExtResource` references, and to resource paths.  
+	![Showcasing navigate to definition](docs/showcase-goto-definition.png)  
+	Going to the definition of a built-in engine type (on `type="SomeType"`, `some_field = SomeType(...)` or in inlay hints) will open its Godot API Documentation using the configured viewer (see below).
+
 #### Latest feature no longer restricted
 🌟 This is now out of early access:
 
-- **See implied parentheses in packed arrays** of vectors or colors that surround items, similar to inlay hints.  
-	🔧 You can toggle this feature with the settings under `godotFiles.clarifyArrays` (`.vector` and `.color`).  
-	✳️ This feature respects `editor.maxTokenizationLineLength` to avoid potential performance issues on very long lines.  
-	![Showcasing implied parentheses in array items as inlay hints](docs/showcase-parentheses-hint-in-arrays.webp)
+- The `browser` option for the documentation viewer (see below).
 
 If you want **more features**, check the sections **Early Access**, **Crowdfunding** and **Potential Future Development** below.
 
@@ -124,9 +179,10 @@ Browse the online Godot Documentation directly from the IDE.
 ⚙️ You can use the command ***Godot Files: Open Godot API Documentation*** to show the page listing all classes. Default shortcut: <kbd>Ctrl</kbd> <kbd>F1</kbd>; macOS: <kbd>⌥</kbd> <kbd>⌘</kbd> <kbd>D</kbd>.  
 🔧 The setting `godotFiles.documentation.viewer` lets you choose your preferred viewer for when you're online:
 - `godot-tools`: Use the *godot-tools* extension to open API docs (offline; requires Godot to be running and connected).
-- 🔒 `browser`: Open online documentation URLs in the external browser. Also supports going to the specific Godot version.
+- `browser`: Open online documentation URLs in the external browser. Also supports going to the specific Godot version.
 - 🔒 `webview`: Load online documentation pages internally within IDE tabs (including tutorials).  
-Searches and external links are opened in your browser. This advanced viewer supports redirecting inherited members to locate their definition in a parent class. There's a few settings for it too. Some features (e.g. translations, user-contributed notes) are not supported in this viewer, but you can use the command to open the page externally.
+Searches and external links are opened in your browser. This advanced viewer supports redirecting inherited members to locate their definition in a parent class. There's a few settings for it too. Some features (e.g. translations, user-contributed notes) are not supported in this viewer, but you can use the command to open the page externally.  
+💻 This option isn't supported on browser IDEs, where it uses the equivalent `browser` fallback to open the page in a browser tab instead of IDE tab.  
 
 ![Showcasing a Godot Docs tutorial page on the internal webview](docs/showcase-docs-webview-tutorial.webp)
 
@@ -154,53 +210,12 @@ The preprocessor produces sourcemapping for all ranges within `#include` and mac
 
 ## Crowdfunding
 
-This extension is free, but making it is not free at all. Development of features took a huge amount of work (specially of GDShader language features in particular). This should be only the start, but it's **not possible to make any further progress** in this extension due to the extremely low amount of [donations][donate] 📉. Yet I really want this extension to stay free in public domain, with no ads. So I have no choice - I have to request a bit of crowdfunding, to see whether this project can continue at all or has to be abandoned 😢.
+This extension is free, but making it is not free at all. Development of features took a huge amount of work (specially of GDShader language features in particular). This should be only the start, but it's **not possible to make any further progress** in this extension without enough [donations][donate] 📉. Yet I really want this extension to continue as free software in public domain, with no ads. So I have no choice - I have to request a sort of "crowdfunding", to see whether this project can continue at all or has to be abandoned (meaning no more new features 😢). [Full explanation here](https://github.com/AlfishSoftware/godot-files-vscode/issues/3).
 
 A [**collective donation goal**][donate] was set, to compensate the amount of work (commits, days) **already done** to implement the features.  
 **If the goal is not reached by the community within the time limit, then the project has to be abandoned**.
 
 By donating, you make development possible, helping yourself and everyone else at the same time, so please do if you have the means to, specially if you want proper GDShader support in VSCode or any other features listed in the **Potential Future Development** section below.
-
-## Special Thanks
-❤️ Huge thanks to everyone who has donated so far! There's now donation tiers to also [get your logo or GitHub user listed][donate] right here.
-
-[![Logo 00](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-00.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-00.html)
-[![Logo 01](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-01.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-01.html)
-[![Logo 02](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-02.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-02.html)
-[![Logo 03](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-03.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-03.html)
-[![Logo 04](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-04.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-04.html)
-[![Logo 05](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-05.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-05.html)
-
-[![User 00](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-00.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-00.html)
-[![User 01](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-01.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-01.html)
-[![User 02](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-02.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-02.html)
-[![User 03](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-03.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-03.html)
-[![User 04](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-04.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-04.html)
-[![User 05](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-05.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-05.html)
-[![User 06](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-06.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-06.html)
-[![User 07](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-07.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-07.html)
-[![User 08](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-08.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-08.html)
-[![User 09](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-09.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-09.html)
-[![User 10](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-10.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-10.html)
-[![User 11](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-11.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-11.html)
-[![User 12](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-12.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-12.html)
-[![User 13](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-13.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-13.html)
-[![User 14](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-14.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-14.html)
-[![User 15](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-15.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-15.html)
-[![User 16](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-16.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-16.html)
-[![User 17](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-17.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-17.html)
-[![User 18](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-18.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-18.html)
-[![User 19](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-19.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-19.html)
-[![User 20](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-20.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-20.html)
-[![User 21](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-21.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-21.html)
-[![User 22](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-22.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-22.html)
-[![User 23](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-23.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-23.html)
-[![User 24](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-24.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-24.html)
-[![User 25](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-25.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-25.html)
-[![User 26](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-26.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-26.html)
-[![User 27](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-27.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-27.html)
-[![User 28](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-28.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-28.html)
-[![User 29](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-29.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-29.html)
 
 ## Support
 
@@ -210,6 +225,7 @@ This software is free and in the [public domain]. It respects your privacy by no
 🌐 [GitHub] | [Bitbucket] | [Reddit] | [YouTube]
 
 [donate]: https://alfish.itch.io/godot-files-vscode
+[rewards]: https://alfish.itch.io/godot-files-vscode#rewards
 [public domain]: https://unlicense.org/
 [GitHub repo]: https://github.com/AlfishSoftware/godot-files-vscode
 [VS Marketplace]: https://marketplace.visualstudio.com/items?itemName=alfish.godot-files
@@ -225,7 +241,7 @@ This software is free and in the [public domain]. It respects your privacy by no
 ## Third-party Notices
 
 When accessing 3rd-party websites, you may be subject to their privacy policies.  
-Also, content may be automatically fetched from GitHub and Godot websites, as necessary.
+Also, content may be automatically fetched from GitHub, Bitbucket and Godot websites, as necessary.
 
 Content from **Godot** is available under the licenses found in their repositories for [code/API](https://github.com/godotengine/godot) and for [documentation](https://github.com/godotengine/godot-docs).
 
@@ -233,11 +249,11 @@ The included [**ANTLR4 Runtime Library**](https://www.npmjs.com/package/antlr4) 
 
 ## Known Minor Limitations
 
+VSCode only recognizes a word token properly when hovering or placing the cursor within its first 32 characters. So, for long paths, you only get the tooltip when hovering this initial part of the path.
+
 Some commands like the buttons in the Godot Docs webview might not work consistently when using aux / floating windows or dragging tabs to different tab groups.
 
 Parsing of INI-like files is very simplistic (line-based; doesn't use a robust parser library), but should work well for almost all cases where files were generated by Godot. A few corner cases might not match, specially if you manually edit files (e.g., a line with an array value like `[null]` may be interpreted as a section). Also, `ext_resource` paths containing comment chars (`#` or `;`) are not parsed properly in outline; this causes issues in hover too.
-
-VSCode only recognizes a word token properly when hovering or placing the cursor within its first 32 characters. So, for long paths, you only get the tooltip when hovering this initial part of the path.
 
 ---
 
