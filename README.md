@@ -20,6 +20,53 @@ This is not meant to fully replace the official [godot-tools] extension, but to 
 
 🌐 This extension also works on browser IDEs ([vscode.dev](https://vscode.dev) and [github.dev](https://github.dev)), with minor limitations.
 
+## Special Thanks
+❤️ Huge thanks to everyone who has donated so far!
+
+[![Logo 00](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-00.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-00.html)
+[![Logo 01](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-01.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-01.html)
+<!--
+[![Logo 02](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-02.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-02.html)
+[![Logo 03](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-03.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-03.html)
+[![Logo 04](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-04.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-04.html)
+[![Logo 05](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-05.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-05.html)
+-->
+
+[![User 00](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-00.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-00.html)
+[![User 01](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-01.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-01.html)
+[![User 02](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-02.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-02.html)
+[![User 03](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-03.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-03.html)
+[![User 04](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-04.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-04.html)
+[![User 05](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-05.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-05.html)
+[![User 06](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-06.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-06.html)
+[![User 07](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-07.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-07.html)
+[![User 08](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-08.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-08.html)
+[![User 09](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-09.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-09.html)
+<!--
+[![User 10](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-10.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-10.html)
+[![User 11](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-11.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-11.html)
+[![User 12](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-12.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-12.html)
+[![User 13](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-13.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-13.html)
+[![User 14](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-14.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-14.html)
+[![User 15](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-15.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-15.html)
+[![User 16](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-16.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-16.html)
+[![User 17](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-17.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-17.html)
+[![User 18](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-18.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-18.html)
+[![User 19](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-19.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-19.html)
+[![User 20](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-20.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-20.html)
+[![User 21](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-21.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-21.html)
+[![User 22](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-22.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-22.html)
+[![User 23](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-23.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-23.html)
+[![User 24](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-24.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-24.html)
+[![User 25](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-25.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-25.html)
+[![User 26](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-26.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-26.html)
+[![User 27](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-27.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-27.html)
+[![User 28](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-28.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-28.html)
+[![User 29](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-29.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-29.html)
+-->
+
+There are donation tiers if you also want to [get your logo or GitHub user listed][rewards] right here.
+
 ## Features
 Features are supported on these languages:
 - **GDShader** files: `*.gdshader`, `*.gdshaderinc`.  
@@ -161,47 +208,6 @@ A [**collective donation goal**][donate] was set, to compensate the amount of wo
 
 By donating, you make development possible, helping yourself and everyone else at the same time, so please do if you have the means to, specially if you want proper GDShader support in VSCode or any other features listed in the **Potential Future Development** section below.
 
-## Special Thanks
-❤️ Huge thanks to everyone who has donated so far! There's now donation tiers to also [get your logo or GitHub user listed][donate] right here.
-
-[![Logo 00](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-00.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-00.html)
-[![Logo 01](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-01.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-01.html)
-[![Logo 02](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-02.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-02.html)
-[![Logo 03](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-03.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-03.html)
-[![Logo 04](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-04.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-04.html)
-[![Logo 05](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-05.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-05.html)
-
-[![User 00](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-00.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-00.html)
-[![User 01](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-01.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-01.html)
-[![User 02](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-02.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-02.html)
-[![User 03](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-03.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-03.html)
-[![User 04](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-04.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-04.html)
-[![User 05](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-05.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-05.html)
-[![User 06](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-06.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-06.html)
-[![User 07](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-07.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-07.html)
-[![User 08](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-08.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-08.html)
-[![User 09](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-09.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-09.html)
-[![User 10](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-10.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-10.html)
-[![User 11](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-11.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-11.html)
-[![User 12](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-12.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-12.html)
-[![User 13](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-13.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-13.html)
-[![User 14](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-14.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-14.html)
-[![User 15](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-15.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-15.html)
-[![User 16](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-16.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-16.html)
-[![User 17](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-17.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-17.html)
-[![User 18](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-18.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-18.html)
-[![User 19](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-19.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-19.html)
-[![User 20](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-20.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-20.html)
-[![User 21](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-21.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-21.html)
-[![User 22](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-22.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-22.html)
-[![User 23](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-23.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-23.html)
-[![User 24](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-24.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-24.html)
-[![User 25](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-25.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-25.html)
-[![User 26](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-26.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-26.html)
-[![User 27](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-27.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-27.html)
-[![User 28](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-28.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-28.html)
-[![User 29](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-29.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-29.html)
-
 ## Support
 
 This software is free and in the [public domain]. It respects your privacy by not collecting any data.  
@@ -210,6 +216,7 @@ This software is free and in the [public domain]. It respects your privacy by no
 🌐 [GitHub] | [Bitbucket] | [Reddit] | [YouTube]
 
 [donate]: https://alfish.itch.io/godot-files-vscode
+[rewards]: https://alfish.itch.io/godot-files-vscode#rewards
 [public domain]: https://unlicense.org/
 [GitHub repo]: https://github.com/AlfishSoftware/godot-files-vscode
 [VS Marketplace]: https://marketplace.visualstudio.com/items?itemName=alfish.godot-files
