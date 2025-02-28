@@ -4,7 +4,7 @@
 	"version": "0.1.3",
 	"license": "Unlicense",
 	"displayName": "Godot Files",
-	"description": "Basic GDShader support, better syntax-coloring and additional features for some Godot files.",
+	"description": "Additional features for some Godot files, better syntax-coloring and very basic GDShader support.",
 	"icon": "icon.webp",
 	"repository": {
 		"type": "git",
@@ -458,15 +458,15 @@
 						"scope": "machine-overridable",
 						"type": "string",
 						"default": "webview",
-						"markdownDescription": "Specifies how the [Godot Documentation](command:godotFiles.openApiDocs) is opened when online. The `godot-tools` viewer will be used when you're offline.\n\n🔒 This setting is exclusive to [early access](command:godotFiles.unlockEarlyAccess) (otherwise, only `godot-tools` will be used).",
+						"markdownDescription": "Specifies how the [Godot Documentation](command:godotFiles.openApiDocs) is opened when online. The `godot-tools` viewer will be used when you're offline.\n\n🔒 The `webview` option is exclusive to [early access](command:godotFiles.unlockEarlyAccess) (otherwise, `browser` will be used).",
 						"enum": [
 							"browser",
 							"webview",
 							"godot-tools"
 						],
-						"enumDescriptions": [
+						"markdownEnumDescriptions": [
 							"Use your browser to open the documentation URL. Supports going to the specific API version.",
-							"Use a tab in the IDE to open the documentation website. Supports redirecting inherited members to their definition.\nNote that any future website changes could potentially break this, so use the browser instead if you notice issues.",
+							"Use a tab in the IDE to open the documentation website. Supports redirecting inherited members to their definition.\n\nNote that any future website changes could potentially break this, so use `browser` instead if you notice issues.\n\n💻 On web IDEs, this option is not supported and uses `browser` as a fallback to open the page in a browser tab instead of IDE tab.",
 							"Use the official godot-tools extension to open API documentation in a tab. Note that this requires the Godot Editor to be running and connected to that extension."
 						]
 					},

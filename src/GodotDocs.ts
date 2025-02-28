@@ -1,6 +1,7 @@
 // Godot Docs
 import {
   workspace, window, commands, extensions, env, Uri, CancellationToken, TextDocument, Position, Location,
+  ConfigurationScope,
   WebviewPanel, CustomDocument, CustomDocumentOpenContext, CustomReadonlyEditorProvider,
 } from 'vscode';
 import { isOnline } from './+cross/Platform';
@@ -96,12 +97,16 @@ export class GodotDocumentationProvider implements CustomReadonlyEditorProvider
     webviewPanel.dispose();
   }
 }
+function getViewerConfig(configScope?: ConfigurationScope) {
+  let viewer = workspace.getConfiguration('godotFiles.documentation', configScope).get<string>('viewer')!;
+  if (viewer == 'webview' && (typeof process == 'undefined' || !GodotFiles.supported)) viewer = 'browser';
+  return viewer;
+}
 const pos0 = new Position(0, 0);
 export async function apiDocs(
   document: TextDocument, className: string, memberName: string, token: CancellationToken | null
 ) {
-  const config = workspace.getConfiguration('godotFiles', document);
-  const viewer = GodotFiles.supported ? config.get<string>('documentation.viewer')! : 'godot-tools';
+  const viewer = getViewerConfig(document);
   if (viewer != 'godot-tools' && await isOnline(onlineDocsHost)) {
     // We could get locale properly, but it seems other locales don't support every version consistently.
     // Also the API will probably still be in english even in those locales.
@@ -323,8 +328,8 @@ export async function openApiDocs() {
     gdVersion = (activeTabUri && await godotVersionOfDocument(activeTabUri))
       ?? (workspaceFolder ? await godotVersionOfProject(workspaceFolder.uri) : null);
   }
-  const viewer = workspace.getConfiguration('godotFiles.documentation', configScope).get<string>('viewer')!;
-  const godotTools = !GodotFiles.supported || viewer == 'godot-tools';
+  const viewer = getViewerConfig(configScope);
+  const godotTools = viewer == 'godot-tools';
   if (godotTools || !await isOnline(onlineDocsHost)) {
     if (extensions.getExtension('geequlim.godot-tools')?.isActive)
       await commands.executeCommand('godotTools.listGodotClasses');

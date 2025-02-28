@@ -111,7 +111,7 @@ export default class GDShaderProvider implements
       if (offerGDShader) {
         offerGDShader = false;
         const neverRefusedBefore = refusedGDShaderOfferUntil == -Infinity;
-        const feature = 'GDShader language features (error squiggles, outline, mark inactive #if regions)';
+        const feature = 'GDShader language features (basic error squiggles, outline, mark inactive #if regions)';
         const m = neverRefusedBefore
           ? `Do you need ${feature}?`
           : 'This extension is under risk of being abandoned... 😢 Development cannot continue without donations. '
