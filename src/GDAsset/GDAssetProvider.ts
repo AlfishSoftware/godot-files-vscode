@@ -6,7 +6,7 @@ import {
   ThemeColor, ThemableDecorationAttachmentRenderOptions, InlayHint, InlayHintKind, InlayHintLabelPart,
 } from 'vscode';
 import GDAsset, { GDResource } from './GDAsset';
-import { resPathOfDocument, locateResPath } from '../GodotProject';
+import { resPathOfDocument, locateResPath, resolveUidInDocument } from '../GodotProject';
 import { apiDocs } from '../GodotDocs';
 import { resPathPreview } from '../GodotAssetPreview';
 
@@ -323,7 +323,7 @@ export default class GDAssetProvider implements
     const wordIsPath = isPathWord(word, wordRange, document);
     if (!wordIsPath && gdasset.isInString(wordRange)) return null; // ignore strings (except resPaths)
     const hover: MarkdownString[] = [];
-    let resPath, resRef;
+    let resPath: string, resRef;
     if (word == 'ext_resource' || wordIsPath) {
       let res: GDResource | undefined;
       if (word == 'ext_resource') {
@@ -334,7 +334,8 @@ export default class GDAssetProvider implements
         resPath = res?.path ?? '';
         if (!resPath) return null;
       } else {
-        resPath = word;
+        //TODO optimize by checking local ext_resource uid mappings first
+        resPath = word.startsWith('uid:') ? await resolveUidInDocument(word, document.uri) ?? word : word;
         const extResSymbols = gdasset.refs.ExtResource;
         for (const id in extResSymbols) {
           if (extResSymbols[id]?.path == resPath) { res = extResSymbols[id]; break; }
@@ -344,11 +345,11 @@ export default class GDAssetProvider implements
       const match = /^(.*?)::([^\\/:]*)$/.exec(resPath);
       if (match) {
         [resPath, id] = [match[1]!, match[2]!];
-        if (!res && resPath == await resPathOfDocument(document)) {
+        if (!res && resPath.startsWith('res:') && resPath == await resPathOfDocument(document)) {
           res = gdasset.refs.SubResource[id];
           return new Hover(gdCodeLoad(resPath, id, res?.type, document.languageId), wordRange);
         }
-      } else if (!res && resPath == await resPathOfDocument(document))
+      } else if (!res && resPath.startsWith('res:') && resPath == await resPathOfDocument(document))
         res = gdasset.resource;
       hover.push(gdCodeLoad(resPath, id, res?.type, document.languageId));
     } else if (word == 'sub_resource') {
@@ -385,7 +386,7 @@ export default class GDAssetProvider implements
     if (token.isCancellationRequested) return null;
     if (workspace.getConfiguration('godotFiles', document).get<boolean>('hover.previewResource')!) {
       // show link to res:// path if available
-      if (!/^(?:user|uid):\/\//.test(resPath)) { // Cannot locate user:// or uid:// paths
+      if (!resPath.startsWith('user://')) { // Cannot locate user:// paths
         const mdPreview = await resPathPreview(resPath, document, token);
         if (token.isCancellationRequested) return null;
         if (mdPreview) hover.push(mdPreview);

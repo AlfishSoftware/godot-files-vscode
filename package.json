@@ -149,11 +149,16 @@
 					".remap"
 				],
 				"filenames": [
-					"export_presets.cfg"
+					"export_presets.cfg",
+					"export_credentials.cfg",
+					"global_script_class_cache.cfg",
+					"scene_groups_cache.cfg"
 				],
 				"filenamePatterns": [
 					"**/.godot/**/*.cfg",
-					"**/.godot/imported/*.md5",
+					"**/godot/editor/**/*.cfg",
+					"**/.godot/imported/**/*.md5",
+					"**/godot/imported/**/*.md5",
 					"*.import",
 					"*.gdnlib",
 					"*.tet",
