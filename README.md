@@ -221,7 +221,7 @@ By donating, you make development possible, helping yourself and everyone else a
 
 This software is free and in the [public domain]. It respects your privacy by not collecting any data.  
 👍 If you think this is useful, please star the [GitHub repo] and give it a rating on [VS Marketplace] or [Open-VSX].  
-🛒 [Itch Store] | [ArtStation] | [Unity Assets]  
+🛒 [Itch Store] | [Unity Assets]  
 🌐 [GitHub] | [Bitbucket] | [Reddit] | [YouTube]
 
 [donate]: https://alfish.itch.io/godot-files-vscode
@@ -231,7 +231,6 @@ This software is free and in the [public domain]. It respects your privacy by no
 [VS Marketplace]: https://marketplace.visualstudio.com/items?itemName=alfish.godot-files
 [Open-VSX]: https://open-vsx.org/extension/alfish/godot-files
 [Itch Store]: https://alfish.itch.io/
-[ArtStation]: https://www.artstation.com/a/26333626
 [Unity Assets]: https://assetstore.unity.com/publishers/30331
 [GitHub]: https://github.com/AlfishSoftware
 [Bitbucket]: https://bitbucket.org/alfish/workspace/repositories

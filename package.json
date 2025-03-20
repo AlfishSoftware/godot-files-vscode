@@ -1,7 +1,7 @@
 {
 	"publisher": "alfish",
 	"name": "godot-files",
-	"version": "0.1.3",
+	"version": "0.1.4",
 	"license": "Unlicense",
 	"displayName": "Godot Files",
 	"description": "Additional features for some Godot files, better syntax-coloring and very basic GDShader support.",
@@ -631,9 +631,9 @@
 		]
 	},
 	"devDependencies": {
-		"@types/vscode": "^1.97.0",
+		"@types/vscode": "^1.98.0",
 		"ts-loader": "^9.5.2",
-		"typescript": "^5.7.3",
+		"typescript": "^5.8.2",
 		"webpack": "^5.98.0",
 		"webpack-cli": "^5.1.4"
 	},
@@ -641,7 +641,7 @@
 		"antlr4": "~4.13.2"
 	},
 	"engines": {
-		"vscode": "^1.97.0"
+		"vscode": "^1.98.0"
 	},
 	"scripts": {
 		"watch-pc": "tsc -watch -p ./src/",
