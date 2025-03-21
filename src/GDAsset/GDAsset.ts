@@ -1,13 +1,23 @@
 // GDAsset Structure
 import { Range, Position, DocumentSymbol } from 'vscode';
 import GDAssetProvider from './GDAssetProvider';
+import GodotFiles from '../ExtensionEntry';
 
-export class GDResource {
-  path!: string;
-  pathRange?: Range;
-  type!: string;
+export interface GDResource {
+  symbol: DocumentSymbol;
+  path: string;
+  type: string;
   typeRange?: Range;
-  symbol!: DocumentSymbol;
+}
+export interface GDResourceFile extends GDResource {
+  uid: string;
+  uidRange?: Range;
+}
+export interface GDResourceExt extends GDResourceFile {
+  pathRange?: Range;
+}
+export interface GDResourceSub extends GDResource {
+  id: string;
 }
 
 export default class GDAsset {
@@ -30,7 +40,7 @@ export default class GDAsset {
   static nodeCode(path: string, percent = false) {
     return (percent ? '%' : '$') + (/^\/?(?:[A-Za-z_]\w*\/)*[A-Za-z_]\w*$/.test(path) ? path : `"${path}"`);
   }
-  rootNode: string | undefined = undefined;
+  rootNode?: string;
   nodePath(n: string) {
     if (!this.rootNode || !n) return n;
     if (n == '.') return GDAsset.nodeCode('../' + this.rootNode);
@@ -45,10 +55,10 @@ export default class GDAsset {
     const resource = this.refs[keyword][id];
     return { keyword, id, resource };
   }
-  resource: GDResource | undefined = undefined;
+  resource?: GDResourceFile;
   refs = {
-    ExtResource: {} as { [id: string]: GDResource | undefined },
-    SubResource: {} as { [id: string]: GDResource | undefined },
+    ExtResource: {} as { [id: string]: GDResourceExt },
+    SubResource: {} as { [id: string]: GDResourceSub },
   };
   pathsByMinimalForm: Map<string, string> = new Map();
   addMinimalPath(pathSegments: string[], nSegments = 1) {
@@ -79,4 +89,14 @@ export default class GDAsset {
     return false;
   }
   isNonCode(place: Position | Range) { return this.isInString(place) || this.isInComment(place); }
+  resolveLocalUid(uidPath: string) {
+    if (!GodotFiles.supported) return null;
+    if (this.resource && this.resource.uid == uidPath) return this.resource.path;
+    const extRes = this.refs.ExtResource;
+    for (const id in extRes) {
+      const resource = extRes[id];
+      if (resource && resource.uid == uidPath) return resource.path;
+    }
+    return null;
+  }
 }

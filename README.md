@@ -35,7 +35,7 @@ This is not meant to fully replace the official [godot-tools] extension, but to 
 
 [![User 00](https://avatars.githubusercontent.com/u/3393799?s=64)](https://github.com/Ushio-Aria)
 [![User 01](https://avatars.githubusercontent.com/u/13101208?s=64)](https://github.com/CyberSer0)
-[![User 02](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-02.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-02.html)
+[![User 02](https://avatars.githubusercontent.com/u/934053?s=64)](https://github.com/leftos)
 [![User 03](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-03.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-03.html)
 [![User 04](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-04.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-04.html)
 [![User 05](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-05.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-05.html)

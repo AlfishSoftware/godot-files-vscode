@@ -14,13 +14,13 @@ function sectionSymbol(
   document: TextDocument, tag: string, rest: string, range: Range, gdasset: GDAsset
 ) {
   const attributes: { [field: string]: string | undefined; } = {};
-  let id: string | undefined, typeRange: Range | undefined, pathRange: Range | undefined;
+  let id: string | undefined, typeRange: Range | undefined, uidRange: Range | undefined, pathRange: Range | undefined;
   for (const assignment of rest.matchAll(/\b([\w-]+)\b\s*=\s*(?:(\d+)|"([^"\\]*)"|((?:Ext|Sub)Resource\s*\(.*?\)))/g)) {
     const value = assignment[2] ?? assignment[4] ?? GDAssetProvider.unescapeString(assignment[3]!);
     const attr = assignment[1]!;
     attributes[attr] = value;
     if (attr == 'id') id = value;
-    else if (assignment[3] != null && /^(?:type|path)$/.test(attr)) {
+    else if (assignment[3] != null && /^(?:type|uid|path)$/.test(attr)) {
       const rangeText = document.getText(range);
       const matchStart = rangeText.indexOf(assignment[0], tag.length + 2);
       const valueStart = assignment[0].indexOf('"', attr.length + 1) + 1;
@@ -28,7 +28,11 @@ function sectionSymbol(
         start.translate(0, matchStart + valueStart),
         start.translate(0, matchStart + valueStart + assignment[3].length),
       );
-      if (attr == 'type') typeRange = valueRange; else pathRange = valueRange;
+      switch (attr) {
+        case 'type': typeRange = valueRange; break;
+        case 'uid': uidRange = valueRange; break;
+        case 'path': pathRange = valueRange; break;
+      }
     }
   }
   const symbol = new DocumentSymbol(tag, rest, SymbolKind.Namespace, range, range);
@@ -36,27 +40,28 @@ function sectionSymbol(
     case 'gd_scene': {
       const docUriPath = document.uri.path;
       const [, fileTitle, ext] = /^\/(?:.*\/)*(.*?)(\.\w*)?$/.exec(docUriPath) ?? [undefined, docUriPath];
+      const uid = attributes.uid ?? '';
       symbol.name = fileTitle;
       symbol.detail = 'PackedScene';
       symbol.kind = SymbolKind.File;
-      gdasset.resource = { path: `${fileTitle}${ext ?? ''}`, type: 'PackedScene', symbol };
+      gdasset.resource = { path: `${fileTitle}${ext ?? ''}`, uid, uidRange, type: 'PackedScene', symbol };
       break;
     }
     case 'gd_resource': {
       const fileName = document.uri.path.replace(/^\/(?:.*\/)*/, ''); // with ext
       symbol.name = fileName;
-      const type = attributes.type ?? '';
+      const type = attributes.type ?? '', uid = attributes.uid ?? '';
       symbol.detail = type;
       symbol.kind = SymbolKind.File;
-      gdasset.resource = { path: fileName, type, typeRange, symbol };
+      gdasset.resource = { path: fileName, uid, uidRange, type, typeRange, symbol };
       break;
     }
     case 'ext_resource': {
       const type = attributes.type ?? '';
       if (id) {
-        const path = attributes.path ?? '?';
+        const uid = attributes.uid ?? '', path = attributes.path ?? '?';
         if (attributes.path) gdasset.addMinimalPath(path.split(/[/\\]/g));
-        gdasset.refs.ExtResource[id] = { path, pathRange, type, typeRange, symbol };
+        gdasset.refs.ExtResource[id] = { path, pathRange, uid, uidRange, type, typeRange, symbol };
       }
       symbol.name = attributes.path ?? tag;
       symbol.detail = type;
@@ -67,7 +72,7 @@ function sectionSymbol(
       const type = attributes.type ?? '';
       if (id) {
         const subPath = '::' + id, path = `${gdasset.resource?.path ?? ''}${subPath}`;
-        gdasset.refs.SubResource[id] = { path, type, typeRange, symbol };
+        gdasset.refs.SubResource[id] = { path, id, type, typeRange, symbol };
         symbol.name = subPath;
       }
       symbol.detail = type;
@@ -334,14 +339,13 @@ export default class GDAssetProvider implements
         resPath = res?.path ?? '';
         if (!resPath) return null;
       } else {
-        //TODO optimize by checking local ext_resource uid mappings first
-        resPath = word.startsWith('uid:') ? await resolveUidInDocument(word, document.uri) ?? word : word;
+        resPath = word.startsWith('uid:') ? await resolveUid(word, gdasset, document.uri) ?? word : word;
         const extResSymbols = gdasset.refs.ExtResource;
         for (const id in extResSymbols) {
           if (extResSymbols[id]?.path == resPath) { res = extResSymbols[id]; break; }
         }
       }
-      let id = null;
+      let id: string | null = null;
       const match = /^(.*?)::([^\\/:]*)$/.exec(resPath);
       if (match) {
         [resPath, id] = [match[1]!, match[2]!];
@@ -422,7 +426,7 @@ export default class GDAssetProvider implements
         const id = m[3] ?? GDAssetProvider.unescapeString(m[4]!);
         const resource = gdasset.refs[fn][id];
         if (!resource) continue;
-        const { type, typeRange, pathRange } = resource, { end } = matchRange;
+        const { type, typeRange } = resource, { end } = matchRange;
         if (sClass == 'always' ||
           sClass == 'auto' && !(instancing && type == 'PackedScene') && type != 'Resource' && !id.startsWith(type + '_')
         ) {
@@ -433,6 +437,7 @@ export default class GDAssetProvider implements
           const typeHint = new InlayHint(typePos, [typeLabel], InlayHintKind.Type);
           hints.push(typeHint);
         }
+        const pathRange = 'pathRange' in resource ? resource.pathRange : undefined;
         if (pathRange && eol && sFilePaths != 'none') {
           const pathPos = bracket ? end.translate(0, bracket.length) : end;
           let shownPath = resource.path;
@@ -584,4 +589,8 @@ function gdCodeLoad(resPath: string, id: string | null, type: string | undefined
     code = `FileAccess.open("${escCode(resPath)}", FileAccess.READ)`;
   }
   return new MarkdownString().appendCodeblock(code, language);
+}
+
+async function resolveUid(uidPath: string, gdasset: GDAsset, documentUri: Uri) {
+  return gdasset.resolveLocalUid(uidPath) ?? await resolveUidInDocument(uidPath, documentUri);
 }
