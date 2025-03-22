@@ -9,6 +9,7 @@ import GDAsset, { GDResource } from './GDAsset';
 import { resPathOfDocument, locateResPath, resolveUidInDocument } from '../GodotProject';
 import { apiDocs } from '../GodotDocs';
 import { resPathPreview } from '../GodotAssetPreview';
+import GodotFiles from '../ExtensionEntry';
 
 function sectionSymbol(
   document: TextDocument, tag: string, rest: string, range: Range, gdasset: GDAsset
@@ -213,7 +214,7 @@ export default class GDAssetProvider implements
         // No more non-ignored tokens until end of line; only Line Comment or Whitespace
         if (gdasset && match[2]) {
           j += match[1]!.length;
-          gdasset.comments.push({ range: new Range(i, j, i, range.end.character), value: match[2] });
+          gdasset.comments.push({ innerRange: new Range(i, j + 1, i, range.end.character), value: match[2] });
         }
         previousEnd = range.end;
         j = 0; i++;
@@ -236,8 +237,9 @@ export default class GDAssetProvider implements
           s = document.lineAt(i).text;
         }
         if (i >= n) break;
-        if (gdasset)
-          gdasset.strings.push({ range: new Range(range.start.line, range.start.character, i, j), value: str });
+        if (gdasset) gdasset.strings.push({
+          innerRange: new Range(range.start.line, range.start.character + 1, i, j - 1), value: str
+        });
       } else if ((match = text.match(/^\s+/))) {
         // Whitespace
         j += match[0].length;
@@ -440,23 +442,31 @@ export default class GDAssetProvider implements
         const pathRange = 'pathRange' in resource ? resource.pathRange : undefined;
         if (pathRange && eol && sFilePaths != 'none') {
           const pathPos = bracket ? end.translate(0, bracket.length) : end;
-          let shownPath = resource.path;
-          switch (sFilePaths) {
-            case 'filename': shownPath = shownPath.replace(/^(?:[^/\\]*[/\\])+/, ''); break;
-            case 'exact': break;
-            default: for (const [minimalPath, exactPath] of gdasset.pathsByMinimalForm) {
-              if (shownPath != exactPath) continue;
-              // replace shown path with its minimal form if using `minimal` setting
-              if (shownPath != minimalPath) shownPath = '…/' + minimalPath;
-              break;
-            }
-          }
+          const shownPath = getDisplayPath(resource.path, sFilePaths, gdasset);
           const pathLabel = new InlayHintLabelPart(shownPath);
           pathLabel.location = new Location(document.uri, pathRange);
           const pathHint = new InlayHint(pathPos, [new InlayHintLabelPart('; '), pathLabel]);
           hints.push(pathHint);
         }
       }
+    }
+    // locate all uid path strings, skipping occurrences inside a comment or within another string
+    if (GodotFiles.supported && sFilePaths != 'none') for (const m of reqSrc.matchAll(
+      /"(uid:\/*\w+)"(?=[ \t]*(?:;.*?)?$)/mgi
+    )) {
+      const matchStart = reqStart + m.index, matchEnd = matchStart + m[0].length;
+      const matchRange = new Range(document.positionAt(matchStart), document.positionAt(matchEnd));
+      if (gdasset.isNonCode(matchRange)) continue;
+      const uidPath = GDAssetProvider.unescapeString(m[1]!);
+      const resPath = await resolveUid(uidPath, gdasset, document.uri);
+      if (!resPath) continue;
+      const shownPath = getDisplayPath(resPath, sFilePaths, gdasset);
+      const pathLabel = new InlayHintLabelPart(shownPath);
+      const innerRange = new Range(matchRange.start.translate(0, 1), matchRange.end.translate(0, -1));
+      pathLabel.location = new Location(document.uri, innerRange);
+      const pathHint = new InlayHint(matchRange.end, [new InlayHintLabelPart('; '), pathLabel]);
+      pathHint.textEdits = [TextEdit.replace(innerRange, resPath)];
+      hints.push(pathHint);
     }
     return hints;
   }
@@ -550,6 +560,20 @@ export default class GDAssetProvider implements
       editor.setDecorations(parenthesesDecoration, decorations.vectorParentheses);
     }
   }
+}
+
+function getDisplayPath(srcPath: string, displayMode: string, gdasset: GDAsset): string {
+  switch (displayMode) {
+    case 'filename': return srcPath.replace(/^(?:[^/\\]*[/\\])+/, '');
+    case 'exact': return srcPath;
+    default: for (const [minimalPath, exactPath] of gdasset.pathsByMinimalForm) {
+      if (srcPath != exactPath) continue;
+      // replace shown path with its minimal form if using `minimal` setting
+      if (srcPath != minimalPath) return '…/' + minimalPath;
+      return srcPath;
+    }
+  }
+  return srcPath;
 }
 
 interface DecorationRanges {

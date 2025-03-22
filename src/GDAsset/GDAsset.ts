@@ -76,16 +76,16 @@ export default class GDAsset {
     }
     this.addMinimalPath(pathSegments, nSegments + 1);
   }
-  strings: { range: Range, value: string; }[] = [];
-  comments: { range: Range, value: string; }[] = [];
+  strings: { innerRange: Range, value: string; }[] = [];
+  comments: { innerRange: Range, value: string; }[] = [];
   isInString(place: Position | Range) {
     for (const token of this.strings)
-      if (token.range.contains(place)) return true;
+      if (token.innerRange.contains(place)) return true;
     return false;
   }
   isInComment(place: Position | Range) {
     for (const token of this.comments)
-      if (token.range.contains(place)) return true;
+      if (token.innerRange.contains(place)) return true;
     return false;
   }
   isNonCode(place: Position | Range) { return this.isInString(place) || this.isInComment(place); }
