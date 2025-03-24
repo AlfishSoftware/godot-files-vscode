@@ -452,12 +452,13 @@ export default class GDAssetProvider implements
     }
     // locate all uid path strings, skipping occurrences inside a comment or within another string
     if (GodotFiles.supported && sFilePaths != 'none') for (const m of reqSrc.matchAll(
-      /"(uid:\/*\w+)"(?=[ \t]*(?:;.*?)?$)/mgi
+      /(?<=(^\s*uid\s*=\s*)?)"(uid:\/*\w+)"(?=[ \t]*(?:;.*?)?$)/mgi
     )) {
+      if (m[1] && document.fileName.toLowerCase().endsWith('.import')) continue;
       const matchStart = reqStart + m.index, matchEnd = matchStart + m[0].length;
       const matchRange = new Range(document.positionAt(matchStart), document.positionAt(matchEnd));
       if (gdasset.isNonCode(matchRange)) continue;
-      const uidPath = GDAssetProvider.unescapeString(m[1]!);
+      const uidPath = GDAssetProvider.unescapeString(m[2]!);
       const resPath = await resolveUid(uidPath, gdasset, document.uri);
       if (!resPath) continue;
       const shownPath = getDisplayPath(resPath, sFilePaths, gdasset);
@@ -465,7 +466,8 @@ export default class GDAssetProvider implements
       const innerRange = new Range(matchRange.start.translate(0, 1), matchRange.end.translate(0, -1));
       pathLabel.location = new Location(document.uri, innerRange);
       const pathHint = new InlayHint(matchRange.end, [new InlayHintLabelPart('; '), pathLabel]);
-      pathHint.textEdits = [TextEdit.replace(innerRange, resPath)];
+      if (document.languageId != 'godot-asset')
+        pathHint.textEdits = [TextEdit.replace(innerRange, resPath)];
       hints.push(pathHint);
     }
     return hints;
