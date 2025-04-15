@@ -17,7 +17,7 @@ function sectionSymbol(
   const attributes: { [field: string]: string | undefined; } = {};
   let id: string | undefined, typeRange: Range | undefined, uidRange: Range | undefined, pathRange: Range | undefined;
   for (const assignment of rest.matchAll(/\b([\w-]+)\b\s*=\s*(?:(\d+)|"([^"\\]*)"|((?:Ext|Sub)Resource\s*\(.*?\)))/g)) {
-    const value = assignment[2] ?? assignment[4] ?? GDAssetProvider.unescapeString(assignment[3]!);
+    const value = assignment[2] ?? assignment[4] ?? GDAsset.unescapeString(assignment[3]!);
     const attr = assignment[1]!;
     attributes[attr] = value;
     if (attr == 'id') id = value;
@@ -130,23 +130,6 @@ export default class GDAssetProvider implements
     { language: 'config-definition' },
   );
   
-  public static unescapeString(partInsideQuotes: string) {
-    let s = '';
-    for (const m of partInsideQuotes.matchAll(/\\(["bfnrt\\]|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{6})|\\$|\\?([^])/gmu)) {
-      switch (m[1]) {
-        case '\\': case '"': s += m[1]; continue;
-        case 'n': s += '\n'; continue;
-        case 't': s += '\t'; continue;
-        case 'r': s += '\r'; continue;
-        case 'b': s += '\b'; continue;
-        case 'f': s += '\f'; continue;
-        case undefined: case null: case '': s += m[2] ?? ''; continue;
-        default: s += String.fromCharCode(parseInt(m[1].substring(1), 16)); continue; // uXXXX
-      }
-    }
-    return s;
-  }
-  
   defs: { [uri: string]: GDAsset | undefined; } = {};
   
   async parsedGDAsset(document: TextDocument, _token: CancellationToken) {
@@ -229,7 +212,7 @@ export default class GDAssetProvider implements
           for (const [sub] of s.matchAll(/"|(?:\\(?:["bfnrt\\]|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{6}|$)|\\?[^"\r\n])+/gmu)) {
             j += sub.length;
             if (sub == '"') break lines;
-            str += GDAssetProvider.unescapeString(sub);
+            str += GDAsset.unescapeString(sub);
           }
           str += "\n";
           j = 0; i++;
@@ -283,7 +266,7 @@ export default class GDAssetProvider implements
     if (gdasset.isInString(wordRange)) return null;
     if ((match = word.match(/^((?:Ext|Sub)Resource)\s*\(\s*(?:(\d+)|"([^"\\]*)")\s*\)$/))) {
       const keyword = match[1] as 'ExtResource' | 'SubResource';
-      const id = match[2] ?? GDAssetProvider.unescapeString(match[3]!);
+      const id = match[2] ?? GDAsset.unescapeString(match[3]!);
       const s = gdasset.refs[keyword][id]?.symbol;
       if (!s) return null;
       if (keyword == 'ExtResource') {
@@ -337,7 +320,7 @@ export default class GDAssetProvider implements
         const line = document.lineAt(position).text;
         const match = /^\[\s*ext_resource\s+.*?\bid\s*=\s*(?:(\d+)\b|"([^"\\]*)")/.exec(line);
         if (!match) return null;
-        res = gdasset.refs.ExtResource[match[1] ?? GDAssetProvider.unescapeString(match[2]!)];
+        res = gdasset.refs.ExtResource[match[1] ?? GDAsset.unescapeString(match[2]!)];
         resPath = res?.path ?? '';
         if (!resPath) return null;
       } else {
@@ -364,7 +347,7 @@ export default class GDAssetProvider implements
         = /^\[\s*sub_resource\s+type\s*=\s*"([^"\\]*)"\s*id\s*=\s*(?:(\d+)\b|"([^"\\]*)")/.exec(line);
       if (!match) return null;
       const type = match[1]!, idN = match[2], idS = match[3];
-      const id = idN ?? GDAssetProvider.unescapeString(idS!);
+      const id = idN ?? GDAsset.unescapeString(idS!);
       resPath = await resPathOfDocument(document);
       return new Hover(gdCodeLoad(resPath, id, type, document.languageId), wordRange);
     } else if (word == 'gd_resource') {
@@ -425,7 +408,7 @@ export default class GDAssetProvider implements
       if (fn == 'NodePath') {
         continue; //TODO
       } else {
-        const id = m[3] ?? GDAssetProvider.unescapeString(m[4]!);
+        const id = m[3] ?? GDAsset.unescapeString(m[4]!);
         const resource = gdasset.refs[fn][id];
         if (!resource) continue;
         const { type, typeRange } = resource, { end } = matchRange;
@@ -458,7 +441,7 @@ export default class GDAssetProvider implements
       const matchStart = reqStart + m.index, matchEnd = matchStart + m[0].length;
       const matchRange = new Range(document.positionAt(matchStart), document.positionAt(matchEnd));
       if (gdasset.isNonCode(matchRange)) continue;
-      const uidPath = GDAssetProvider.unescapeString(m[2]!);
+      const uidPath = GDAsset.unescapeString(m[2]!);
       const resPath = await resolveUid(uidPath, gdasset, document.uri);
       if (!resPath) continue;
       const shownPath = getDisplayPath(resPath, sFilePaths, gdasset);

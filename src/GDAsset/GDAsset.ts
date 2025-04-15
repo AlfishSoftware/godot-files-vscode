@@ -1,6 +1,5 @@
 // GDAsset Structure
 import { Range, Position, DocumentSymbol } from 'vscode';
-import GDAssetProvider from './GDAssetProvider';
 import GodotFiles from '../ExtensionEntry';
 
 export interface GDResource {
@@ -21,6 +20,22 @@ export interface GDResourceSub extends GDResource {
 }
 
 export default class GDAsset {
+  static unescapeString(partInsideQuotes: string) {
+    let s = '';
+    for (const m of partInsideQuotes.matchAll(/\\(["bfnrt\\]|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{6})|\\$|\\?([^])/gmu)) {
+      switch (m[1]) {
+        case '\\': case '"': s += m[1]; continue;
+        case 'n': s += '\n'; continue;
+        case 't': s += '\t'; continue;
+        case 'r': s += '\r'; continue;
+        case 'b': s += '\b'; continue;
+        case 'f': s += '\f'; continue;
+        case undefined: case null: case '': s += m[2] ?? ''; continue;
+        default: s += String.fromCharCode(parseInt(m[1].substring(1), 16)); continue; // uXXXX
+      }
+    }
+    return s;
+  }
   static floatValue(code: string): number | null {
     switch (code) { case 'nan': return NaN; case 'inf': return Infinity; case 'inf_neg': return -Infinity; }
     const n = +code;
@@ -51,7 +66,7 @@ export default class GDAsset {
     const match = code.match(/^((?:Ext|Sub)Resource)\s*\(\s*(?:(\d+)|"([^"\\]*)")\s*\)$/);
     if (!match) return null;
     const keyword = match[1] as 'ExtResource' | 'SubResource';
-    const id = match[2] ?? GDAssetProvider.unescapeString(match[3]!);
+    const id = match[2] ?? GDAsset.unescapeString(match[3]!);
     const resource = this.refs[keyword][id];
     return { keyword, id, resource };
   }
