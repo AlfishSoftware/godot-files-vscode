@@ -22,7 +22,8 @@ This is not meant to fully replace the official [godot-tools] extension, but to 
 🌐 This extension also works on browser IDEs ([vscode.dev](https://vscode.dev) and [github.dev](https://github.dev)), with minor limitations.
 
 ## Special Thanks
-❤️ Huge thanks to everyone who has donated so far!
+❤️ Huge thanks to everyone who has donated so far!  
+There are special donation tiers if you also want to [get your logo or GitHub user listed][rewards] right here:
 
 [![Logo 00](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-00.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-00.html)
 [![Logo 01](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-01.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-01.html)
@@ -33,21 +34,21 @@ This is not meant to fully replace the official [godot-tools] extension, but to 
 [![Logo 05](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-05.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-05.html)
 -->
 
+[![User 05](https://avatars.githubusercontent.com/u/87227173?s=64)](https://github.com/cureforboredom)
 [![User 00](https://avatars.githubusercontent.com/u/3393799?s=64)](https://github.com/Ushio-Aria)
 [![User 01](https://avatars.githubusercontent.com/u/13101208?s=64)](https://github.com/CyberSer0)
 [![User 02](https://avatars.githubusercontent.com/u/934053?s=64)](https://github.com/leftos)
-[![User 03](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-03.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-03.html)
-[![User 04](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-04.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-04.html)
-[![User 05](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-05.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-05.html)
+[![User 03](https://avatars.githubusercontent.com/u/55458977?s=64)](https://github.com/Dreak183)
+[![User 04](https://avatars.githubusercontent.com/u/7904683?s=64)](https://github.com/LiamSmyth)
 [![User 06](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-06.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-06.html)
 [![User 07](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-07.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-07.html)
-<!--
 [![User 08](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-08.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-08.html)
 [![User 09](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-09.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-09.html)
 [![User 10](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-10.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-10.html)
 [![User 11](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-11.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-11.html)
 [![User 12](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-12.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-12.html)
 [![User 13](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-13.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-13.html)
+<!--
 [![User 14](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-14.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-14.html)
 [![User 15](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-15.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-15.html)
 [![User 16](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-16.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-16.html)
@@ -65,8 +66,6 @@ This is not meant to fully replace the official [godot-tools] extension, but to 
 [![User 28](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-28.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-28.html)
 [![User 29](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-29.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-29.html)
 -->
-
-There are donation tiers if you also want to [get your logo or GitHub user listed][rewards] right here.
 
 ## Features
 Features are supported on these languages:

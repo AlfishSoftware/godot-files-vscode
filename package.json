@@ -76,8 +76,12 @@
 					"Godot Project Definition",
 					"Godot Project Properties Asset"
 				],
+				"extensions": [
+					".godot"
+				],
 				"filenames": [
-					"project.godot"
+					"project.godot",
+					"override.cfg"
 				],
 				"icon": {
 					"dark": "./lang.gdasset/godot-project.dark.svg",
@@ -636,17 +640,17 @@
 		]
 	},
 	"devDependencies": {
-		"@types/vscode": "^1.98.0",
+		"@types/vscode": "^1.99.1",
 		"ts-loader": "^9.5.2",
-		"typescript": "^5.8.2",
-		"webpack": "^5.98.0",
+		"typescript": "^5.8.3",
+		"webpack": "^5.99.5",
 		"webpack-cli": "^5.1.4"
 	},
 	"dependencies": {
 		"antlr4": "~4.13.2"
 	},
 	"engines": {
-		"vscode": "^1.98.0"
+		"vscode": "^1.99.1"
 	},
 	"scripts": {
 		"watch-pc": "tsc -watch -p ./src/",

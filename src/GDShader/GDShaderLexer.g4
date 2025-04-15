@@ -87,6 +87,7 @@ KEYWORD_TYPE_SAMPLER: [iu]? 'sampler' ('2D' 'Array'? | '3D') | 'sampler' ('Cube'
 
 KEYWORD_HINT_SIMPLE
 : 'source_color'
+| 'color_conversion_disabled'
 | 'hint_'
 	( 'color' | 'black_'? 'albedo' | 'normal'
 	| 'default_'? ('white' | 'black')

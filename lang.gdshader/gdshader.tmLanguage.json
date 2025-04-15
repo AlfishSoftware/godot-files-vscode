@@ -869,7 +869,7 @@
       "match": "\\b(?:void|bool|u?int|float|[biu]?vec[234]|mat[234]|[iu]?sampler(?:2D(?:Array)?|3D)|sampler(?:Cube(?:Array)?|ExternalOES))\\b"
     },
     "hintKeyword": {
-      "match": "(\\:)?\\s*\\b(source_color|hint_(?:enum|color|range|(?:black_)?albedo|normal|(?:default_)?(?:white|black)|default_transparent|aniso(?:tropy)?|roughness_(?:[rgba]|normal|gray)|(?:screen|depth|normal_roughness)_texture)|filter_(?:nearest|linear)(?:_mipmap(?:_anisotropic)?)?|repeat_(?:en|dis)able|instance_index)\\b",
+      "match": "(\\:)?\\s*\\b(source_color|color_conversion_disabled|hint_(?:enum|color|range|(?:black_)?albedo|normal|(?:default_)?(?:white|black)|default_transparent|aniso(?:tropy)?|roughness_(?:[rgba]|normal|gray)|(?:screen|depth|normal_roughness)_texture)|filter_(?:nearest|linear)(?:_mipmap(?:_anisotropic)?)?|repeat_(?:en|dis)able|instance_index)\\b",
       "captures": {
         "1": { "name": "keyword.operator.type.annotation.gdshader" },
         "2": { "name": "support.type.annotation.gdshader" }
