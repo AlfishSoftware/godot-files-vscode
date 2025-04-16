@@ -9,7 +9,9 @@ import GDAsset, { GDResource } from './GDAsset';
 import { resPathOfDocument, locateResPath, resolveUidInDocument } from '../GodotProject';
 import { apiDocs } from '../GodotDocs';
 import { resPathPreview } from '../GodotAssetPreview';
-import GodotFiles from '../ExtensionEntry';
+import GodotFiles, { openSponsorUrl } from '../ExtensionEntry';
+
+let refusedUidResolveOffer = false;
 
 function sectionSymbol(
   document: TextDocument, tag: string, rest: string, range: Range, gdasset: GDAsset
@@ -258,10 +260,17 @@ export default class GDAssetProvider implements
     const word = document.getText(wordRange);
     let match;
     if (isPathWord(word, wordRange, document)) {
+      if (!GodotFiles.supported && !refusedUidResolveOffer && word.startsWith('uid://')) {
+        const m = `On early access, uid paths can be resolved into their res paths. \
+This allows you to navigate to the source, see the implied path and quickly replace it into strings.`;
+        const ok = 'See how to enable', no = 'No';
+        window.showInformationMessage(m, ok, no).then(async (r) => {
+          if (r == ok) await openSponsorUrl();
+          else if (r == no) refusedUidResolveOffer = true;
+        });
+      }
       const resLoc = await locateResPath(word, document.uri);
-      if (typeof resLoc != 'string')
-        return new Location(resLoc.uri, new Position(0, 0));
-      return null;
+      return typeof resLoc == 'string' ? null : new Location(resLoc.uri, new Position(0, 0));
     }
     if (gdasset.isInString(wordRange)) return null;
     if ((match = word.match(/^((?:Ext|Sub)Resource)\s*\(\s*(?:(\d+)|"([^"\\]*)")\s*\)$/))) {
@@ -436,21 +445,25 @@ export default class GDAssetProvider implements
     }
     // locate all uid path strings, skipping occurrences inside a comment or within another string
     if (GodotFiles.supported && sFilePaths != 'none') for (const m of reqSrc.matchAll(
-      /(?<=(^\s*uid\s*=\s*)?)"(uid:\/*\w+)"(?=[ \t]*(?:;.*?)?$)/mgi
+      /(?<=((?:^|\s+)uid\s*=\s*)?)("|^)(uid:\/*\w+)\2(?=([ \t;,:)\]}])|$)/mg
     )) {
-      if (m[1] && document.fileName.toLowerCase().endsWith('.import')) continue;
+      const eol = !m[4];
+      if (m[1] && (!eol || document.fileName.toLowerCase().endsWith('.import'))) continue;
       const matchStart = reqStart + m.index, matchEnd = matchStart + m[0].length;
       const matchRange = new Range(document.positionAt(matchStart), document.positionAt(matchEnd));
       if (gdasset.isNonCode(matchRange)) continue;
-      const uidPath = GDAsset.unescapeString(m[2]!);
+      const quoted = m[2]!;
+      const uidPath = quoted ? GDAsset.unescapeString(m[3]!) : m[3]!;
       const resPath = await resolveUid(uidPath, gdasset, document.uri);
       if (!resPath) continue;
       const shownPath = getDisplayPath(resPath, sFilePaths, gdasset);
       const pathLabel = new InlayHintLabelPart(shownPath);
-      const innerRange = new Range(matchRange.start.translate(0, 1), matchRange.end.translate(0, -1));
+      const innerRange = !quoted ? matchRange
+        : new Range(matchRange.start.translate(0, 1), matchRange.end.translate(0, -1));
       pathLabel.location = new Location(document.uri, innerRange);
-      const pathHint = new InlayHint(matchRange.end, [new InlayHintLabelPart('; '), pathLabel]);
-      if (document.languageId != 'godot-asset')
+      const sepLabel = new InlayHintLabelPart(!quoted ? ' | ' : eol ? '; ' : ' ');
+      const pathHint = new InlayHint(matchRange.end, [sepLabel, pathLabel]);
+      if (/^godot-(?:scene|resource|project)$/.test(document.languageId))
         pathHint.textEdits = [TextEdit.replace(innerRange, resPath)];
       hints.push(pathHint);
     }

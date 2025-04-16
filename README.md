@@ -9,6 +9,8 @@ Godot Editor does NOT need to be running for any features here.
 > 🥺 Please help development by [donating to the crowdfunding goal][donate] so I can resume work here on new features!  
 > 🔑 With a donation, you can **unlock early access and other rewards**! More info below.
 
+*All screenshots use the [Semanticolors Dark][donate] color theme, available for both VSCode and Godot for a consistent experience.*
+
 ![Showcasing various features, like GDShader errors, hovering, navigating and documentation pages](docs/showcase-all.png "* Features showcased here include those restricted to early access.")
 
 This is not meant to fully replace the official [godot-tools] extension, but to improve on its supported files. This plugin is designed so it can work alongside it, but it's completely independent. If you're using GDScript, you'll likely want to install godot-tools too; if not, just this one is enough.  
@@ -17,7 +19,7 @@ This is not meant to fully replace the official [godot-tools] extension, but to 
 **Compatibility**:
 
 - **Godot**: 3.x LTS and 4.0 to 4.x; official and flathub builds
-- **godot-tools**: v2.4.0; *("view documentation" feature can use godot-tools)*
+- **godot-tools**: v2.5.x; *("view documentation" feature can use godot-tools)*
 
 🌐 This extension also works on browser IDEs ([vscode.dev](https://vscode.dev) and [github.dev](https://github.dev)), with minor limitations.
 
@@ -34,13 +36,13 @@ There are special donation tiers if you also want to [get your logo or GitHub us
 [![Logo 05](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-05.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/logo-05.html)
 -->
 
-[![User 05](https://avatars.githubusercontent.com/u/87227173?s=64)](https://github.com/cureforboredom)
-[![User 00](https://avatars.githubusercontent.com/u/3393799?s=64)](https://github.com/Ushio-Aria)
-[![User 01](https://avatars.githubusercontent.com/u/13101208?s=64)](https://github.com/CyberSer0)
-[![User 02](https://avatars.githubusercontent.com/u/934053?s=64)](https://github.com/leftos)
-[![User 03](https://avatars.githubusercontent.com/u/55458977?s=64)](https://github.com/Dreak183)
-[![User 04](https://avatars.githubusercontent.com/u/7904683?s=64)](https://github.com/LiamSmyth)
-[![User 06](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-06.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-06.html)
+[![User 05 !!!!!](https://avatars.githubusercontent.com/u/87227173?s=80)](https://github.com/cureforboredom)
+[![User 06 !!!](https://avatars.githubusercontent.com/u/36652820?s=72)](https://github.com/gegehprast)
+[![User 00 !](https://avatars.githubusercontent.com/u/3393799?s=64)](https://github.com/Ushio-Aria)
+[![User 01 !](https://avatars.githubusercontent.com/u/13101208?s=64)](https://github.com/CyberSer0)
+[![User 02 !](https://avatars.githubusercontent.com/u/934053?s=64)](https://github.com/leftos)
+[![User 03 !](https://avatars.githubusercontent.com/u/55458977?s=64)](https://github.com/Dreak183)
+[![User 04 !](https://avatars.githubusercontent.com/u/7904683?s=64)](https://github.com/LiamSmyth)
 [![User 07](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-07.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-07.html)
 [![User 08](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-08.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-08.html)
 [![User 09](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-09.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-09.html)
@@ -48,10 +50,10 @@ There are special donation tiers if you also want to [get your logo or GitHub us
 [![User 11](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-11.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-11.html)
 [![User 12](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-12.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-12.html)
 [![User 13](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-13.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-13.html)
-<!--
 [![User 14](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-14.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-14.html)
 [![User 15](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-15.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-15.html)
 [![User 16](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-16.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-16.html)
+<!--
 [![User 17](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-17.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-17.html)
 [![User 18](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-18.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-18.html)
 [![User 19](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-19.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-19.html)
@@ -110,7 +112,7 @@ These features are supported in textual Scene and Resource files.
 
 - **See inferred class and path of resource references** in inlay hints. You can <kbd>Ctrl</kbd>+Click them to navigate. You can also hover paths.  
 	✳️ Paths are only shown at the end of a line (so not within arrays, but you can still hover the id to see the path in this case).  
-	🔧 You can control this feature in the settings under `godotFiles.clarifyReferences` (`.class`, `.asOperator` and `.filePath`). By default, `.filePath` shows the minimal unique subpath (usually just the file name; folders are only shown to differentiate files with the same name). The class is not hinted where it can be inferred from the context, so in Godot 4 it won't be shown for `SubResource`, as it's already in the id (unless you set `.class` to `always`).  
+	🔧 You can control this feature in the settings under `godotFiles.clarifyReferences` (`.filePath`, `.class` and `.asOperator`). By default, `.filePath` shows the minimal unique subpath (usually just the file name; folders are only shown to differentiate files with the same name). The class is not hinted where it can be inferred from the context, so in Godot 4 it won't be shown for `SubResource`, as it's already in the id (unless you set `.class` to `always`).  
 	![Showcasing classes and paths as inlay hints on resource references](docs/showcase-inlay-hints-resource-refs.webp)
 
 - **See implied parentheses in packed arrays** of vectors or colors that surround items, similar to inlay hints.  
@@ -153,7 +155,7 @@ These features are supported in textual Scene and Resource files.
 
 #### Commands
 
-- **Navigate to the definition** of `SubResource` and `ExtResource` references, and to resource paths.  
+- **Navigate to the definition** of `SubResource` and `ExtResource` references, and to resource paths (<kbd>Ctrl</kbd> <kbd>Click</kbd> or <kbd>F12</kbd> by default).  
 	![Showcasing navigate to definition](docs/showcase-goto-definition.png)  
 	Going to the definition of a built-in engine type (on `type="SomeType"`, `some_field = SomeType(...)` or in inlay hints) will open its Godot API Documentation using the configured viewer (see below).
 
@@ -172,6 +174,18 @@ Each feature will stay restricted until the next new feature takes its place in 
 🔑 To unlock all features as soon as they arrive, please [donate] and copy the password, then use the ***Unlock features in early access*** command (right-click this extension in the Extensions panel) and paste it in the prompt. Doing this **just once will permanently unlock** everything in early access, even across updates.
 
 The features below are currently restricted.
+
+### Resolve uid paths
+🔒 Resolve `uid://…` strings into their `res://…` paths. This allows many things on these references:
+- Navigate to the definition (<kbd>Ctrl</kbd> <kbd>Click</kbd> or <kbd>F12</kbd> by default).
+- See the resolved path and its preview when hovering.
+- See the resolved path in inlay hints.
+- If you double-click the inlay hint, you can replace the uid in the string with its path (useful in `project.godot` and `@export_file` values).
+
+✳️ The IDE has a character limit per line for inlay hints. So on lines with multiple items (e.g. in arrays) they only appear for some (you can still hover the uid to see the path).  
+✳️ If the mapping is not found locally in the document itself, the global uid cache is consulted.  
+🔧 The setting `godotFiles.clarifyReferences.filePath` also applies here. But note that `minimal` only shortens `ext_resource` paths found locally in the document. When it comes from the global uid cache, the full `res://…` path is shown.  
+![Showcasing uid paths as inlay hints and replacing with their resolved res paths](docs/showcase-inlay-hints-uid-replaced.png)
 
 ### Godot Documentation Viewer
 Browse the online Godot Documentation directly from the IDE.  

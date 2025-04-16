@@ -148,6 +148,7 @@
 				],
 				"extensions": [
 					".import",
+					".uid",
 					".gdnlib",
 					".tet",
 					".remap"
@@ -164,6 +165,7 @@
 					"**/.godot/imported/**/*.md5",
 					"**/godot/imported/**/*.md5",
 					"*.import",
+					"*.uid",
 					"*.gdnlib",
 					"*.tet",
 					"*.remap"
@@ -512,8 +514,27 @@
 						"default": true,
 						"description": "Disable if you don't want tooltips to show an image preview of the resource or a link to it."
 					},
-					"godotFiles.clarifyReferences.class": {
+					"godotFiles.clarifyReferences.filePath": {
 						"order": 200,
+						"scope": "language-overridable",
+						"type": "string",
+						"default": "minimal",
+						"markdownDescription": "Show implied file paths as inlay hints after `ExtResource(…)` and `uid://…` references.",
+						"enum": [
+							"none",
+							"filename",
+							"minimal",
+							"exact"
+						],
+						"markdownEnumDescriptions": [
+							"Disable showing these inlay hints.",
+							"Show only the file name (with extension), even when different files have the same name.",
+							"Show the minimum path segments needed to have unique paths for different files, collapsing the common parents into `…/`. This means it usually shows just the file name (with extension), and parent folders are shown only as needed to distinguish files with the same name. Note that a path is only collapsed if it's from `ext_resource`; otherwise it shows the full path.",
+							"Show the path reference exactly as declared."
+						]
+					},
+					"godotFiles.clarifyReferences.class": {
+						"order": 201,
 						"scope": "language-overridable",
 						"type": "string",
 						"default": "auto",
@@ -530,7 +551,7 @@
 						]
 					},
 					"godotFiles.clarifyReferences.asOperator": {
-						"order": 201,
+						"order": 202,
 						"scope": "language-overridable",
 						"type": "string",
 						"default": "#",
@@ -551,25 +572,6 @@
 							{
 								"maxLength": 15
 							}
-						]
-					},
-					"godotFiles.clarifyReferences.filePath": {
-						"order": 202,
-						"scope": "language-overridable",
-						"type": "string",
-						"default": "minimal",
-						"markdownDescription": "Show implied file paths as inlay hints after `ExtResource(…)` references.",
-						"enum": [
-							"none",
-							"filename",
-							"minimal",
-							"exact"
-						],
-						"markdownEnumDescriptions": [
-							"Disable showing these inlay hints.",
-							"Show only the file name (with extension), even when different files have the same name.",
-							"Show the minimum path segments needed to have unique paths for different files, collapsing the common parents into `…/`. This means it usually shows just the file name (with extension), and parent folders are shown only as needed to distinguish files with the same name.",
-							"Show the path reference exactly as declared."
 						]
 					},
 					"godotFiles.clarifyArrays.vector": {
