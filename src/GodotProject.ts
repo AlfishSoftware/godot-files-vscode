@@ -130,10 +130,9 @@ export async function godotVersionOfDocument(document: TextDocument | Uri): Prom
 
 /** URL schemes where you can get a project dir for an asset. */
 const resScheme = new Set(['file', 'vscode-file', 'vscode-remote', 'vscode-remote-resource']);
-export async function resPathOfDocument(document: TextDocument) {
-  const assetUri = document.uri;
-  const assetPath = assetUri.path;
-  const projDir = await projectDir(assetUri);
+export async function resPathOfDocument(documentUri: Uri) {
+  const assetPath = documentUri.path;
+  const projDir = await projectDir(documentUri);
   if (projDir && assetPath.startsWith(projDir.path))
     return 'res:/' + assetPath.replace(projDir.path, ''); // remove proj path at the start to make it relative to proj
   return assetPath.replace(/^(?:.*\/)+/, ''); // fallback to document file name (relative path)
@@ -186,7 +185,7 @@ export async function resolveUidInDocument(uidPath: string, documentUri: Uri) {
 export async function resolveUidInProject(uidPath: string, projectDirUri: Uri) {
   if (!GodotFiles.supported) return null;
   const resolvedPath = (await getUidCache(projectDirUri)).get(uidPathToNum(uidPath));
-  return resolvedPath?.startsWith('res://') ? resolvedPath : null;
+  return resolvedPath?.startsWith('res:') ? resolvedPath : null;
 }
 
 /** Read the uid cache binary file as a sequence of bytes, then parse it and return it as a map.

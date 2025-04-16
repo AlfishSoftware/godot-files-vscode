@@ -106,11 +106,11 @@ export default class GDAsset {
   isNonCode(place: Position | Range) { return this.isInString(place) || this.isInComment(place); }
   resolveLocalUid(uidPath: string) {
     if (!GodotFiles.supported) return null;
-    if (this.resource && this.resource.uid == uidPath) return this.resource.path;
+    if (this.resource && this.resource.uid == uidPath) return this.resource;
     const extRes = this.refs.ExtResource;
     for (const id in extRes) {
       const resource = extRes[id];
-      if (resource && resource.uid == uidPath) return resource.path;
+      if (resource && resource.uid == uidPath) return resource;
     }
     return null;
   }
