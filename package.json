@@ -464,6 +464,47 @@
 						},
 						"markdownDescription": "Paths to Godot cache files in each platform. The defaults should work in most cases. Add a path when using a Godot installation in [self-contained mode](https://docs.godotengine.org/en/stable/tutorials/io/data_paths.html#self-contained-mode).\n\nThe keys are platform ids as returned by NodeJS: `win32` (Windows), `darwin` (macOS), `linux`.\n\nEach key maps to an array of path strings. A starting `~/` in the path is equivalent to `${userHome}/`. Substitution is also supported for `${workspaceFolder}` and `${env:VARIABLE}`. Glob patterns are *not* allowed. The order in the array doesn't matter, since all paths are always scanned to get the most recent cache file."
 					},
+					"godotFiles.documentation.locale": {
+						"order": 100,
+						"scope": "machine-overridable",
+						"type": "string",
+						"default": "auto",
+						"markdownDescription": "Specifies the language to use in the [Godot Documentation](command:godotFiles.openApiDocs). If not supported by the viewer, English is used instead.\n\n🔒 Exclusive to [early access](command:godotFiles.unlockEarlyAccess) (otherwise, English will be used).",
+						"enum": [
+							"auto",
+							"en",
+							"cs",
+							"de",
+							"es",
+							"fr",
+							"it",
+							"ja",
+							"ko",
+							"pl",
+							"pt-BR",
+							"ru",
+							"uk",
+							"zh-CN",
+							"zh-TW"
+						],
+						"enumDescriptions": [
+							"Automatically Detected\nThe IDE language, or its closest match, or English if unavailable.",
+							"English",
+							"Czech | Čeština",
+							"German | Deutsch",
+							"Spanish | Español",
+							"French | Français",
+							"Italian | Italiano",
+							"Japanese | 日本語",
+							"Korean | 한국어",
+							"Polish | Polski",
+							"Portuguese (Brazil) | Português (Brasil)",
+							"Russian | Русский",
+							"Ukrainian | Українська",
+							"Chinese (Simplified) | 简体中文",
+							"Chinese (Traditional) | 繁體中文"
+						]
+					},
 					"godotFiles.documentation.viewer": {
 						"order": 100,
 						"scope": "machine-overridable",
@@ -478,7 +519,7 @@
 						"markdownEnumDescriptions": [
 							"Use your browser to open the documentation URL. Supports going to the specific API version.",
 							"Use a tab in the IDE to open the documentation website. Supports redirecting inherited members to their definition.\n\nNote that any future website changes could potentially break this, so use `browser` instead if you notice issues.\n\n💻 On web IDEs, this option is not supported and uses `browser` as a fallback to open the page in a browser tab instead of IDE tab.",
-							"Use the official godot-tools extension to open API documentation in a tab. Note that this requires the Godot Editor to be running and connected to that extension."
+							"Use the official godot-tools extension to open API documentation in a tab. Note that this requires the Godot Editor to be running and connected to that extension. Only English is supported."
 						]
 					},
 					"godotFiles.documentation.webview.hideSidebar": {

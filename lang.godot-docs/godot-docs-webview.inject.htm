@@ -6,8 +6,6 @@ html blockquote { background: unset; border-color: unset; }
 #rtd-sidebar { display: none !important }
 /* Hide incorrect "page does not exist in stable" text, and fix previous text margin */
 p.latest-notice-link { display: none !important } div.latest-notice > p:nth-last-child(2) { margin-bottom: 0; }
-/* Hide list of languages, as they don't work the same as english */
-dl.ide-webview-other-languages { display: none !important }
 </style><script>
 // Set default code language tab to C# or GDScript, if preference is detected
 if ('%{codeLang}' && !sessionStorage.getItem('sphinx-tabs-last-selected'))
@@ -45,7 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (!document.getElementById(hash) && hash.startsWith(idPrefix)) { // If fragment is a non-existing property
     const idProp = hash.substring(idPrefix.length);
     /**@type {HTMLAnchorElement | null}*/ const baseClassLink = document.evaluate(
-      '//h1/following-sibling::p/child::strong[text()="Inherits:"]/following-sibling::a',
+      '//h1/following-sibling::p/child::strong[text()="Inherits:" or text()="继承："]/following-sibling::a',
       document, null, XPathResult.FIRST_ORDERED_NODE_TYPE
     ).singleNodeValue;
     const baseClassUrl = baseClassLink?.getAttribute('href');
@@ -72,42 +70,28 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   // Apply submit fix to first form (search bar) if present
   document.forms[0]?.addEventListener('submit', vscodeSubmitForm);
-  // Fix version links making them point to this specific page instead of home
-  const versionLinksIterator = document.evaluate(
-    '//div[contains(@class, "rst-other-versions")]/dl[./dt[text()="Versions"]]/dd/a',
-    document, null, XPathResult.UNORDERED_NODE_ITERATOR_TYPE
-  );
-  /**@type {HTMLAnchorElement[]}*/ const versionLinks = [];
-  for (let a; a = versionLinksIterator.iterateNext();) versionLinks.push(a);
-  for (const a of versionLinks)
-    a.href = a.title = otherVersionUri(a.text);
-  // Identify language links for hiding
-  /**@type {HTMLDListElement | null}*/ const langLinksNode = document.evaluate(
-    '//div[contains(@class, "rst-other-versions")]/dl[./dt[text()="Languages"]]',
-    document, null, XPathResult.FIRST_ORDERED_NODE_TYPE
-  ).singleNodeValue;
-  langLinksNode?.classList.add('ide-webview-other-languages');
   // Show link to stable and latest if not currently on these
   const switchVer = document.createElement('span'), thisVer = thisVersion();
   switchVer.innerText = ' \u00A0 • \u00A0 Other versions:';
-  if (thisVer != 'stable') switchVer.append(' ', otherVersionLink('stable'));
-  if (thisVer != 'latest') switchVer.append(' ', otherVersionLink('latest'));
+  if ('%{locale}' != 'en')
+    switchVer.append(' ', otherVersionLink(`/en/${thisVer.endsWith('/latest/') ? 'latest' : 'stable'}/`, 'English'));
+  if (thisVer != '/%{locale}/stable/') switchVer.append(' ', otherVersionLink('/%{locale}/stable/', 'stable'));
+  if (thisVer != '/%{locale}/latest/') switchVer.append(' ', otherVersionLink('/%{locale}/latest/', 'latest'));
   document.querySelector(
     'div.rst-content div[role="navigation"] > ul.wy-breadcrumbs > li:first-child > div:first-child'
   ).appendChild(switchVer);
-  document.evaluate('//div/div/div[1]/ul/li/div')
 });
 function otherVersionUri(version) {
-  return document.baseURI.replace(/(?<=\/%{locale}\/)[^/]+(?=\/)/, version);
+  return document.baseURI.replace(/\/%{locale}\/[^/]+\//, version);
 }
-function otherVersionLink(version) {
+function otherVersionLink(version, name) {
   const href = otherVersionUri(version);
   const a = document.createElement('a');
   a.href = href.replaceAll('classes/', 'classes%2F'); // to avoid the docs icon ::after the link
-  a.innerText = `[${version}]`;
+  a.innerText = `[${name}]`;
   return a;
 }
 function thisVersion() {
-  return document.baseURI.match(/(?<=\/%{locale}\/)[^/]+(?=\/)/)?.[0] ?? '';
+  return document.baseURI.match(/\/%{locale}\/[^/]+\//)?.[0] ?? '';
 }
 </script><meta http-equiv="Content-Security-Policy" content="%{csp}"/>

@@ -10,15 +10,7 @@ import { GodotVersion, godotVersionOfDocument, godotVersionOfProject } from './G
 const toUTF8 = new TextDecoder();
 
 export const onlineDocsHost = 'docs.godotengine.org';
-const latestApiGodot3 = '3.6';
-const latestApiGodot2 = '2.1';
-function apiVersion(gdVersion: GodotVersion | null) {
-  if (gdVersion == null) return 'stable';
-  if (gdVersion.api) return gdVersion.api;
-  const major = gdVersion.major;
-  return major <= 2 ? latestApiGodot2 : major == 3 ? latestApiGodot3 : 'stable';
-}
-// const docsLocales = ['en', 'cs', 'de', 'es', 'fr', 'it', 'ja', 'ko', 'pl', 'pt-br', 'ru', 'uk', 'zh-cn', 'zh-tw'];
+export const onlineBaseDomain = '*.godotengine.org';
 interface BrowserHistory {
   overrideFragment?: string;
   currentUri: string;
@@ -102,26 +94,65 @@ function getViewerConfig(configScope?: ConfigurationScope) {
   if (viewer == 'webview' && (typeof process == 'undefined' || !GodotFiles.supported)) viewer = 'browser';
   return viewer;
 }
+type DocsLocale = keyof typeof versions;
+function docsLocale(configScope: ConfigurationScope | undefined): DocsLocale {
+  let locale = !GodotFiles.supported ? 'en'
+    : workspace.getConfiguration('godotFiles.documentation', configScope).get<string>('locale') ?? 'auto';
+  if (locale == 'auto') locale = env.language;
+  locale = locale.replaceAll('_', '-').toLowerCase();
+  if (locale in versions) return locale as DocsLocale;
+  locale = locale.replace(/[-_].*$/, '');
+  if (locale in versions) return locale as DocsLocale
+  if (locale == 'pt') return 'pt-br';
+  if (locale == 'zh') return 'zh-cn';
+  return 'en';
+}
+const latestApi: { [major: number]: string } = { 2: '2.1', 3: '3.6' };
+const versions = {
+  'en': ['4.*', '3.*', '2.1'],
+  'cs': ['4.x'],
+  'de': ['4.x', '4.3', '3.x', '3.5'],
+  'es': ['4.x', '4.3', '3.x', '3.5'],
+  'fr': ['4.x', '4.3', '3.x', '3.5'],
+  'it': ['4.x'],
+  'ja': ['4.x', '4.3', '3.x', '3.5'],
+  'ko': ['4.x'],
+  'pl': ['4.x'],
+  'pt-br': ['4.x', '3.x', '3.5'],
+  'ru': ['4.x', '3.x', '3.5'],
+  'uk': ['4.x', '4.3', '3.x', '3.5'],
+  'zh-cn': ['4.x', '4.3', '3.x', '3.5'],
+  'zh-tw': ['4.x', '4.3'],
+};
+function apiVersion(gdVersion: GodotVersion | null, locale: DocsLocale) {
+  if (gdVersion == null) return 'stable';
+  const v = versions[locale];
+  const { api } = gdVersion;
+  if (api) { // wants specific minor version
+    if (v.includes(api)) return api; // has that specific minor version
+    if (v.includes(gdVersion.major + '.*')) return api; // has all specific minor versions
+  } // else minor is unknown or unavailable, get latest in major branch
+  const { major } = gdVersion;
+  const branch = major + '.x';
+  if (v.includes(branch)) return branch; // has that major branch
+  const latest = latestApi[major];
+  if (latest) {
+    if (v.includes(latest)) return latest; // has the latest minor version for that major
+    if (v.includes(major + '.*')) return latest; // has all minor, so redirect to latest
+  }
+  return 'stable'; // fallback to stable, which redirects in all locales
+}
 const pos0 = new Position(0, 0);
 export async function apiDocs(
   document: TextDocument, className: string, memberName: string, token: CancellationToken | null
 ) {
   const viewer = getViewerConfig(document);
   if (viewer != 'godot-tools' && await isOnline(onlineDocsHost)) {
-    // We could get locale properly, but it seems other locales don't support every version consistently.
-    // Also the API will probably still be in english even in those locales.
-    // const locale = env.language.toLowerCase();
-    // let apiLocale: string;
-    // if (docsLocales.includes(locale)) apiLocale = locale;
-    // else {
-    //   const lang = locale.replace(/[-_].*$/, '');
-    //   apiLocale = docsLocales.includes(lang) ? lang : 'en';
-    // }
-    const apiLocale = 'en';
+    const locale = docsLocale(document);
     const gdVersion = await godotVersionOfDocument(document);
     if (token?.isCancellationRequested) return null;
     try {
-      const docUri = apiDocsPageUri(className, memberName, gdVersion, apiLocale, viewer);
+      const docUri = apiDocsPageUri(className, memberName, gdVersion, locale, viewer);
       if (viewer == 'webview')
         GodotDocumentationProvider.detectedDotnetBuffer.set(docUri.toString(), !!gdVersion?.dotnet);
       return new Location(docUri, pos0);
@@ -135,9 +166,9 @@ export async function apiDocs(
   return null;
 }
 function apiDocsPageUri(
-  className: string, memberName: string, gdVersion: GodotVersion | null, locale: string, viewer: string,
+  className: string, memberName: string, gdVersion: GodotVersion | null, locale: DocsLocale, viewer: string,
 ) {
-  const version = apiVersion(gdVersion);
+  const version = apiVersion(gdVersion, locale);
   const classLower = className.toLowerCase();
   const page = `classes/class_${classLower}.html`;
   const fragment = '#class-' + classLower + (!memberName ? '' :
@@ -222,7 +253,7 @@ div { display: flex; align-items: center; justify-content: center; text-align: c
   const webview = webviewPanel.webview;
   webview.options = { localResourceRoots: [], enableScripts: true };
   webview.onDidReceiveMessage(msg => onDocsTabMessage(msg, webviewPanel, history));
-  const p = `https://${onlineDocsHost.replace(/^docs\./, '*.')}/${locale}/`;
+  const p = `https://${onlineBaseDomain}/${locale}/`;
   const csp = `default-src data: https:; script-src 'unsafe-inline' ${p}; style-src 'unsafe-inline' ${p}`;
   const docsWebviewSettings = workspace.getConfiguration('godotFiles.documentation.webview');
   const hideNav = page != 'index.html' && docsWebviewSettings.get<boolean>('hideSidebar')!;
@@ -272,10 +303,10 @@ async function onDocsTabMessage(
   } else console.error('Godot Files :: Unknown message: ', msg);
 }
 interface GodotDocsMessageNavigate { navigateTo: string; exitThisPage?: boolean; }
+const origin = `https://${onlineDocsHost}/`;
 async function docsTabMsgNavigate(msg: GodotDocsMessageNavigate) {
-  const origin = `https://${onlineDocsHost}/`;
   const url = msg.navigateTo.replace(/^http:/i, 'https:')
-    .replace(/^vscode-webview:\/\/[^/]*\/index\.html\//, origin + 'en/');
+    .replace(/^vscode-webview:\/\/[^/]*\/index\.html\//, origin + docsLocale(undefined) + '/');
   if (!url.startsWith('https:')) { console.warn('Refusing to navigate to this scheme: ' + url); return null; }
   let m;
   if (!url.startsWith(origin) || !(m =
@@ -337,8 +368,8 @@ export async function openApiDocs() {
     else window.showErrorMessage(`Could not open API documentation online or from godot-tools extension.`);
     return;
   }
-  const locale = 'en';
-  const version = apiVersion(gdVersion);
+  const locale = docsLocale(configScope);
+  const version = apiVersion(gdVersion, locale);
   const urlPath = `${locale}/${version}/classes/index.html`, title = 'All classes';
   const docUri = docsPageUri(viewer, urlPath, title, '');
   if (viewer == 'webview') {

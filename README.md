@@ -190,8 +190,9 @@ The features below are currently restricted.
 ### Godot Documentation Viewer
 Browse the online Godot Documentation directly from the IDE.  
 ⚙️ You can use the command ***Godot Files: Open Godot API Documentation*** to show the page listing all classes. Default shortcut: <kbd>Ctrl</kbd> <kbd>F1</kbd>; macOS: <kbd>⌥</kbd> <kbd>⌘</kbd> <kbd>D</kbd>.  
+🔒 🔧 The setting `godotFiles.documentation.locale` lets you choose your preferred language. Leave it as `auto` to use the IDE language.  
 🔧 The setting `godotFiles.documentation.viewer` lets you choose your preferred viewer for when you're online:
-- `godot-tools`: Use the *godot-tools* extension to open API docs (offline; requires Godot to be running and connected).
+- `godot-tools`: Use the *godot-tools* extension to open API docs (offline; requires Godot to be running and connected; only supports English).
 - `browser`: Open online documentation URLs in the external browser. Also supports going to the specific Godot version.
 - 🔒 `webview`: Load online documentation pages internally within IDE tabs (including tutorials).  
 Searches and external links are opened in your browser. This advanced viewer supports redirecting inherited members to locate their definition in a parent class. There's a few settings for it too. Some features (e.g. translations, user-contributed notes) are not supported in this viewer, but you can use the command to open the page externally.  
