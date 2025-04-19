@@ -5,7 +5,7 @@ Godot Editor does NOT need to be running for any features here.
 
 [godot-tools]: https://github.com/godotengine/godot-vscode-plugin
 
-> ⏳ Thanks to the 2 top contributors, the crowdfunding deadline was delayed by 2 more months. But progress is currently paused.  
+> ⏳ Thanks to 2 more big donations, the crowdfunding deadline was delayed again. Progress is currently very slow.  
 > 🥺 Please help development by [donating to the crowdfunding goal][donate] so I can resume work here on new features!  
 > 🔑 With a donation, you can **unlock early access and other rewards**! More info below.
 
@@ -13,7 +13,7 @@ Godot Editor does NOT need to be running for any features here.
 
 ![Showcasing various features, like GDShader errors, hovering, navigating and documentation pages](docs/showcase-all.png "* Features showcased here include those restricted to early access.")
 
-This is not meant to fully replace the official [godot-tools] extension, but to improve on its supported files. This plugin is designed so it can work alongside it, but it's completely independent. If you're using GDScript, you'll likely want to install godot-tools too; if not, just this one is enough.  
+This is not meant to fully replace the official [godot-tools] extension, but to improve on its supported files. This plugin is designed so it can work alongside it, but it's completely independent. If you're using GDScript, you'll likely want to install godot-tools too; if not, just this one may be enough.  
 🔧 You can use the setting `files.associations` to set your preferred extension to handle `*.tscn`, `*.tres`, etc.
 
 **Compatibility**:
@@ -43,7 +43,7 @@ There are special donation tiers if you also want to [get your logo or GitHub us
 [![User 02 !](https://avatars.githubusercontent.com/u/934053?s=64)](https://github.com/leftos)
 [![User 03 !](https://avatars.githubusercontent.com/u/55458977?s=64)](https://github.com/Dreak183)
 [![User 04 !](https://avatars.githubusercontent.com/u/7904683?s=64)](https://github.com/LiamSmyth)
-[![User 07](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-07.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-07.html)
+[![User 07 !](https://avatars.githubusercontent.com/u/77408854?s=64)](https://github.com/jauntyjocularjay)
 [![User 08](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-08.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-08.html)
 [![User 09](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-09.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-09.html)
 [![User 10](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-10.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-10.html)
@@ -53,8 +53,8 @@ There are special donation tiers if you also want to [get your logo or GitHub us
 [![User 14](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-14.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-14.html)
 [![User 15](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-15.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-15.html)
 [![User 16](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-16.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-16.html)
-<!--
 [![User 17](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-17.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-17.html)
+<!--
 [![User 18](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-18.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-18.html)
 [![User 19](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-19.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-19.html)
 [![User 20](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-20.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-20.html)
@@ -79,7 +79,7 @@ Features are supported on these languages:
 	`*.cfg`, Git config files (`.gitconfig`, `.git/config`) and XDG Desktop Entry files (`.desktop`, `.directory`).
 
 Webview features:
-- 🔒 **Godot Documentation Viewer** (on [early access][donate], see below).
+- **Godot Documentation Viewer**
 
 ### Syntax Highlighting
 Includes better (more specific) grammars for syntax-coloring on all supported textual languages above.
@@ -159,10 +159,21 @@ These features are supported in textual Scene and Resource files.
 	![Showcasing navigate to definition](docs/showcase-goto-definition.png)  
 	Going to the definition of a built-in engine type (on `type="SomeType"`, `some_field = SomeType(...)` or in inlay hints) will open its Godot API Documentation using the configured viewer (see below).
 
-#### Latest feature no longer restricted
+### Latest feature no longer restricted
+*Special thanks to [@cureforboredom](https://github.com/cureforboredom), whose donation allowed progress to be made!*
+
 🌟 This is now out of early access:
 
-- The `browser` option for the documentation viewer (see below).
+#### Godot Documentation Viewer
+Browse the online Godot Documentation directly from the IDE.  
+⚙️ You can use the command ***Godot Files: Open Godot API Documentation*** to show the page listing all classes. Default shortcut: <kbd>Ctrl</kbd> <kbd>F1</kbd>; macOS: <kbd>⌥</kbd> <kbd>⌘</kbd> <kbd>D</kbd>.  
+🔧 The setting `godotFiles.documentation.viewer` lets you choose your preferred viewer for when you're online:
+- `godot-tools`: Use the *godot-tools* extension to open API docs (offline; requires Godot to be running and connected; only supports English).
+- `browser`: Open online documentation URLs in the external browser. Also supports going to the specific Godot version.
+- 🌟 `webview`: Load online documentation pages internally within IDE tabs (including tutorials). Searches and external links are opened in your browser. It supports redirecting inherited members to locate their definition in a parent class. There's a few settings for it too. Some features (e.g. user-contributed notes) are not supported in this viewer, but you can use the command to open the page externally.  
+💻 This option isn't supported on browser IDEs, where it uses the equivalent `browser` fallback to open the page in a browser tab instead of IDE tab.  
+
+![Showcasing a Godot Docs tutorial page on the internal webview](docs/showcase-docs-webview-tutorial.webp)
 
 If you want **more features**, check the sections **Early Access**, **Crowdfunding** and **Potential Future Development** below.
 
@@ -175,6 +186,11 @@ Each feature will stay restricted until the next new feature takes its place in 
 
 The features below are currently restricted.
 
+### International Godot Documentation
+🔒 You can browse the online manuals in languages other than English.  
+🔧 The setting `godotFiles.documentation.locale` lets you choose your preferred language. Leave it as `auto` to use the IDE language.  
+✳️ Note that translations from the community are often incomplete (partial, outdated, not all versions supported) and the API is currently still in English for most languages.
+
 ### Resolve uid paths
 🔒 Resolve `uid://…` strings into their `res://…` paths. This allows many things on these references:
 - Navigate to the definition (<kbd>Ctrl</kbd> <kbd>Click</kbd> or <kbd>F12</kbd> by default).
@@ -186,19 +202,6 @@ The features below are currently restricted.
 ✳️ If the mapping is not found locally in the document itself, the global uid cache is consulted.  
 🔧 The setting `godotFiles.clarifyReferences.filePath` also applies here. But note that `minimal` only shortens `ext_resource` paths found locally in the document. When it comes from the global uid cache, the full `res://…` path is shown.  
 ![Showcasing uid paths as inlay hints and replacing with their resolved res paths](docs/showcase-inlay-hints-uid-replaced.png)
-
-### Godot Documentation Viewer
-Browse the online Godot Documentation directly from the IDE.  
-⚙️ You can use the command ***Godot Files: Open Godot API Documentation*** to show the page listing all classes. Default shortcut: <kbd>Ctrl</kbd> <kbd>F1</kbd>; macOS: <kbd>⌥</kbd> <kbd>⌘</kbd> <kbd>D</kbd>.  
-🔒 🔧 The setting `godotFiles.documentation.locale` lets you choose your preferred language. Leave it as `auto` to use the IDE language.  
-🔧 The setting `godotFiles.documentation.viewer` lets you choose your preferred viewer for when you're online:
-- `godot-tools`: Use the *godot-tools* extension to open API docs (offline; requires Godot to be running and connected; only supports English).
-- `browser`: Open online documentation URLs in the external browser. Also supports going to the specific Godot version.
-- 🔒 `webview`: Load online documentation pages internally within IDE tabs (including tutorials).  
-Searches and external links are opened in your browser. This advanced viewer supports redirecting inherited members to locate their definition in a parent class. There's a few settings for it too. Some features (e.g. translations, user-contributed notes) are not supported in this viewer, but you can use the command to open the page externally.  
-💻 This option isn't supported on browser IDEs, where it uses the equivalent `browser` fallback to open the page in a browser tab instead of IDE tab.  
-
-![Showcasing a Godot Docs tutorial page on the internal webview](docs/showcase-docs-webview-tutorial.webp)
 
 ### GDShader Language Features
 After a huge effort, basic support for GDShader language features is finally available! 🎉  

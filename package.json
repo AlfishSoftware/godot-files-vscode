@@ -462,7 +462,7 @@
 								"description": "A path to Godot cache files in this platform."
 							}
 						},
-						"markdownDescription": "Paths to Godot cache files in each platform. The defaults should work in most cases. Add a path when using a Godot installation in [self-contained mode](https://docs.godotengine.org/en/stable/tutorials/io/data_paths.html#self-contained-mode).\n\nThe keys are platform ids as returned by NodeJS: `win32` (Windows), `darwin` (macOS), `linux`.\n\nEach key maps to an array of path strings. A starting `~/` in the path is equivalent to `${userHome}/`. Substitution is also supported for `${workspaceFolder}` and `${env:VARIABLE}`. Glob patterns are *not* allowed. The order in the array doesn't matter, since all paths are always scanned to get the most recent cache file."
+						"markdownDescription": "Paths to Godot cache files in each platform. The defaults should work in most cases. Add a path when using a Godot installation in [self-contained mode](https://docs.godotengine.org/en/stable/tutorials/io/data_paths.html#self-contained-mode). You can also remove paths you don't need in your OS for better performance.\n\nThe keys are platform ids as returned by NodeJS: `win32` (Windows), `darwin` (macOS), `linux`.\n\nEach key maps to an array of path strings. A starting `~/` in the path is equivalent to `${userHome}/`. Substitution is also supported for `${workspaceFolder}` and `${env:VARIABLE}`. Glob patterns are *not* allowed. The order in the array doesn't matter, since all paths are always scanned to get the most recent cache file."
 					},
 					"godotFiles.documentation.locale": {
 						"order": 100,
@@ -510,7 +510,7 @@
 						"scope": "machine-overridable",
 						"type": "string",
 						"default": "webview",
-						"markdownDescription": "Specifies how the [Godot Documentation](command:godotFiles.openApiDocs) is opened when online. The `godot-tools` viewer will be used when you're offline.\n\n🔒 The `webview` option is exclusive to [early access](command:godotFiles.unlockEarlyAccess) (otherwise, `browser` will be used).",
+						"markdownDescription": "Specifies how the [Godot Documentation](command:godotFiles.openApiDocs) is opened when online. The `godot-tools` viewer will be used when you're offline.",
 						"enum": [
 							"browser",
 							"webview",
@@ -527,21 +527,21 @@
 						"scope": "machine",
 						"type": "boolean",
 						"default": false,
-						"markdownDescription": "Enable to show only the documentation content itself, hiding the navigation sidebar when loading a page (except for the home page).\n\n🔒 Applies only to the `webview` documentation viewer, which is exclusive to [early access](command:godotFiles.unlockEarlyAccess)."
+						"markdownDescription": "Enable to show only the documentation content itself, hiding the navigation sidebar when loading a page (except for the home page).\n\n Applies only to the `webview` documentation viewer."
 					},
 					"godotFiles.documentation.webview.keepTabs": {
 						"order": 101,
 						"scope": "machine",
 						"type": "boolean",
 						"default": false,
-						"markdownDescription": "Enable to always open links in a new tab; otherwise you need to hold Ctrl or ⌘ when clicking a link to open it in a new tab.\n\n🔒 Applies only to the `webview` documentation viewer, which is exclusive to [early access](command:godotFiles.unlockEarlyAccess)."
+						"markdownDescription": "Enable to always open links in a new tab; otherwise you need to hold Ctrl or ⌘ when clicking a link to open it in a new tab.\n\n Applies only to the `webview` documentation viewer."
 					},
 					"godotFiles.documentation.webview.redirectInheritedMember": {
 						"order": 101,
 						"scope": "machine",
 						"type": "boolean",
 						"default": true,
-						"markdownDescription": "When opening a class API page in a specific member, automatically redirect a missing member until its definition is found in a base class. Even when disabled, you can still click a link manually in the warning shown atop each page to try finding the inherited member in the next parent class. Supports only properties currently.\n\n🔒 Applies only to the `webview` documentation viewer, which is exclusive to [early access](command:godotFiles.unlockEarlyAccess)."
+						"markdownDescription": "When opening a class API page in a specific member, automatically redirect a missing member until its definition is found in a base class. Even when disabled, you can still click a link manually in the warning shown atop each page to try finding the inherited member in the next parent class. Supports only properties currently.\n\n Applies only to the `webview` documentation viewer."
 					}
 				}
 			},
@@ -560,7 +560,7 @@
 						"scope": "language-overridable",
 						"type": "string",
 						"default": "minimal",
-						"markdownDescription": "Show implied file paths as inlay hints after `ExtResource(…)` and `uid://…` references.",
+						"markdownDescription": "Show implied file paths as inlay hints after `ExtResource(…)` and `uid://…` references.\n\n🔒 The uid references are only resolved in [early access](command:godotFiles.unlockEarlyAccess).",
 						"enum": [
 							"none",
 							"filename",
@@ -686,7 +686,7 @@
 		"@types/vscode": "^1.99.1",
 		"ts-loader": "^9.5.2",
 		"typescript": "^5.8.3",
-		"webpack": "^5.99.5",
+		"webpack": "^5.99.6",
 		"webpack-cli": "^5.1.4"
 	},
 	"dependencies": {

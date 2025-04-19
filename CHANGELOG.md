@@ -4,6 +4,14 @@
 Features currently in early access are marked with 🔒 as they're restricted to [supporters].  
 Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're unlocked for everyone since that version.
 
+## [0.1.4] - 2025-04-21
+- 🔒 Docs: Support non-English documentation languages in the `webview` and `browser` viewers.
+- 🔒 GDAsset: Resolve `uid://…` paths to their `res://…` paths.  
+	Used when going to its definition, hovering it, and seeing and replacing with its inlay hint.
+- GDAsset: Associate `*.uid` format to the `godot-asset` language and make it so its unquoted uid can be resolved too.
+- GDShader: Add `color_conversion_disabled` hint in lexer and syntax coloring.
+- GDShader: Syntactically allow expressions in hint parameters for `hint_range` and `instance_index`.
+
 ## [0.1.3] - 2025-02-28
 ### Changed
 - Docs: Use `browser` viewer instead of `godot-tools` as a fallback to `webview` (default viewer).
@@ -93,7 +101,7 @@ Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're
 - Docs: Command to open Godot API docs listing all classes.
 - Docs: Add a viewer which delegates documentation handling to the `godot-tools` extension via `gddoc:` URI.
 - ***v0.1.3*** 🔓 Docs: Add a simple `browser` viewer, which opens the online docs URL in the external browser.
-- 🔒 Docs: Add an advanced `webview` viewer, which loads the online docs internally within tabs in the IDE.
+- ***v0.1.4*** 🔓 Docs: Add a `webview` viewer, which loads the online docs internally within tabs in the IDE.
 ### Fixed
 - Fix GDAsset quotes escaping on embedded GDScript for new grammar (from godot-tools v2) and raw/triple-quoted strings.
 - Add the cache paths of flatpak Godot3 and Godot3Sharp to the defaults for `godotCachePath` setting.
@@ -172,7 +180,8 @@ Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're
 - GDAsset: Image and font previews by hovering references and paths.
 - GDAsset: Hover resource references to show GDScript preload code.
 
-[Unreleased]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.1.3...develop
+[Unreleased]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.1.4...develop
+[0.1.4]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.1.0...v0.1.1

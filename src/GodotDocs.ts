@@ -91,7 +91,7 @@ export class GodotDocumentationProvider implements CustomReadonlyEditorProvider
 }
 function getViewerConfig(configScope?: ConfigurationScope) {
   let viewer = workspace.getConfiguration('godotFiles.documentation', configScope).get<string>('viewer')!;
-  if (viewer == 'webview' && (typeof process == 'undefined' || !GodotFiles.supported)) viewer = 'browser';
+  if (viewer == 'webview' && typeof process == 'undefined') viewer = 'browser';
   return viewer;
 }
 type DocsLocale = keyof typeof versions;
@@ -213,8 +213,6 @@ async function loadDocsInTab(urlPath: string, urlFragment: string, dotnet: boole
   if (cachedPage) docsPageCache.delete(urlPath);
   let docsPage;
   try {
-    if (!GodotFiles.supported)
-      throw new Error('No early access.', { cause: { pageMsg: 'Restricted to early access.' } });
     docsPage = cachedPage ?? await fetchDocsPage(urlPath, token);
   } catch (e) {
     const pageMsg = ((e as Error)?.cause as { pageMsg?: string; })?.pageMsg;
