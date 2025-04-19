@@ -309,14 +309,14 @@ async function docsTabMsgNavigate(msg: GodotDocsMessageNavigate) {
     .replace(/^vscode-webview:\/\/[^/]*\/index\.html\//, origin + docsLocale(undefined) + '/');
   if (!url.startsWith('https:')) { console.warn('Refusing to navigate to this scheme: ' + url); return null; }
   let m;
-  if (!url.startsWith(origin) || !(m =
-    url.substring(origin.length).replace(/\/(?=(?:#.*)?$)/, '/index.html').match(/^([\w-]+\/[^/]+\/[^#]+\.html)(#.*)?$/)
+  if (!url.startsWith(origin) || !(m = url.substring(origin.length).replace(/\/(?=(?:#.*)?$)/, '/index.html')
+    .match(/^([\w-]+\/[^/?#]+\/[^?#]+\.html)(\?[^#]*)?(#.*)?$/)
   )) {
     if (!await env.openExternal(Uri.parse(url, true)))
       window.showErrorMessage('Could not open URL in browser: ' + url);
     return null;
   }
-  const urlPath = m[1]!, fragment = m[2];
+  const urlPath = m[1]!, fragment = m[3];
   try {
     const docsPage = await fetchDocsPage(urlPath, null);
     docsPageCache.set(urlPath, docsPage);
