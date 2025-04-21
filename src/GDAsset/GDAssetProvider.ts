@@ -6,21 +6,24 @@ import {
   ThemeColor, ThemableDecorationAttachmentRenderOptions, InlayHint, InlayHintKind, InlayHintLabelPart,
 } from 'vscode';
 import GDAsset, { GDResource } from './GDAsset';
-import { resPathOfDocument, locateResPath } from '../GodotProject';
+import { resPathOfDocument, locateResPath, resolveUidInDocument } from '../GodotProject';
 import { apiDocs } from '../GodotDocs';
 import { resPathPreview } from '../GodotAssetPreview';
+import GodotFiles, { openSponsorUrl } from '../ExtensionEntry';
+
+let refusedUidResolveOffer = false;
 
 function sectionSymbol(
   document: TextDocument, tag: string, rest: string, range: Range, gdasset: GDAsset
 ) {
   const attributes: { [field: string]: string | undefined; } = {};
-  let id: string | undefined, typeRange: Range | undefined, pathRange: Range | undefined;
+  let id: string | undefined, typeRange: Range | undefined, uidRange: Range | undefined, pathRange: Range | undefined;
   for (const assignment of rest.matchAll(/\b([\w-]+)\b\s*=\s*(?:(\d+)|"([^"\\]*)"|((?:Ext|Sub)Resource\s*\(.*?\)))/g)) {
-    const value = assignment[2] ?? assignment[4] ?? GDAssetProvider.unescapeString(assignment[3]!);
+    const value = assignment[2] ?? assignment[4] ?? GDAsset.unescapeString(assignment[3]!);
     const attr = assignment[1]!;
     attributes[attr] = value;
     if (attr == 'id') id = value;
-    else if (assignment[3] != null && /^(?:type|path)$/.test(attr)) {
+    else if (assignment[3] != null && /^(?:type|uid|path)$/.test(attr)) {
       const rangeText = document.getText(range);
       const matchStart = rangeText.indexOf(assignment[0], tag.length + 2);
       const valueStart = assignment[0].indexOf('"', attr.length + 1) + 1;
@@ -28,7 +31,11 @@ function sectionSymbol(
         start.translate(0, matchStart + valueStart),
         start.translate(0, matchStart + valueStart + assignment[3].length),
       );
-      if (attr == 'type') typeRange = valueRange; else pathRange = valueRange;
+      switch (attr) {
+        case 'type': typeRange = valueRange; break;
+        case 'uid': uidRange = valueRange; break;
+        case 'path': pathRange = valueRange; break;
+      }
     }
   }
   const symbol = new DocumentSymbol(tag, rest, SymbolKind.Namespace, range, range);
@@ -36,27 +43,28 @@ function sectionSymbol(
     case 'gd_scene': {
       const docUriPath = document.uri.path;
       const [, fileTitle, ext] = /^\/(?:.*\/)*(.*?)(\.\w*)?$/.exec(docUriPath) ?? [undefined, docUriPath];
+      const uid = attributes.uid ?? '';
       symbol.name = fileTitle;
       symbol.detail = 'PackedScene';
       symbol.kind = SymbolKind.File;
-      gdasset.resource = { path: `${fileTitle}${ext ?? ''}`, type: 'PackedScene', symbol };
+      gdasset.resource = { path: `${fileTitle}${ext ?? ''}`, uid, uidRange, type: 'PackedScene', symbol };
       break;
     }
     case 'gd_resource': {
       const fileName = document.uri.path.replace(/^\/(?:.*\/)*/, ''); // with ext
       symbol.name = fileName;
-      const type = attributes.type ?? '';
+      const type = attributes.type ?? '', uid = attributes.uid ?? '';
       symbol.detail = type;
       symbol.kind = SymbolKind.File;
-      gdasset.resource = { path: fileName, type, typeRange, symbol };
+      gdasset.resource = { path: fileName, uid, uidRange, type, typeRange, symbol };
       break;
     }
     case 'ext_resource': {
       const type = attributes.type ?? '';
       if (id) {
-        const path = attributes.path ?? '?';
+        const uid = attributes.uid ?? '', path = attributes.path ?? '?';
         if (attributes.path) gdasset.addMinimalPath(path.split(/[/\\]/g));
-        gdasset.refs.ExtResource[id] = { path, pathRange, type, typeRange, symbol };
+        gdasset.refs.ExtResource[id] = { path, pathRange, uid, uidRange, type, typeRange, symbol };
       }
       symbol.name = attributes.path ?? tag;
       symbol.detail = type;
@@ -67,7 +75,7 @@ function sectionSymbol(
       const type = attributes.type ?? '';
       if (id) {
         const subPath = '::' + id, path = `${gdasset.resource?.path ?? ''}${subPath}`;
-        gdasset.refs.SubResource[id] = { path, type, typeRange, symbol };
+        gdasset.refs.SubResource[id] = { path, id, type, typeRange, symbol };
         symbol.name = subPath;
       }
       symbol.detail = type;
@@ -123,23 +131,6 @@ export default class GDAssetProvider implements
   static docs = GDAssetProvider.godotDocs.concat(
     { language: 'config-definition' },
   );
-  
-  public static unescapeString(partInsideQuotes: string) {
-    let s = '';
-    for (const m of partInsideQuotes.matchAll(/\\(["bfnrt\\]|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{6})|\\$|\\?([^])/gmu)) {
-      switch (m[1]) {
-        case '\\': case '"': s += m[1]; continue;
-        case 'n': s += '\n'; continue;
-        case 't': s += '\t'; continue;
-        case 'r': s += '\r'; continue;
-        case 'b': s += '\b'; continue;
-        case 'f': s += '\f'; continue;
-        case undefined: case null: case '': s += m[2] ?? ''; continue;
-        default: s += String.fromCharCode(parseInt(m[1].substring(1), 16)); continue; // uXXXX
-      }
-    }
-    return s;
-  }
   
   defs: { [uri: string]: GDAsset | undefined; } = {};
   
@@ -208,7 +199,7 @@ export default class GDAssetProvider implements
         // No more non-ignored tokens until end of line; only Line Comment or Whitespace
         if (gdasset && match[2]) {
           j += match[1]!.length;
-          gdasset.comments.push({ range: new Range(i, j, i, range.end.character), value: match[2] });
+          gdasset.comments.push({ innerRange: new Range(i, j + 1, i, range.end.character), value: match[2] });
         }
         previousEnd = range.end;
         j = 0; i++;
@@ -223,7 +214,7 @@ export default class GDAssetProvider implements
           for (const [sub] of s.matchAll(/"|(?:\\(?:["bfnrt\\]|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{6}|$)|\\?[^"\r\n])+/gmu)) {
             j += sub.length;
             if (sub == '"') break lines;
-            str += GDAssetProvider.unescapeString(sub);
+            str += GDAsset.unescapeString(sub);
           }
           str += "\n";
           j = 0; i++;
@@ -231,8 +222,9 @@ export default class GDAssetProvider implements
           s = document.lineAt(i).text;
         }
         if (i >= n) break;
-        if (gdasset)
-          gdasset.strings.push({ range: new Range(range.start.line, range.start.character, i, j), value: str });
+        if (gdasset) gdasset.strings.push({
+          innerRange: new Range(range.start.line, range.start.character + 1, i, j - 1), value: str
+        });
       } else if ((match = text.match(/^\s+/))) {
         // Whitespace
         j += match[0].length;
@@ -268,15 +260,22 @@ export default class GDAssetProvider implements
     const word = document.getText(wordRange);
     let match;
     if (isPathWord(word, wordRange, document)) {
+      if (!GodotFiles.supported && !refusedUidResolveOffer && word.startsWith('uid://')) {
+        const m = `On early access, uid paths can be resolved into their res paths. \
+This allows you to navigate to the source, see the implied path and quickly replace it into strings.`;
+        const ok = 'See how to enable', no = 'No';
+        window.showInformationMessage(m, ok, no).then(async (r) => {
+          if (r == ok) await openSponsorUrl();
+          else if (r == no) refusedUidResolveOffer = true;
+        });
+      }
       const resLoc = await locateResPath(word, document.uri);
-      if (typeof resLoc != 'string')
-        return new Location(resLoc.uri, new Position(0, 0));
-      return null;
+      return typeof resLoc == 'string' ? null : new Location(resLoc.uri, new Position(0, 0));
     }
     if (gdasset.isInString(wordRange)) return null;
     if ((match = word.match(/^((?:Ext|Sub)Resource)\s*\(\s*(?:(\d+)|"([^"\\]*)")\s*\)$/))) {
       const keyword = match[1] as 'ExtResource' | 'SubResource';
-      const id = match[2] ?? GDAssetProvider.unescapeString(match[3]!);
+      const id = match[2] ?? GDAsset.unescapeString(match[3]!);
       const s = gdasset.refs[keyword][id]?.symbol;
       if (!s) return null;
       if (keyword == 'ExtResource') {
@@ -315,7 +314,8 @@ export default class GDAssetProvider implements
   }
   
   async provideHover(document: TextDocument, position: Position, token: CancellationToken): Promise<Hover | null> {
-    const gdasset = this.defs[document.uri.toString(true)];
+    const documentUri = document.uri;
+    const gdasset = this.defs[documentUri.toString(true)];
     if (!gdasset || gdasset.isInComment(position)) return null;
     const wordRange = document.getWordRangeAtPosition(position);
     if (!wordRange) return null;
@@ -323,32 +323,32 @@ export default class GDAssetProvider implements
     const wordIsPath = isPathWord(word, wordRange, document);
     if (!wordIsPath && gdasset.isInString(wordRange)) return null; // ignore strings (except resPaths)
     const hover: MarkdownString[] = [];
-    let resPath, resRef;
+    let resPath: string, resRef;
     if (word == 'ext_resource' || wordIsPath) {
       let res: GDResource | undefined;
       if (word == 'ext_resource') {
         const line = document.lineAt(position).text;
         const match = /^\[\s*ext_resource\s+.*?\bid\s*=\s*(?:(\d+)\b|"([^"\\]*)")/.exec(line);
         if (!match) return null;
-        res = gdasset.refs.ExtResource[match[1] ?? GDAssetProvider.unescapeString(match[2]!)];
+        res = gdasset.refs.ExtResource[match[1] ?? GDAsset.unescapeString(match[2]!)];
         resPath = res?.path ?? '';
         if (!resPath) return null;
       } else {
-        resPath = word;
+        resPath = word.startsWith('uid:') ? await resolveUid(word, gdasset, documentUri) ?? word : word;
         const extResSymbols = gdasset.refs.ExtResource;
         for (const id in extResSymbols) {
           if (extResSymbols[id]?.path == resPath) { res = extResSymbols[id]; break; }
         }
       }
-      let id = null;
+      let id: string | null = null;
       const match = /^(.*?)::([^\\/:]*)$/.exec(resPath);
       if (match) {
         [resPath, id] = [match[1]!, match[2]!];
-        if (!res && resPath == await resPathOfDocument(document)) {
+        if (!res && resPath.startsWith('res:') && resPath == await resPathOfDocument(documentUri)) {
           res = gdasset.refs.SubResource[id];
           return new Hover(gdCodeLoad(resPath, id, res?.type, document.languageId), wordRange);
         }
-      } else if (!res && resPath == await resPathOfDocument(document))
+      } else if (!res && resPath.startsWith('res:') && resPath == await resPathOfDocument(documentUri))
         res = gdasset.resource;
       hover.push(gdCodeLoad(resPath, id, res?.type, document.languageId));
     } else if (word == 'sub_resource') {
@@ -357,26 +357,26 @@ export default class GDAssetProvider implements
         = /^\[\s*sub_resource\s+type\s*=\s*"([^"\\]*)"\s*id\s*=\s*(?:(\d+)\b|"([^"\\]*)")/.exec(line);
       if (!match) return null;
       const type = match[1]!, idN = match[2], idS = match[3];
-      const id = idN ?? GDAssetProvider.unescapeString(idS!);
-      resPath = await resPathOfDocument(document);
+      const id = idN ?? GDAsset.unescapeString(idS!);
+      resPath = await resPathOfDocument(documentUri);
       return new Hover(gdCodeLoad(resPath, id, type, document.languageId), wordRange);
     } else if (word == 'gd_resource') {
       const line = document.lineAt(position).text;
       const match = /^\[\s*gd_resource\s+type\s*=\s*"([^"\\]*)"/.exec(line);
       if (!match) return null;
-      resPath = await resPathOfDocument(document);
+      resPath = await resPathOfDocument(documentUri);
       hover.push(gdCodeLoad(resPath, null, match[1], document.languageId));
     } else if (word == 'gd_scene') {
       const line = document.lineAt(position).text;
       const match = /^\[\s*gd_scene\b/.exec(line);
       if (!match) return null;
-      resPath = await resPathOfDocument(document);
+      resPath = await resPathOfDocument(documentUri);
       hover.push(gdCodeLoad(resPath, null, 'PackedScene', document.languageId));
     } else if ((resRef = gdasset.resCall(word))) {
       const res = resRef.resource;
       if (!res) return null;
       if (resRef.keyword == 'SubResource') {
-        resPath = await resPathOfDocument(document);
+        resPath = await resPathOfDocument(documentUri);
         return new Hover(gdCodeLoad(resPath, resRef.id, res.type, document.languageId), wordRange);
       }
       resPath = res.path;
@@ -385,7 +385,7 @@ export default class GDAssetProvider implements
     if (token.isCancellationRequested) return null;
     if (workspace.getConfiguration('godotFiles', document).get<boolean>('hover.previewResource')!) {
       // show link to res:// path if available
-      if (!/^(?:user|uid):\/\//.test(resPath)) { // Cannot locate user:// or uid:// paths
+      if (!resPath.startsWith('user://')) { // Cannot locate user:// paths
         const mdPreview = await resPathPreview(resPath, document, token);
         if (token.isCancellationRequested) return null;
         if (mdPreview) hover.push(mdPreview);
@@ -418,10 +418,10 @@ export default class GDAssetProvider implements
       if (fn == 'NodePath') {
         continue; //TODO
       } else {
-        const id = m[3] ?? GDAssetProvider.unescapeString(m[4]!);
+        const id = m[3] ?? GDAsset.unescapeString(m[4]!);
         const resource = gdasset.refs[fn][id];
         if (!resource) continue;
-        const { type, typeRange, pathRange } = resource, { end } = matchRange;
+        const { type, typeRange } = resource, { end } = matchRange;
         if (sClass == 'always' ||
           sClass == 'auto' && !(instancing && type == 'PackedScene') && type != 'Resource' && !id.startsWith(type + '_')
         ) {
@@ -432,25 +432,40 @@ export default class GDAssetProvider implements
           const typeHint = new InlayHint(typePos, [typeLabel], InlayHintKind.Type);
           hints.push(typeHint);
         }
+        const pathRange = 'pathRange' in resource ? resource.pathRange : undefined;
         if (pathRange && eol && sFilePaths != 'none') {
           const pathPos = bracket ? end.translate(0, bracket.length) : end;
-          let shownPath = resource.path;
-          switch (sFilePaths) {
-            case 'filename': shownPath = shownPath.replace(/^(?:[^/\\]*[/\\])+/, ''); break;
-            case 'exact': break;
-            default: for (const [minimalPath, exactPath] of gdasset.pathsByMinimalForm) {
-              if (shownPath != exactPath) continue;
-              // replace shown path with its minimal form if using `minimal` setting
-              if (shownPath != minimalPath) shownPath = '…/' + minimalPath;
-              break;
-            }
-          }
+          const shownPath = getDisplayPath(resource.path, sFilePaths, gdasset);
           const pathLabel = new InlayHintLabelPart(shownPath);
           pathLabel.location = new Location(document.uri, pathRange);
           const pathHint = new InlayHint(pathPos, [new InlayHintLabelPart('; '), pathLabel]);
           hints.push(pathHint);
         }
       }
+    }
+    // locate all uid path strings, skipping occurrences inside a comment or within another string
+    if (GodotFiles.supported && sFilePaths != 'none') for (const m of reqSrc.matchAll(
+      /(?<=((?:^|\s+)uid\s*=\s*)?)("|^)(uid:\/*\w+)\2(?=([ \t;,:)\]}])|$)/mg
+    )) {
+      const eol = !m[4];
+      if (m[1] && (!eol || document.fileName.toLowerCase().endsWith('.import'))) continue;
+      const matchStart = reqStart + m.index, matchEnd = matchStart + m[0].length;
+      const matchRange = new Range(document.positionAt(matchStart), document.positionAt(matchEnd));
+      if (gdasset.isNonCode(matchRange)) continue;
+      const quoted = m[2]!;
+      const uidPath = quoted ? GDAsset.unescapeString(m[3]!) : m[3]!;
+      const resPath = await resolveUid(uidPath, gdasset, document.uri);
+      if (!resPath) continue;
+      const shownPath = getDisplayPath(resPath, sFilePaths, gdasset);
+      const pathLabel = new InlayHintLabelPart(shownPath);
+      const innerRange = !quoted ? matchRange
+        : new Range(matchRange.start.translate(0, 1), matchRange.end.translate(0, -1));
+      pathLabel.location = new Location(document.uri, innerRange);
+      const sepLabel = new InlayHintLabelPart(!quoted ? ' | ' : eol ? '; ' : ' ');
+      const pathHint = new InlayHint(matchRange.end, [sepLabel, pathLabel]);
+      if (/^godot-(?:scene|resource|project)$/.test(document.languageId))
+        pathHint.textEdits = [TextEdit.replace(innerRange, resPath)];
+      hints.push(pathHint);
     }
     return hints;
   }
@@ -546,6 +561,20 @@ export default class GDAssetProvider implements
   }
 }
 
+function getDisplayPath(srcPath: string, displayMode: string, gdasset: GDAsset): string {
+  switch (displayMode) {
+    case 'filename': return srcPath.replace(/^(?:[^/\\]*[/\\])+/, '');
+    case 'exact': return srcPath;
+    default: for (const [minimalPath, exactPath] of gdasset.pathsByMinimalForm) {
+      if (srcPath != exactPath) continue;
+      // replace shown path with its minimal form if using `minimal` setting
+      if (srcPath != minimalPath) return '…/' + minimalPath;
+      return srcPath;
+    }
+  }
+  return srcPath;
+}
+
 interface DecorationRanges {
   vectorParentheses: Range[];
 }
@@ -575,12 +604,19 @@ function isPathWord(word: string, wordRange: Range, document: TextDocument) {
 function escCode(s: string) { return s.replace(/("|\\)/g, '\\$1'); }
 function gdCodeLoad(resPath: string, id: string | null, type: string | undefined, language: string) {
   let code;
-  if (type || id != null || /^(?:res|uid):\/\//.test(resPath)) {
-    code = id != null ? `load("${resPath}::${id}")` : `preload("${resPath}")`;
+  if (type || id != null || /^(?:res|uid):/.test(resPath)) {
+    code = id != null ? `load("${escCode(resPath)}::${id}")` : `preload("${escCode(resPath)}")`;
     if (type) code += ` as ${type}`;
-  } else { // typeless user:// and file:// schemes, and relative paths
-    if (resPath.startsWith('file://')) resPath = Uri.parse(resPath).fsPath;
+  } else if (/^file:/i.test(resPath)) { // typeless file: URI
+    code = `FileAccess.open("${escCode(Uri.parse(resPath).fsPath)}", FileAccess.READ)`;
+  } else if (/^user:/.test(resPath)) { // typeless user: scheme
     code = `FileAccess.open("${escCode(resPath)}", FileAccess.READ)`;
-  }
+  } else code = `preload("${escCode(resPath)}")`; // typeless relative paths
   return new MarkdownString().appendCodeblock(code, language);
+}
+
+async function resolveUid(uidPath: string, gdasset: GDAsset, documentUri: Uri) {
+  const resource = gdasset.resolveLocalUid(uidPath);
+  if (resource && resource == gdasset.resource) return await resPathOfDocument(documentUri)
+  return resource?.path ?? await resolveUidInDocument(uidPath, documentUri);
 }

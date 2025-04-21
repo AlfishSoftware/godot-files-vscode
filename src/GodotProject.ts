@@ -1,5 +1,9 @@
 // Godot Project Helpers
 import { workspace, Uri, FileStat, TextDocument, FileSystemError } from 'vscode';
+import { parseBinaryUidCache, uidPathToNum } from './GodotUid';
+import GodotFiles from './ExtensionEntry';
+import GDAsset from './GDAsset/GDAsset';
+
 const toUTF8 = new TextDecoder();
 
 /** Find the root folder Uri of the closest Godot project containing the asset.
@@ -22,6 +26,48 @@ export async function projectDir(assetUri: Uri) {
   } while (uri.path);
   return null;
 }
+
+/** In a config file, remove comments and ensure strings use single-line syntax (escape newline chars). */
+function simplifyConfigFile(configFileText: string) {
+  return configFileText.replace(/("(?:\\[^]|[^"\\])*")|;.*?$/mg, (_0, g1?: string) =>
+    !g1 ? '' : g1.replace(/\r?\n/g, g0 => g0 == '\r\n' ? '\\r\\n' : '\\n')
+  )
+}
+/** Get a value from config file by its `section/field` key. Only primitive values are supported. */
+function parseConfigProperty(configFileText: string, prop: string) {
+  const h = prop.indexOf('/');
+  const header = h < 0 ? '' : prop.substring(0, h), field = prop.substring(h + 1);
+  const configText = simplifyConfigFile(configFileText);
+  let a = header ? null : 0, b;
+  for (const m of configText.matchAll(/^\s*\[[ \t]*(\w+(?:[-./: ]\w+)*)[ \t]*\]$/mg)) {
+    if (a == null) { if (m[1] == header) a = m.index + m[0].length; } else b = m.index;
+  }
+  if (a == null) return undefined; // section not found
+  const sectionText = configText.substring(a, b);
+  for (const m of sectionText.matchAll(/^\s*(\w+(?:[-./:]\w+)*)\s*=\s*/mg)) if (m[1] == field) try {
+    const v = sectionText.substring(m.index + m[0].length); // text that starts at the correct field's value
+    if (/^[&^]?"/.test(v)) {
+      a = v[0] == '"' ? 1 : 2; b = v.length;
+      for (let i = a; i < b; i++) {
+        const c = v[i]!;
+        if (c == '\\') { i++; continue; }
+        if (c == '"') return GDAsset.unescapeString(v.substring(a, i));
+      }
+      return undefined; // unterminated string literal
+    }
+    if (/^null\b/.test(v)) return null;
+    if (/^false\b/.test(v)) return false;
+    if (/^true\b/.test(v)) return true;
+    if (/^(?:nan|NAN)\b/.test(v)) return NaN;
+    if (/^\+?(?:inf|INF)\b/.test(v)) return Infinity;
+    if (/^(?:inf_neg|-inf|-INF)\b/.test(v)) return -Infinity;
+    if (/^[-+]?(?:\.\d+|\d+[.eE])/.test(v)) return parseFloat(v);
+    const mInt = /^[-+]?\d+\b/.exec(v); if (mInt) return BigInt(mInt[0]);
+    return Symbol() // field found, but value is unsupported or invalid
+  } catch { return undefined; } // syntax error when parsing value
+  return undefined; // field not found in this section
+}
+
 export interface GodotVersion { major: number; minor?: number; api?: string; dotnet: boolean; }
 const projGodotVersionRegex = /^\s*config\/features\s*=\s*PackedStringArray\s*\(\s*(.*?)\s*\)\s*(?:[;#].*)?$/m;
 /** Get the Godot version of the project on the specified folder.
@@ -81,12 +127,12 @@ export async function godotVersionOfDocument(document: TextDocument | Uri): Prom
   }
   return null;
 }
+
 /** URL schemes where you can get a project dir for an asset. */
 const resScheme = new Set(['file', 'vscode-file', 'vscode-remote', 'vscode-remote-resource']);
-export async function resPathOfDocument(document: TextDocument) {
-  const assetUri = document.uri;
-  const assetPath = assetUri.path;
-  const projDir = await projectDir(assetUri);
+export async function resPathOfDocument(documentUri: Uri) {
+  const assetPath = documentUri.path;
+  const projDir = await projectDir(documentUri);
   if (projDir && assetPath.startsWith(projDir.path))
     return 'res:/' + assetPath.replace(projDir.path, ''); // remove proj path at the start to make it relative to proj
   return assetPath.replace(/^(?:.*\/)+/, ''); // fallback to document file name (relative path)
@@ -102,9 +148,14 @@ interface UriFound { uri: Uri; stat: FileStat; }
 export async function locateResPath(resPath: string, assetUri: Uri): Promise<string | UriFound> {
   let resUri: Uri;
   resPath = resPath.replace(/::[^:/\\]*$/, '');
-  if (resPath.startsWith('res://')) {
+  if (/^(?:res|uid):\/\//.test(resPath)) {
     const projDir = await projectDir(assetUri);
-    if (!projDir) return resPath; // no project.godot found, res paths cannot be resolved
+    if (!projDir) return resPath; // no project.godot found, res and uid paths cannot be resolved
+    if (resPath.startsWith('uid://')) {
+      const resolvedPath = await resolveUidInProject(resPath, projDir);
+      if (!resolvedPath) return resPath; // if uid mapping not found, cannot load
+      resPath = resolvedPath;
+    }
     resUri = Uri.joinPath(projDir, resPath.substring(6)); // 6 == 'res://'.length
   } else if (resPath.startsWith('file://')) {
     resUri = Uri.parse(resPath, true); // absolute file URI
@@ -123,4 +174,53 @@ export async function locateResPath(resPath: string, assetUri: Uri): Promise<str
       return resUri.toString(true);
     throw err;
   }
+}
+
+export async function resolveUidInDocument(uidPath: string, documentUri: Uri) {
+  if (!GodotFiles.supported) return null;
+  const projDir = await projectDir(documentUri);
+  if (!projDir) return null; // no project.godot found, uid paths cannot be resolved
+  return await resolveUidInProject(uidPath, projDir);
+}
+export async function resolveUidInProject(uidPath: string, projectDirUri: Uri) {
+  if (!GodotFiles.supported) return null;
+  const resolvedPath = (await getUidCache(projectDirUri)).get(uidPathToNum(uidPath));
+  return resolvedPath?.startsWith('res:') ? resolvedPath : null;
+}
+
+/** Read the uid cache binary file as a sequence of bytes, then parse it and return it as a map.
+ * @param projectDirUri Uri of the folder containing the project.godot file.
+ */
+async function getUidCache(projectDirUri: Uri) {
+  const cacheKey = projectDirUri.toString(true);
+  const cachedValue = cachedUidMaps.get(cacheKey);
+  if (cachedValue && cachedValue.lastModified >= Date.now() - 5000) return cachedValue.map;
+  try {
+    const genDir = await godotGenDir(projectDirUri);
+    if (!genDir.endsWith('godot')) throw null;
+    const fileUri = Uri.joinPath(projectDirUri, genDir, 'uid_cache.bin');
+    const { mtime: lastModified } = await workspace.fs.stat(fileUri);
+    if (cachedValue && cachedValue.lastModified >= lastModified) return cachedValue.map;
+    // else cache_uid.bin has changed, parse and update local cached UidMap
+    const { buffer } = await workspace.fs.readFile(fileUri);
+    const map = parseBinaryUidCache(buffer);
+    cachedUidMaps.set(cacheKey, { lastModified, map });
+    return map;
+  } catch { return new Map<bigint, string>(); }
+}
+interface UidMap { lastModified: number; map: Map<bigint, string>; }
+const cachedUidMaps = new Map<string, UidMap>();
+
+/** Get the folder name of the generated files, as per the project settings and Godot version.
+ * @param projectDirUri Uri of the folder containing the project.godot file.
+ */
+async function godotGenDir(projectDirUri: Uri) {
+  let hidden = true, configVersion = 0n;
+  try {
+    const proj = toUTF8.decode(await workspace.fs.readFile(Uri.joinPath(projectDirUri, 'project.godot')));
+    configVersion = BigInt(parseConfigProperty(proj, '/config_version') as bigint)
+    hidden = !!(parseConfigProperty(proj, 'application/config/use_hidden_project_data_directory') ?? true);
+  } catch { /* assume .godot on any error */ }
+  if (configVersion >= 5) return hidden ? '.godot' : 'godot';
+  else return hidden ? '.import' : 'import';
 }

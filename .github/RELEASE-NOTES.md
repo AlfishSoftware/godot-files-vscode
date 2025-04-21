@@ -13,10 +13,9 @@ code --install-extension ${vsix}
 This software is free and in the [public domain].  
 🔑 Please [donate] to unlock features in early access, and to help this project not be abandoned!  
 👍 If you think this is useful, please star this repo and rate the extension.  
-🛒 [Itch Store] | [ArtStation] | [Unity Assets]
+🛒 [Itch Store] | [Unity Assets]
 
 [public domain]: https://unlicense.org/
 [donate]: https://alfish.itch.io/godot-files-vscode
 [Itch Store]: https://alfish.itch.io/
-[ArtStation]: https://www.artstation.com/a/26333626
 [Unity Assets]: https://assetstore.unity.com/publishers/30331
