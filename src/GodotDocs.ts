@@ -23,12 +23,12 @@ export class GodotDocumentationProvider implements CustomReadonlyEditorProvider
   private static readonly navigationHistory = new Map<string, BrowserHistory>();
   static readonly detectedDotnetBuffer = new Map<string, boolean>();
   static parseUri(uri: Uri) {
-    const { path, fragment } = uri;
+    const { path, query, fragment } = uri;
     const [, viewer, urlPath, title] = path.match(/^.*?\/godot\.docs\.([\w-]+):\/(.*?)\/([^/]+)$/)
       ?? path.match(/^.*?\/godot-docs\.([\w-]+)\.ide:\/(.*?)\/([^/]+)$/) // compatibility: tabs from v0.0.8 ~ v0.0.9
       ?? [, '', '', ''];
-    const urlFragment = fragment ? '#' + fragment : '';
-    return { path, viewer, urlPath, title, fragment, urlFragment };
+    const urlQuery = query ? '?' + query : '', urlFragment = fragment ? '#' + fragment : '';
+    return { path, viewer, urlPath, title, query, urlQuery, fragment, urlFragment };
   }
   static parseUrlPath(urlPath: string) {
     const [, locale, version, page] = urlPath.match(/^([\w-]+)\/([^/]+)\/([^#]+\.html)$/)
@@ -75,14 +75,20 @@ export class GodotDocumentationProvider implements CustomReadonlyEditorProvider
       GodotDocumentationProvider.webviewPanels.delete(uriString);
       GodotDocumentationProvider.navigationHistory.delete(uriString);
     });
-    const { path, viewer, urlPath, title, urlFragment } = GodotDocumentationProvider.parseUri(docsPageUri);
+    const { path, viewer, urlPath, title, urlQuery, urlFragment } = GodotDocumentationProvider.parseUri(docsPageUri);
+    if (viewer == 'simple-browser' || viewer == 'webview' && urlQuery && urlPath.endsWith('/search.html')) {
+      const url = `https://${onlineDocsHost}/${urlPath}${urlQuery}${urlFragment}`;
+      await commands.executeCommand('simpleBrowser.show', url);
+      webviewPanel.dispose();
+      return;
+    }
     if (viewer == 'webview') {
       try {
-        await loadDocsInTab(urlPath, urlFragment, dotnet, webviewPanel, history, token);
+        await loadDocsInTab(urlPath, urlQuery, urlFragment, dotnet, webviewPanel, history, token);
         return;
       } catch (e) { console.error(e); throw e; }
     } else if (viewer == 'browser') {
-      const url = `https://${onlineDocsHost}/${urlPath}${urlFragment}`;
+      const url = `https://${onlineDocsHost}/${urlPath}${urlQuery}${urlFragment}`;
       if (!await env.openExternal(Uri.parse(url, true)))
         window.showErrorMessage(`Could not open documentation for "${title}" in browser. URL: ${url}`);
     } else window.showErrorMessage('Documentation viewer could not open path: ' + path);
@@ -91,7 +97,7 @@ export class GodotDocumentationProvider implements CustomReadonlyEditorProvider
 }
 function getViewerConfig(configScope?: ConfigurationScope) {
   let viewer = workspace.getConfiguration('godotFiles.documentation', configScope).get<string>('viewer')!;
-  if (viewer == 'webview' && typeof process == 'undefined') viewer = 'browser';
+  if (viewer != 'godot-tools' && typeof process == 'undefined') viewer = 'browser'; // only one supported in browser IDE
   return viewer;
 }
 type DocsLocale = keyof typeof versions;
@@ -171,19 +177,21 @@ function apiDocsPageUri(
   const version = apiVersion(gdVersion, locale);
   const classLower = className.toLowerCase();
   const page = `classes/class_${classLower}.html`;
-  const fragment = '#class-' + classLower + (!memberName ? '' :
+  const urlFragment = '#class-' + classLower + (!memberName ? '' :
     `-${version == '3.0' || version == '2.1' ? '' : 'property-'}${memberName.replaceAll('_', '-')}`);
-  return docsPageUri(viewer, `${locale}/${version}/${page}`, className, fragment);
+  return docsPageUri(viewer, `${locale}/${version}/${page}`, className, '', urlFragment);
 }
-function docsPageUri(viewer: string, urlPath: string, title: string, fragment: string) {
+function docsPageUri(viewer: string, urlPath: string, title: string, urlQuery: string, urlFragment: string) {
   const filename = encodeURIComponent(title);
-  return Uri.parse(`${ctx.extension.id}:/godot.docs.${viewer}:/${urlPath}/${filename}${fragment}`);
+  return Uri.parse(`${ctx.extension.id}:/godot.docs.${viewer}:/${urlPath}/${filename}${urlQuery}${urlFragment}`);
 }
 
 interface GodotDocsPage { docsUrl: string; title: string; html: string; }
 const docsPageCache = new Map<string, GodotDocsPage>();
-async function fetchDocsPage(urlPath: string, token: CancellationToken | null): Promise<GodotDocsPage> {
-  const docsUrl = `https://${onlineDocsHost}/${urlPath}`;
+async function fetchDocsPage(
+  urlPath: string, urlQuery: string, token: CancellationToken | null
+): Promise<GodotDocsPage> {
+  const docsUrl = `https://${onlineDocsHost}/${urlPath}${urlQuery}`;
   let response; try {
     response = await fetch(docsUrl);
   } catch (e) {
@@ -206,14 +214,14 @@ async function fetchDocsPage(urlPath: string, token: CancellationToken | null): 
   return { docsUrl, title, html };
 }
 function htmlText(s: string) { return s.replaceAll('<', '&lt;'); }
-async function loadDocsInTab(urlPath: string, urlFragment: string, dotnet: boolean | undefined,
+async function loadDocsInTab(urlPath: string, urlQuery: string, urlFragment: string, dotnet: boolean | undefined,
   webviewPanel: WebviewPanel, history: BrowserHistory, token: CancellationToken | null
 ) {
   const cachedPage = docsPageCache.get(urlPath);
   if (cachedPage) docsPageCache.delete(urlPath);
   let docsPage;
   try {
-    docsPage = cachedPage ?? await fetchDocsPage(urlPath, token);
+    docsPage = cachedPage ?? await fetchDocsPage(urlPath, urlQuery, token);
   } catch (e) {
     const pageMsg = ((e as Error)?.cause as { pageMsg?: string; })?.pageMsg;
     const errMsg = pageMsg ? htmlText(pageMsg) : `Are you online?`;
@@ -314,11 +322,15 @@ async function docsTabMsgNavigate(msg: GodotDocsMessageNavigate) {
       window.showErrorMessage('Could not open URL in browser: ' + url);
     return null;
   }
-  const urlPath = m[1]!, fragment = m[3];
+  const urlPath = m[1]!, urlQuery = m[2] ?? '', urlFragment = m[3] ?? '';
   try {
-    const docsPage = await fetchDocsPage(urlPath, null);
+    if (urlQuery && urlPath.endsWith('/search.html')) {
+      await commands.executeCommand('simpleBrowser.show', url);
+      return null;
+    }
+    const docsPage = await fetchDocsPage(urlPath, urlQuery, null);
     docsPageCache.set(urlPath, docsPage);
-    const docUri = docsPageUri('webview', `${urlPath}`, docsPage.title, fragment ?? '');
+    const docUri = docsPageUri('webview', `${urlPath}`, docsPage.title, urlQuery, urlFragment);
     const exit = msg.exitThisPage &&
       !workspace.getConfiguration('godotFiles.documentation.webview').get<boolean>('keepTabs')!;
     if (exit) return docUri; // to replace current tab
@@ -337,8 +349,13 @@ async function docsTabMsgNavigate(msg: GodotDocsMessageNavigate) {
 interface TabInputUnknown { readonly ['uri']?: Uri; readonly ['modified']?: Uri; readonly ['viewType']?: string; }
 export async function openApiDocs() {
   const document = window.activeTextEditor?.document;
-  let configScope, gdVersion;
+  let configScope, gdVersion, cursorWord;
   if (document) {
+    if (/^(?:gd|godot-)(?:script|shader|resource|scene|asset|project)$/.test(document.languageId)) {
+      const { selection } = window.activeTextEditor!;
+      const range = selection.isEmpty ? document.getWordRangeAtPosition(selection.active) ?? selection : selection;
+      cursorWord = document.getText(range);
+    }
     configScope = document;
     gdVersion = await godotVersionOfDocument(document);
   } else {
@@ -347,7 +364,7 @@ export async function openApiDocs() {
     if (activeTabUri && t['viewType'] == GodotDocumentationProvider.viewType) {
       const { locale, version } =
         GodotDocumentationProvider.parseUrlPath(GodotDocumentationProvider.parseUri(activeTabUri).urlPath);
-      const docUri = docsPageUri('webview', `${locale}/${version}/classes/index.html`, 'All classes', '');
+      const docUri = docsPageUri('webview', `${locale}/${version}/classes/index.html`, 'All classes', '', '');
       await commands.executeCommand('vscode.openWith', docUri, GodotDocumentationProvider.viewType);
       return;
     }
@@ -368,16 +385,25 @@ export async function openApiDocs() {
   }
   const locale = docsLocale(configScope);
   const version = apiVersion(gdVersion, locale);
-  const urlPath = `${locale}/${version}/classes/index.html`, title = 'All classes';
-  const docUri = docsPageUri(viewer, urlPath, title, '');
-  if (viewer == 'webview') {
-    GodotDocumentationProvider.detectedDotnetBuffer.set(docUri.toString(), !!gdVersion?.dotnet);
-    await commands.executeCommand('vscode.openWith', docUri, GodotDocumentationProvider.viewType);
-  } else if (viewer == 'browser') {
-    const url = `https://${onlineDocsHost}/${urlPath}`;
-    if (!await env.openExternal(Uri.parse(url, true)))
-      window.showErrorMessage(`Could not open documentation for "${title}" in browser. URL: ${url}`);
-  } else window.showErrorMessage('Documentation viewer not supported: ' + viewer);
+  let docUri: Uri;
+  if (cursorWord?.match(/^(?:@?[A-Z]\w*[a-z]\w*|bool|int|float|JSON(?:RPC)?|UPNP|OS|IP|XRVRS)$/)) {
+    docUri = apiDocsPageUri(cursorWord, '', gdVersion, locale, viewer);
+  } else if (cursorWord?.match(/^@?[a-z_A-Z]\w*$/)) {
+    const urlPath = `${locale}/${version}/search.html`, title = 'Search';
+    const urlQuery = `?q=${encodeURIComponent(cursorWord)}&check_keywords=yes&area=default`;
+    docUri = docsPageUri(viewer, urlPath, title, urlQuery, '');
+  } else {
+    const urlPath = `${locale}/${version}/classes/index.html`, title = 'All classes';
+    if (viewer == 'browser') {
+      const url = `https://${onlineDocsHost}/${urlPath}`;
+      if (!await env.openExternal(Uri.parse(url, true)))
+        window.showErrorMessage(`Could not open documentation for "${title}" in browser. URL: ${url}`);
+      return;
+    }
+    docUri = docsPageUri(viewer, urlPath, title, '', '');
+  }
+  if (viewer == 'webview') GodotDocumentationProvider.detectedDotnetBuffer.set(docUri.toString(), !!gdVersion?.dotnet);
+  await commands.executeCommand('vscode.openWith', docUri, GodotDocumentationProvider.viewType);
 }
 function getActiveDocsUri() {
   // check active tab group first, as it should be the one activating the command
@@ -434,19 +460,19 @@ export async function activeDocsReload() {
     return;
   }
   const newFragment = history.overrideFragment;
-  const { urlPath, urlFragment } = GodotDocumentationProvider.parseUri(docsTabUri);
+  const { urlPath, urlQuery, urlFragment } = GodotDocumentationProvider.parseUri(docsTabUri);
   const newUrlFragment = newFragment != undefined ? '#' + newFragment : urlFragment;
   const dotnet = GodotDocumentationProvider.detectedDotnetBuffer.get(uriString);
   GodotDocumentationProvider.detectedDotnetBuffer.delete(uriString);
-  await loadDocsInTab(urlPath, newUrlFragment, dotnet, webviewPanel, history, null);
+  await loadDocsInTab(urlPath, urlQuery, newUrlFragment, dotnet, webviewPanel, history, null);
 }
 export async function activeDocsOpenInBrowser() {
   const docsTabUri = getActiveDocsUri(), uriString = docsTabUri.toString();
   const history = GodotDocumentationProvider.getHistory(uriString);
   const newFragment = history.overrideFragment;
-  const { urlPath, fragment } = GodotDocumentationProvider.parseUri(docsTabUri);
+  const { urlPath, query, fragment } = GodotDocumentationProvider.parseUri(docsTabUri);
   const url = Uri.from({
-    scheme: 'https', authority: onlineDocsHost, path: '/' + urlPath, fragment: newFragment ?? fragment
+    scheme: 'https', authority: onlineDocsHost, path: '/' + urlPath, query, fragment: newFragment ?? fragment
   });
   if (!await env.openExternal(url))
     window.showErrorMessage('Could not open URL in browser: ' + url);
