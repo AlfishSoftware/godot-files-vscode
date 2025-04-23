@@ -1,7 +1,7 @@
 {
 	"publisher": "alfish",
 	"name": "godot-files",
-	"version": "0.1.4",
+	"version": "0.1.5",
 	"license": "Unlicense",
 	"displayName": "Godot Files",
 	"description": "Additional features for some Godot files, better syntax-coloring and very basic GDShader support.",
@@ -469,7 +469,7 @@
 						"scope": "machine-overridable",
 						"type": "string",
 						"default": "auto",
-						"markdownDescription": "Specifies the language to use in the [Godot Documentation](command:godotFiles.openApiDocs). If not supported by the viewer, English is used instead.\n\n🔒 Exclusive to [early access](command:godotFiles.unlockEarlyAccess) (otherwise, English will be used).",
+						"markdownDescription": "Specifies the language to use in the [Godot Documentation](command:godotFiles.openApiDocs). Ignored by the `godot-tools` viewer, which only supports English.\n\n🔒 Exclusive to [early access](command:godotFiles.unlockEarlyAccess) (otherwise, English will be used).",
 						"enum": [
 							"auto",
 							"en",
@@ -510,16 +510,18 @@
 						"scope": "machine-overridable",
 						"type": "string",
 						"default": "webview",
-						"markdownDescription": "Specifies how the [Godot Documentation](command:godotFiles.openApiDocs) is opened when online. The `godot-tools` viewer will be used when you're offline.",
+						"markdownDescription": "Specifies how the [Godot Documentation](command:godotFiles.openApiDocs) is opened when online.\n\nThis viewer is used when going to a class definition from a GDAsset file.\n\nOn other Godot files like GDScript, it's only used when triggering the **Open Godot API Documentation** command directly. This command opens the class list if nothing is selected, or a class page or a search page when an identifier is under the text cursor or a text is selected (if not using the `godot-tools` viewer).",
 						"enum": [
 							"browser",
+							"simple-browser",
 							"webview",
 							"godot-tools"
 						],
 						"markdownEnumDescriptions": [
-							"Use your browser to open the documentation URL. Supports going to the specific API version.",
-							"Use a tab in the IDE to open the documentation website. Supports redirecting inherited members to their definition.\n\nNote that any future website changes could potentially break this, so use `browser` instead if you notice issues.\n\n💻 On web IDEs, this option is not supported and uses `browser` as a fallback to open the page in a browser tab instead of IDE tab.",
-							"Use the official godot-tools extension to open API documentation in a tab. Note that this requires the Godot Editor to be running and connected to that extension. Only English is supported."
+							"Use **your browser** to open the documentation URL externally.",
+							"Use the built-in **Simple Browser** extension to open the documentation URL in an IDE tab.\n\n ✳️ Cannot open multiple tabs. The tab is always reused.\n\n 💻 On web IDEs, this option is not supported and uses `browser` as a fallback.",
+							"Use a **tab in the IDE** to open the documentation website.\n\n ✳️ Any future website changes could potentially break this, so use a different viewer if you notice issues.\n\n ✳️ The search page uses `simple-browser` instead.\n\n 💻 On web IDEs, this option is not supported and uses `browser` as a fallback.",
+							"Use the official **godot-tools** extension to open API documentation in a tab.\n\n ✳️ Requires the Godot Editor to be running and connected to that extension.\n\n ✳️ Only English is supported.\n\n ✳️ Always used as a fallback for the other viewers when you're offline."
 						]
 					},
 					"godotFiles.documentation.webview.hideSidebar": {

@@ -4,12 +4,21 @@
 Features currently in early access are marked with 🔒 as they're restricted to [supporters].  
 Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're unlocked for everyone since that version.
 
+## [0.1.5] - 2025-04-22
+### Added
+- Docs: Add `simple-browser` viewer which uses the "Simple Browser" built-in extension.
+- Docs: Open docs command can go directly to a class page or search page when a word is selected.
+### Fixed
+- Docs Webview: Fix broken search page by using `simple-browser` in this case.
+
 ## [0.1.4] - 2025-04-21
+### Added
 - 🔒 Docs: Support non-English documentation languages in the `webview` and `browser` viewers.
 - 🔒 GDAsset: Resolve `uid://…` paths to their `res://…` paths.  
 	Used when going to its definition, hovering it, and seeing and replacing with its inlay hint.
 - GDAsset: Associate `*.uid` format to the `godot-asset` language and make it so its unquoted uid can be resolved too.
 - GDShader: Add `color_conversion_disabled` hint in lexer and syntax coloring.
+### Fixed
 - GDShader: Syntactically allow expressions in hint parameters for `hint_range` and `instance_index`.
 
 ## [0.1.3] - 2025-02-28
@@ -180,7 +189,8 @@ Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're
 - GDAsset: Image and font previews by hovering references and paths.
 - GDAsset: Hover resource references to show GDScript preload code.
 
-[Unreleased]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.1.4...develop
+[Unreleased]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.1.5...develop
+[0.1.5]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.1.1...v0.1.2

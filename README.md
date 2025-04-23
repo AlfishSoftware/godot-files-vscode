@@ -157,7 +157,7 @@ These features are supported in textual Scene and Resource files.
 
 - **Navigate to the definition** of `SubResource` and `ExtResource` references, and to resource paths (<kbd>Ctrl</kbd> <kbd>Click</kbd> or <kbd>F12</kbd> by default).  
 	![Showcasing navigate to definition](docs/showcase-goto-definition.png)  
-	Going to the definition of a built-in engine type (on `type="SomeType"`, `some_field = SomeType(...)` or in inlay hints) will open its Godot API Documentation using the configured viewer (see below).
+	✳️ Going to the definition of a built-in engine type (on `type="SomeType"`, `some_field = SomeType(...)` or in inlay hints) will open its Godot API Documentation using the configured viewer (see below). But note that **GDScript is entirely handled by godot-tools** (not by this extension), so when using "Go to Definition" on a .gd file, they'll always use their own implementation to show the documentation.
 
 ### Latest feature no longer restricted
 *Special thanks to [@cureforboredom](https://github.com/cureforboredom), whose donation allowed progress to be made!*
@@ -166,12 +166,13 @@ These features are supported in textual Scene and Resource files.
 
 #### Godot Documentation Viewer
 Browse the online Godot Documentation directly from the IDE.  
-⚙️ You can use the command ***Godot Files: Open Godot API Documentation*** to show the page listing all classes. Default shortcut: <kbd>Ctrl</kbd> <kbd>F1</kbd>; macOS: <kbd>⌥</kbd> <kbd>⌘</kbd> <kbd>D</kbd>.  
-🔧 The setting `godotFiles.documentation.viewer` lets you choose your preferred viewer for when you're online:
+⚙️ You can use the command ***Godot Files: Open Godot API Documentation*** (default shortcut: <kbd>Ctrl</kbd> <kbd>F1</kbd>; macOS: <kbd>⌥</kbd> <kbd>⌘</kbd> <kbd>D</kbd>) to show the page listing all classes, find a specific class under the text cursor, or search the selected text.  
+🔧 The setting `godotFiles.documentation.viewer` lets you choose your preferred viewer for when you're online (the features supported depend on this choice):
 - `godot-tools`: Use the *godot-tools* extension to open API docs (offline; requires Godot to be running and connected; only supports English).
-- `browser`: Open online documentation URLs in the external browser. Also supports going to the specific Godot version.
-- 🌟 `webview`: Load online documentation pages internally within IDE tabs (including tutorials). Searches and external links are opened in your browser. It supports redirecting inherited members to locate their definition in a parent class. There's a few settings for it too. Some features (e.g. user-contributed notes) are not supported in this viewer, but you can use the command to open the page externally.  
-💻 This option isn't supported on browser IDEs, where it uses the equivalent `browser` fallback to open the page in a browser tab instead of IDE tab.  
+- `browser`: Open online documentation URLs in the external browser.
+- 🌟 `simple-browser`: Use the *Simple Browser* built-in extension to open documentation URLs in an IDE tab. Cannot open multiple tabs. The same tab is always reused.
+- 🌟 `webview`: Load online documentation pages internally within IDE tabs. You can still use the command to open the page externally.  
+	🔧 You can set some preferences for this viewer in the settings under `godotFiles.documentation.webview`.
 
 ![Showcasing a Godot Docs tutorial page on the internal webview](docs/showcase-docs-webview-tutorial.webp)
 
@@ -187,7 +188,7 @@ Each feature will stay restricted until the next new feature takes its place in 
 The features below are currently restricted.
 
 ### International Godot Documentation
-🔒 You can browse the online manuals in languages other than English.  
+🔒 You can browse the online manuals in languages other than English (except on the `godot-tools` viewer).  
 🔧 The setting `godotFiles.documentation.locale` lets you choose your preferred language. Leave it as `auto` to use the IDE language.  
 ✳️ Note that translations from the community are often incomplete (partial, outdated, not all versions supported) and the API is currently still in English for most languages.
 
