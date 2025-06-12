@@ -743,19 +743,20 @@
     },
     
     "classifier": {
-      "name": "meta.classifier.gdshader",
-      "begin": "(?=\\b(?:shader_type|render_mode)\\b)",
+      "name": "meta.classifier.$1.gdshader",
+      "begin": "(?=\\b(shader_type|render_mode|stencil_mode)\\b)",
       "patterns": [
         { "include": "#text" },
         { "include": "#keyword" },
+        { "include": "#literalInt" },
         { "include": "#identifierClassification" },
         { "include": "#separator" }
       ],
       "end": "(?<=;)"
     },
     "classifierKeyword": {
-      "name": "keyword.language.classifier.gdshader",
-      "match": "\\b(?:shader_type|render_mode)\\b"
+      "name": "keyword.language.classifier.$1.gdshader",
+      "match": "\\b(shader_type|render_mode|stencil_mode)\\b"
     },
     "identifierClassification": {
       "name": "entity.other.inherited-class.gdshader",
