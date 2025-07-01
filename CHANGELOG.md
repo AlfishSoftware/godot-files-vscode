@@ -4,6 +4,10 @@
 Features currently in early access are marked with 🔒 as they're restricted to [supporters].  
 Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're unlocked for everyone since that version.
 
+## [0.1.6] - 2025-06-30
+### Added
+- GDShader: Support `stencil_mode` keyword and its syntax.
+
 ## [0.1.5] - 2025-04-22
 ### Added
 - Docs: Add `simple-browser` viewer which uses the "Simple Browser" built-in extension.
@@ -189,7 +193,8 @@ Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're
 - GDAsset: Image and font previews by hovering references and paths.
 - GDAsset: Hover resource references to show GDScript preload code.
 
-[Unreleased]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.1.5...develop
+[Unreleased]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.1.6...develop
+[0.1.6]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.1.2...v0.1.3

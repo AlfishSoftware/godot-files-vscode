@@ -11,11 +11,11 @@ code --install-extension ${vsix}
 [Changelog](https://github.com/${ghRepo}/blob/v${version}/CHANGELOG.md)
 
 This software is free and in the [public domain].  
-🔑 Please [donate] to unlock features in early access, and to help this project not be abandoned!  
+🔑 Please [donate] to unlock features in early access, and to allow this project to continue!  
 👍 If you think this is useful, please star this repo and rate the extension.  
-🛒 [Itch Store] | [Unity Assets]
+🛒 You can also help by visiting my [Itch Store] and [Unity Asset Store] pages.
 
-[public domain]: https://unlicense.org/
+[public domain]: https://github.com/${ghRepo}/blob/v${version}/LICENSE.md
 [donate]: https://alfish.itch.io/godot-files-vscode
 [Itch Store]: https://alfish.itch.io/
-[Unity Assets]: https://assetstore.unity.com/publishers/30331
+[Unity Asset Store]: https://assetstore.unity.com/publishers/30331

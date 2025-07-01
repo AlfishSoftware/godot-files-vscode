@@ -114,8 +114,8 @@ export default class GDShaderProvider implements
         const feature = 'GDShader language features (basic error squiggles, outline, mark inactive #if regions)';
         const m = neverRefusedBefore
           ? `Do you need ${feature}?`
-          : 'This extension is under risk of being abandoned... 😢 Development cannot continue without donations. '
-          + `If you can, please contribute to the crowdfunding, to get ${feature}, among other things!`;
+          : 'Maintaining this extension costs time and effort ... development can only continue with enough donations. '
+          + `If you can, please make a small donation to get ${feature}, among other things!`;
         const ok = neverRefusedBefore ? 'See how to enable' : 'Maybe';
         const no = neverRefusedBefore ? 'Not today' : 'Not this week';
         window.showInformationMessage(m, ok, no).then(async (r) => {
