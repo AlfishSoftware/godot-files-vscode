@@ -48,7 +48,8 @@ BRACE_L: '{';
 BRACE_R: '}';
 
 KEYWORD_SHADER_TYPE: 'shader_type';
-KEYWORD_CLASSIFIER: 'render_mode';
+KEYWORD_MODE_RENDER: 'render_mode';
+KEYWORD_MODE_STENCIL: 'stencil_mode';
 KEYWORD_SCOPING: 'group_uniforms';
 
 KEYWORD_STRUCT: 'struct';

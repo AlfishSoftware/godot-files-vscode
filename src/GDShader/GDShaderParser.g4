@@ -7,6 +7,7 @@ aShaderCode: aShaderType? defs+=aRootDef* EOF;
 aShaderType: 'shader_type' value=ID ';';
 aRootDef
 : aRenderMode
+| aStencilMode
 | aGroupUniforms
 | aStructDef
 | aFunctionDef
@@ -27,6 +28,11 @@ aAtomicNamedType: typeName=ID;
 aArraySize: '[' size=aExpression? ']';
 
 aRenderMode: 'render_mode' values+=ID (',' values+=ID)* ';';
+
+aStencilMode: 'stencil_mode' values+=aStencilValue (',' values+=aStencilValue)* ';';
+aStencilValue: aStencilModifier | aStencilReference;
+aStencilModifier: ID;
+aStencilReference: INTEGER | HEX;
 
 aGroupUniforms: 'group_uniforms' name=aGroupName? ';';
 aGroupName: group=ID ('.' subgroup=ID)?;
