@@ -1,7 +1,7 @@
 # Godot Files
 
-[![Public Domain](https://img.shields.io/badge/Public_Domain-white?logo=unlicense&logoColor=black "See The Unlicense")][public domain]
-[![GitHub stars](https://img.shields.io/github/stars/AlfishSoftware/godot-files-vscode?logo=github&label=%E2%98%85 "Give the repo a star on GitHub")](https://github.com/AlfishSoftware/godot-files-vscode/stargazers)
+[![Public Domain](https://img.shields.io/badge/Public_Domain-gray?logo=unlicense&logoColor=white "See The Unlicense")][public domain]
+[![GitHub stars](https://img.shields.io/github/stars/AlfishSoftware/godot-files-vscode?logo=github&label=%E2%98%85&style=flat&color=white "Give the repo a star on GitHub")](https://github.com/AlfishSoftware/godot-files-vscode/stargazers)
 [![Donate](https://img.shields.io/badge/Donate_to_unlock_rewards-4C1?logo=itch.io&logoColor=white "See what you get when you donate")][donate]
 
 **Additional features for some Godot files, better syntax-coloring and very basic GDShader support.**  
@@ -29,37 +29,37 @@ This is not meant to fully replace the official [godot-tools] extension, but to 
 ❤️ Huge thanks to everyone who has donated so far!  
 There are special donation tiers if you also want to [get your profile picture listed][rewards] right here:
 
-[<img alt="User 05 !!!!!" src="https://avatars.githubusercontent.com/u/87227173?s=80" width="80" height="80"/>](https://github.com/cureforboredom)
-[<img alt="User 06 !!!" src="https://avatars.githubusercontent.com/u/36652820?s=72" width="72" height="72"/>](https://github.com/gegehprast)
-[<img alt="User 12 !!" src="https://avatars.githubusercontent.com/u/191537778?s=68" width="68" height="68"/>](https://github.com/ZauraGS)
-[<img alt="User 14 !!" src="https://avatars.githubusercontent.com/u/3269392?s=68" width="68" height="68"/>](https://github.com/anwesender)
-[<img alt="User 15 !!" src="https://avatars.githubusercontent.com/u/45481101?s=68" width="68" height="68"/>](https://github.com/lfod1997)
-[<img alt="User 00 !" src="https://avatars.githubusercontent.com/u/3393799?s=64" width="64" height="64"/>](https://github.com/Ushio-Aria)
-[<img alt="User 01 !" src="https://avatars.githubusercontent.com/u/13101208?s=64" width="64" height="64"/>](https://github.com/CyberSer0)
-[<img alt="User 02 !" src="https://avatars.githubusercontent.com/u/934053?s=64" width="64" height="64"/>](https://github.com/leftos)
-[<img alt="User 03 !" src="https://avatars.githubusercontent.com/u/55458977?s=64" width="64" height="64"/>](https://github.com/Dreak183)
-[<img alt="User 04 !" src="https://avatars.githubusercontent.com/u/7904683?s=64" width="64" height="64"/>](https://github.com/LiamSmyth)
-[<img alt="User 07 !" src="https://avatars.githubusercontent.com/u/77408854?s=64" width="64" height="64"/>](https://github.com/jauntyjocularjay)
-[<img alt="User 08 !" src="https://avatars.githubusercontent.com/u/9137739?s=64" width="64" height="64"/>](https://github.com/loldruger)
-[<img alt="User 09 !" src="https://avatars.githubusercontent.com/u/24413283?s=64" width="64" height="64"/>](https://github.com/dirk-arnholt)
-[<img alt="User 10 !" src="https://avatars.githubusercontent.com/u/110045387?s=64" width="64" height="64"/>](https://github.com/SasVel)
-[<img alt="User 11 !" src="https://avatars.githubusercontent.com/u/159775249?s=64" width="64" height="64"/>](https://github.com/atelieralice)
-[<img alt="User 13 !" src="https://avatars.githubusercontent.com/u/997300?s=64" width="64" height="64"/>](https://github.com/fryingpanjoe)
-[![User 16](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-16.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-16.html)
-[![User 17](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-17.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-17.html)
-[![User 18](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-18.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-18.html)
-[![User 19](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-19.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-19.html)
-[![User 20](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-20.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-20.html)
-[![User 21](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-21.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-21.html)
-[![User 22](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-22.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-22.html)
-[![User 23](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-23.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-23.html)
-[![User 24](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-24.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-24.html)
+[<img width="80" height="80" src="https://avatars.githubusercontent.com/u/87227173?s=80" alt="@cureforboredom"/>](https://github.com/cureforboredom) <!-- 05!!!!! -->
+[<img width="72" height="72" src="https://avatars.githubusercontent.com/u/36652820?s=72" alt="@gegehprast"/>](https://github.com/gegehprast) <!-- 06!!! -->
+[<img width="68" height="68" src="https://avatars.githubusercontent.com/u/191537778?s=68" alt="@ZauraGS"/>](https://github.com/ZauraGS) <!-- 12!! -->
+[<img width="68" height="68" src="https://avatars.githubusercontent.com/u/3269392?s=68" alt="@anwesender"/>](https://github.com/anwesender) <!-- 14!! -->
+[<img width="68" height="68" src="https://avatars.githubusercontent.com/u/45481101?s=68" alt="@lfod1997"/>](https://github.com/lfod1997) <!-- 15!! -->
+[<img width="68" height="68" src="https://avatars.githubusercontent.com/u/934053?s=68" alt="@leftos"/>](https://github.com/leftos) <!-- 02! ! -->
+[<img width="64" height="64" src="https://avatars.githubusercontent.com/u/3393799?s=64" alt="@Aria"/>](https://github.com/Ushio-Aria) <!-- 00! -->
+[<img width="64" height="64" src="https://avatars.githubusercontent.com/u/13101208?s=64" alt="@CyberSer0"/>](https://github.com/CyberSer0) <!-- 01! -->
+[<img width="64" height="64" src="https://avatars.githubusercontent.com/u/55458977?s=64" alt="@Dreak183"/>](https://github.com/Dreak183) <!-- 03! -->
+[<img width="64" height="64" src="https://avatars.githubusercontent.com/u/7904683?s=64" alt="@LiamSmyth"/>](https://github.com/LiamSmyth) <!-- 04! -->
+[<img width="64" height="64" src="https://avatars.githubusercontent.com/u/77408854?s=64" alt="@jauntyjocularjay"/>](https://github.com/jauntyjocularjay) <!-- 07! -->
+[<img width="64" height="64" src="https://avatars.githubusercontent.com/u/9137739?s=64" alt="@loldruger"/>](https://github.com/loldruger) <!-- 08! -->
+[<img width="64" height="64" src="https://avatars.githubusercontent.com/u/24413283?s=64" alt="@arnholt"/>](https://github.com/dirk-arnholt) <!-- 09! -->
+[<img width="64" height="64" src="https://avatars.githubusercontent.com/u/110045387?s=64" alt="@SasVel"/>](https://github.com/SasVel) <!-- 10! -->
+[<img width="64" height="64" src="https://avatars.githubusercontent.com/u/159775249?s=64" alt="@atelieralice"/>](https://github.com/atelieralice) <!-- 11! -->
+[<img width="64" height="64" src="https://avatars.githubusercontent.com/u/997300?s=64" alt="@fryingpanjoe"/>](https://github.com/fryingpanjoe) <!-- 13! -->
+[<img width="64" height="64" src="https://avatars.githubusercontent.com/u/17725121?s=64" alt="@lsdmtr"/>](https://github.com/lsdmtr) <!-- 16! -->
+[![ ](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-17.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-17.html)
+[![ ](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-18.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-18.html)
+[![ ](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-19.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-19.html)
+[![ ](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-20.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-20.html)
+[![ ](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-21.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-21.html)
+[![ ](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-22.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-22.html)
+[![ ](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-23.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-23.html)
+[![ ](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-24.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-24.html)
 <!--
-[![User 25](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-25.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-25.html)
-[![User 26](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-26.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-26.html)
-[![User 27](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-27.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-27.html)
-[![User 28](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-28.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-28.html)
-[![User 29](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-29.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-29.html)
+[![ ](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-25.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-25.html)
+[![ ](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-26.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-26.html)
+[![ ](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-27.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-27.html)
+[![ ](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-28.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-28.html)
+[![ ](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-29.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-29.html)
 -->
 
 ## Features
