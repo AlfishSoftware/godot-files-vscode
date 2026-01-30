@@ -96,6 +96,7 @@ KEYWORD_HINT_SIMPLE
 	| 'aniso' 'tropy'?
 	| 'roughness_' ([rgba] | 'normal' | 'gray')
 	| ('screen' | 'depth' | 'normal_roughness') '_texture'
+	| 'blit_source' [0-3]
 	)
 | 'filter_' ('nearest' | 'linear') ('_mipmap' '_anisotropic'?)?
 | 'repeat_' ('en' | 'dis') 'able'
