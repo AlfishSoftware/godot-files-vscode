@@ -4,6 +4,16 @@
 Features currently in early access are marked with 🔒 as they're restricted to [supporters].  
 Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're unlocked for everyone since that version.
 
+## [0.1.7] - 2026-03-10
+### Security
+- [Updated webpack](https://github.com/advisories/ghsa-5c6j-r48x-rmvq) just in case.  
+	Webpack is only used to pack the Web Extension for browser IDEs like vscode.dev and github.dev.  
+	The code that runs on desktop IDEs (VSCode installed on your PC) doesn't use any webpack output, so it's unaffected.
+
+### Added
+- GDShader: Add `hint_blit_source0~3` hint keywords to syntax coloring and lexer.
+- GDShader: Add `blit()` to processor function syntax coloring.
+
 ## [0.1.6] - 2025-06-30
 ### Added
 - GDShader: Support `stencil_mode` keyword and its syntax.
@@ -18,7 +28,7 @@ Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're
 ## [0.1.4] - 2025-04-21
 ### Added
 - 🔒 Docs: Support non-English documentation languages in the `webview` and `browser` viewers.
-- 🔒 GDAsset: Resolve `uid://…` paths to their `res://…` paths.  
+- ***v0.1.7*** 🔓 GDAsset: Resolve `uid://…` paths to their `res://…` paths.  
 	Used when going to its definition, hovering it, and seeing and replacing with its inlay hint.
 - GDAsset: Associate `*.uid` format to the `godot-asset` language and make it so its unquoted uid can be resolved too.
 - GDShader: Add `color_conversion_disabled` hint in lexer and syntax coloring.
@@ -193,7 +203,8 @@ Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're
 - GDAsset: Image and font previews by hovering references and paths.
 - GDAsset: Hover resource references to show GDScript preload code.
 
-[Unreleased]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.1.6...develop
+[Unreleased]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.1.7...develop
+[0.1.7]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.1.3...v0.1.4

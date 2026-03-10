@@ -7,7 +7,7 @@ export async function sha512(s: string) {
     (b: number) => b.toString(16).padStart(2, '0')).join('');
 }
 /** Convert bytes to a base64 string, using either nodejs or web API. */
-export function base64(data: Uint8Array) {
+export function base64(data: Uint8Array<ArrayBuffer>) {
   const url = new FileReaderSync().readAsDataURL(new Blob([data]));
   return url.substring(url.indexOf(',', 12) + 1); // `data:${mime};base64,${data}`
 }

@@ -151,10 +151,8 @@ These features are supported in textual Scene and Resource files.
 	![Showcasing navigate to definition](docs/showcase-goto-definition.png)  
 	✳️ Going to the definition of a built-in engine type (on `type="SomeType"`, `some_field = SomeType(...)` or in inlay hints) will open its Godot API Documentation using the configured viewer (see below). But note that **GDScript is entirely handled by godot-tools** (not by this extension), so when using "Go to Definition" on a .gd file, they'll always use their own implementation to show the documentation.
 
-### Latest feature no longer restricted
-*Special thanks to [@cureforboredom](https://github.com/cureforboredom), whose donation allowed progress to be made!*
-
-<!-- 🌟 This is now out of early access: -->
+### Features viewed in special tabs
+These features are supported as special (non-text editor) tabs.
 
 #### Godot Documentation Viewer
 Browse the online Godot Documentation directly from the IDE.  
@@ -167,6 +165,21 @@ Browse the online Godot Documentation directly from the IDE.
 	🔧 Set preferences for this viewer in the settings under `godotFiles.documentation.webview`.
 
 ![Showcasing a Godot Docs tutorial page on the internal webview](docs/showcase-docs-webview-tutorial.webp)
+
+### Latest feature no longer restricted
+*Thanks to the amazing people who donate, this is now out of early access and available to everyone.*
+
+#### Resolve uid paths
+Resolve `uid://…` strings into their `res://…` paths. This allows many things on these references:
+- Navigate to the definition (<kbd>Ctrl</kbd> <kbd>Click</kbd> or <kbd>F12</kbd> by default).
+- See the resolved path and its preview when hovering.
+- See the resolved path in inlay hints.
+- If you double-click the inlay hint, you can replace the uid in the string with its path (useful in `project.godot` and `@export_file` values).
+
+✳️ The IDE has a character limit per line for inlay hints. So on lines with multiple items (e.g. in arrays) they only appear for some (you can still hover the uid to see the path).  
+✳️ If the mapping is not found locally in the document itself, the global uid cache is consulted.  
+🔧 The setting `godotFiles.clarifyReferences.filePath` also applies here.  
+![Showcasing uid paths as inlay hints and replacing with their resolved res paths](docs/showcase-inlay-hints-uid-replaced.png)
 
 For **more features**, check the sections **Early Access** and **Potential Future Development** below.
 
@@ -182,18 +195,6 @@ The features below are currently restricted.
 🔒 You can browse the online manuals in languages other than English (except on the `godot-tools` viewer).  
 🔧 Choose your language in `godotFiles.documentation.locale` or leave it as `auto` to use the IDE language.  
 ✳️ Note that translations from the community are often incomplete (partial, outdated, not all versions supported) and the API is currently still in English for most languages.
-
-### Resolve uid paths
-🔒 Resolve `uid://…` strings into their `res://…` paths. This allows many things on these references:
-- Navigate to the definition (<kbd>Ctrl</kbd> <kbd>Click</kbd> or <kbd>F12</kbd> by default).
-- See the resolved path and its preview when hovering.
-- See the resolved path in inlay hints.
-- If you double-click the inlay hint, you can replace the uid in the string with its path (useful in `project.godot` and `@export_file` values).
-
-✳️ The IDE has a character limit per line for inlay hints. So on lines with multiple items (e.g. in arrays) they only appear for some (you can still hover the uid to see the path).  
-✳️ If the mapping is not found locally in the document itself, the global uid cache is consulted.  
-🔧 The setting `godotFiles.clarifyReferences.filePath` also applies here.  
-![Showcasing uid paths as inlay hints and replacing with their resolved res paths](docs/showcase-inlay-hints-uid-replaced.png)
 
 ### GDShader Language Features
 After a huge effort, very basic support for GDShader language features is finally available.  
