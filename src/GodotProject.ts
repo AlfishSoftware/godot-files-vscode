@@ -177,13 +177,11 @@ export async function locateResPath(resPath: string, assetUri: Uri): Promise<str
 }
 
 export async function resolveUidInDocument(uidPath: string, documentUri: Uri) {
-  if (!GodotFiles.supported) return null;
   const projDir = await projectDir(documentUri);
   if (!projDir) return null; // no project.godot found, uid paths cannot be resolved
   return await resolveUidInProject(uidPath, projDir);
 }
 export async function resolveUidInProject(uidPath: string, projectDirUri: Uri) {
-  if (!GodotFiles.supported) return null;
   const resolvedPath = (await getUidCache(projectDirUri)).get(uidPathToNum(uidPath));
   return resolvedPath?.startsWith('res:') ? resolvedPath : null;
 }

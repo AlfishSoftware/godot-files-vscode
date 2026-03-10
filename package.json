@@ -1,7 +1,7 @@
 {
 	"publisher": "alfish",
 	"name": "godot-files",
-	"version": "0.1.6",
+	"version": "0.1.7",
 	"license": "Unlicense",
 	"displayName": "Godot Files",
 	"description": "Additional features for some Godot files, better syntax-coloring and very basic GDShader support.",
@@ -488,7 +488,7 @@
 							"zh-TW"
 						],
 						"enumDescriptions": [
-							"Automatically Detected\nThe IDE language, or its closest match, or English if unavailable.",
+							"Automatically Detected: The IDE language, or its closest match, or English if unavailable.",
 							"English",
 							"Czech | Čeština",
 							"German | Deutsch",
@@ -562,7 +562,7 @@
 						"scope": "language-overridable",
 						"type": "string",
 						"default": "minimal",
-						"markdownDescription": "Show implied file paths as inlay hints after `ExtResource(…)` and `uid://…` references.\n\n🔒 The uid references are only resolved in [early access](command:godotFiles.unlockEarlyAccess).",
+						"markdownDescription": "Show implied file paths as inlay hints after `ExtResource(…)` and `uid://…` references.",
 						"enum": [
 							"none",
 							"filename",
@@ -685,17 +685,17 @@
 		]
 	},
 	"devDependencies": {
-		"@types/vscode": "^1.100.0",
-		"ts-loader": "^9.5.2",
-		"typescript": "^5.8.3",
-		"webpack": "^5.99.9",
+		"@types/vscode": "^1.105.0",
+		"ts-loader": "^9.5.4",
+		"typescript": "^5.9.3",
+		"webpack": "^5.105.4",
 		"webpack-cli": "^6.0.1"
 	},
 	"dependencies": {
 		"antlr4": "~4.13.2"
 	},
 	"engines": {
-		"vscode": "^1.100.0"
+		"vscode": "^1.105.0"
 	},
 	"scripts": {
 		"watch-pc": "tsc -watch -p ./src/",

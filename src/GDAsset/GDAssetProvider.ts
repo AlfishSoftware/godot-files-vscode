@@ -9,9 +9,6 @@ import GDAsset, { GDResource } from './GDAsset';
 import { resPathOfDocument, locateResPath, resolveUidInDocument } from '../GodotProject';
 import { apiDocs } from '../GodotDocs';
 import { resPathPreview } from '../GodotAssetPreview';
-import GodotFiles, { openSponsorUrl } from '../ExtensionEntry';
-
-let refusedUidResolveOffer = false;
 
 function sectionSymbol(
   document: TextDocument, tag: string, rest: string, range: Range, gdasset: GDAsset
@@ -260,15 +257,6 @@ export default class GDAssetProvider implements
     const word = document.getText(wordRange);
     let match;
     if (isPathWord(word, wordRange, document)) {
-      if (!GodotFiles.supported && !refusedUidResolveOffer && word.startsWith('uid://')) {
-        const m = `On early access, uid paths can be resolved into their res paths. \
-This allows you to navigate to the source, see the implied path and quickly replace it into strings.`;
-        const ok = 'See how to enable', no = 'No';
-        window.showInformationMessage(m, ok, no).then(async (r) => {
-          if (r == ok) await openSponsorUrl();
-          else if (r == no) refusedUidResolveOffer = true;
-        });
-      }
       const resLoc = await locateResPath(word, document.uri);
       return typeof resLoc == 'string' ? null : new Location(resLoc.uri, new Position(0, 0));
     }
@@ -444,7 +432,7 @@ This allows you to navigate to the source, see the implied path and quickly repl
       }
     }
     // locate all uid path strings, skipping occurrences inside a comment or within another string
-    if (GodotFiles.supported && sFilePaths != 'none') for (const m of reqSrc.matchAll(
+    if (sFilePaths != 'none') for (const m of reqSrc.matchAll(
       /(?<=((?:^|\s+)uid\s*=\s*)?)("|^)(uid:\/*\w+)\2(?=([ \t;,:)\]}])|$)/mg
     )) {
       const eol = !m[4];
