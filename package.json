@@ -686,9 +686,9 @@
 	},
 	"devDependencies": {
 		"@types/vscode": "~1.105.0",
-		"ts-loader": "^9.5.4",
+		"ts-loader": "^9.5.7",
 		"typescript": "^5.9.3",
-		"webpack": "^5.105.4",
+		"webpack": "^5.106.2",
 		"webpack-cli": "^6.0.1"
 	},
 	"dependencies": {

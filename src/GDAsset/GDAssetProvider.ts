@@ -39,7 +39,7 @@ function sectionSymbol(
   switch (tag) {
     case 'gd_scene': {
       const docUriPath = document.uri.path;
-      const [, fileTitle, ext] = /^\/(?:.*\/)*(.*?)(\.\w*)?$/.exec(docUriPath) ?? [undefined, docUriPath];
+      const [, fileTitle, ext] = /^\/(?:[^/]*\/)*(.*?)(\.\w*)?$/.exec(docUriPath) ?? [undefined, docUriPath];
       const uid = attributes.uid ?? '';
       symbol.name = fileTitle;
       symbol.detail = 'PackedScene';

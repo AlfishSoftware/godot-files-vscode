@@ -10,6 +10,8 @@ jobs:
       github.event.release && !github.event.release.draft && github.event.release.assets[0]
       && endsWith(github.event.release.assets[0].name, '.vsix')
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
     steps:
       - name: Checkout ${{ github.repository }} ${{ github.ref_type }} ${{ github.ref_name }}
         uses: actions/checkout@v4
@@ -19,7 +21,7 @@ jobs:
           cache: npm
       - name: Download vsix file from release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo Downloadable at "${{ github.event.release.assets[0].browser_download_url }}"
           gh api -H "Accept: application/octet-stream" "${{ github.event.release.assets[0].url }}" \

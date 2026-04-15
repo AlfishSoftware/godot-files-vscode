@@ -35,7 +35,7 @@ aStencilModifier: ID;
 aStencilReference: INTEGER | HEX;
 
 aGroupUniforms: 'group_uniforms' name=aGroupName? ';';
-aGroupName: group=ID ('.' subgroup=ID)?;
+aGroupName: groups+=ID ('.' groups+=ID)*;
 
 aStructDef: 'struct' name=ID '{' fieldDefs+=aStructFieldDef+ '}' ';';
 aStructFieldDef
