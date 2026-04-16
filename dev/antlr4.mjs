@@ -21,10 +21,10 @@ async function compileGrammar(grammarDir, ...grammarFiles) {
     if (stderr) console.error(stderr);
     console.log(`Compiled "${grammarDir}" grammar.`);
   } catch (e) {
-    if (e?.stderr == null) throw e;
-    const { stdout, code } = e;
+    if (/** @type {{stderr?: string}} */(e)?.stderr == null) throw e;
+    const { stdout, code } = /** @type {{stdout?: string, code?: number}} */(e);
     if (stdout) console.log(stdout);
-    console.error(e?.message ?? e);
+    console.error(/** @type {Error} */(e)?.message ?? e);
     process.exitCode = code || 1;
   }
 }

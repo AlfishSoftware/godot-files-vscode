@@ -56,7 +56,7 @@ jobs:
            .github/RELEASE-NOTES.md > .github/RELEASE-NOTES-v${{ steps.P.outputs.version }}.md
       - name: Draft a GitHub release uploading vsix asset
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Create draft release
           draft=._gh_draft.json

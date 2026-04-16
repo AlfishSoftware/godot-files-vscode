@@ -11,6 +11,12 @@
 		"tabWidth": 2,
 		"useTab": true,
 	},
+	"json.schemas": [
+		{
+			"url": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+			"fileMatch": [ "*.tmLanguage.json" ],
+		},
+	],
 	"cSpell.words": [
 		"abfnrtv",
 		"bfnrt",

@@ -21,7 +21,7 @@ This is not meant to fully replace the official [godot-tools] extension, but to 
 **Compatibility**:
 
 - **Godot**: 3.x LTS and 4.0 to 4.x; official and flathub builds
-- **godot-tools**: v2.5.x; *("view documentation" feature can use godot-tools)*
+- **godot-tools**: v2.6.x; *("view documentation" feature can use godot-tools)*
 
 🌐 This extension also works on browser IDEs ([vscode.dev](https://vscode.dev) and [github.dev](https://github.dev)), with minor limitations.
 
@@ -35,13 +35,13 @@ There are special donation tiers if you also want to [get your profile picture l
 [<img width="68" height="68" src="https://avatars.githubusercontent.com/u/3269392?s=68" alt="@anwesender"/>](https://github.com/anwesender) <!-- 14!! -->
 [<img width="68" height="68" src="https://avatars.githubusercontent.com/u/45481101?s=68" alt="@lfod1997"/>](https://github.com/lfod1997) <!-- 15!! -->
 [<img width="68" height="68" src="https://avatars.githubusercontent.com/u/934053?s=68" alt="@leftos"/>](https://github.com/leftos) <!-- 02! ! -->
-[<img width="64" height="64" src="https://avatars.githubusercontent.com/u/3393799?s=64" alt="@Aria"/>](https://github.com/Ushio-Aria) <!-- 00! -->
+[<img width="64" height="64" src="https://avatars.githubusercontent.com/u/3393799?s=64" alt="@Ushio-Aria"/>](https://github.com/Ushio-Aria) <!-- 00! -->
 [<img width="64" height="64" src="https://avatars.githubusercontent.com/u/13101208?s=64" alt="@CyberSer0"/>](https://github.com/CyberSer0) <!-- 01! -->
 [<img width="64" height="64" src="https://avatars.githubusercontent.com/u/55458977?s=64" alt="@Dreak183"/>](https://github.com/Dreak183) <!-- 03! -->
 [<img width="64" height="64" src="https://avatars.githubusercontent.com/u/7904683?s=64" alt="@LiamSmyth"/>](https://github.com/LiamSmyth) <!-- 04! -->
 [<img width="64" height="64" src="https://avatars.githubusercontent.com/u/77408854?s=64" alt="@jauntyjocularjay"/>](https://github.com/jauntyjocularjay) <!-- 07! -->
 [<img width="64" height="64" src="https://avatars.githubusercontent.com/u/9137739?s=64" alt="@loldruger"/>](https://github.com/loldruger) <!-- 08! -->
-[<img width="64" height="64" src="https://avatars.githubusercontent.com/u/24413283?s=64" alt="@arnholt"/>](https://github.com/dirk-arnholt) <!-- 09! -->
+[<img width="64" height="64" src="https://avatars.githubusercontent.com/u/24413283?s=64" alt="@dirk-arnholt"/>](https://github.com/dirk-arnholt) <!-- 09! -->
 [<img width="64" height="64" src="https://avatars.githubusercontent.com/u/110045387?s=64" alt="@SasVel"/>](https://github.com/SasVel) <!-- 10! -->
 [<img width="64" height="64" src="https://avatars.githubusercontent.com/u/159775249?s=64" alt="@atelieralice"/>](https://github.com/atelieralice) <!-- 11! -->
 [<img width="64" height="64" src="https://avatars.githubusercontent.com/u/997300?s=64" alt="@fryingpanjoe"/>](https://github.com/fryingpanjoe) <!-- 13! -->

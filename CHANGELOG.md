@@ -4,6 +4,14 @@
 Features currently in early access are marked with 🔒 as they're restricted to [supporters].  
 Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're unlocked for everyone since that version.
 
+## [0.1.8] - 2026-04-15
+### Security
+- Updated dependencies again (webpack and ts-loader). The code for desktop IDEs is again unaffected.
+- Addressed warnings after enabling code scanning in the repo. No actual issue was found, only minor stuff.
+### Added
+- GDShader: Parser allows defining more than one level in `group_uniforms` subgroups.
+- Docs Webview: When navigating to accessor-only properties (e.g. `anchors_preset`), find it by the get/set method.
+
 ## [0.1.7] - 2026-03-10
 ### Security
 - [Updated webpack](https://github.com/advisories/ghsa-5c6j-r48x-rmvq) just in case.  
@@ -203,7 +211,8 @@ Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're
 - GDAsset: Image and font previews by hovering references and paths.
 - GDAsset: Hover resource references to show GDScript preload code.
 
-[Unreleased]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.1.7...develop
+[Unreleased]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.1.8...develop
+[0.1.8]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.1.7...v0.1.8
 [0.1.7]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.1.4...v0.1.5

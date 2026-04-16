@@ -103,7 +103,7 @@ export async function godotVersionOfProject(projectDirUri: Uri): Promise<GodotVe
   return null;
 }
 const assetGodotVersionRegex =
-  /^\s*\[\s*gd_(?:resource|scene)(?:\s+\w+=(?:\d+|".*?"))*?\s+format=(\d+)\b.*?\]\s*(?:[;#].*)?$/m;
+  /^\s*\[\s*gd_(?:resource|scene)(?:\s+\w+=(?:\d+|"[^"\n]*?"))*?\s+format=(\d+)\b.*?\]\s*(?:[;#].*)?$/m;
   /** Get the Godot version of the project with the specified document.
    * @param document Text document of the asset.
    * @returns An object with versions (major, and if found, minor too) or null if not found.
