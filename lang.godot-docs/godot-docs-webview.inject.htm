@@ -65,12 +65,12 @@ document.addEventListener('DOMContentLoaded', () => {
       } else tryBaseLink = ''; // Else property was not found in any class in inheritance chain
       const admonitionContainer = document.getElementsByClassName('admonition-grid')[0] ??
         document.querySelector('div[itemprop="articleBody"]');
-      const prop = idProp.replaceAll('-', '_');
+      const prop = idProp.replaceAll('-', '_').replaceAll(/[^\w-]/g, '');
       admonitionContainer?.insertAdjacentHTML('afterbegin', `\
 <div class="admonition warning not-found">
   <p class="first admonition-title">Not found</p>
   <p><strong>The property was not found:</strong>
-  <code class="docutils literal notranslate">${prop.replaceAll('<', '&lt;')}</code>.${tryBaseLink}</p>
+  <code class="docutils literal notranslate">${prop}</code>.${tryBaseLink}</p>
 </div>`
       );
     }
