@@ -113,6 +113,15 @@ function docsLocale(configScope: ConfigurationScope | undefined): DocsLocale {
   if (locale == 'zh') return 'zh-cn';
   return 'en';
 }
+function docsVersion(configScope: ConfigurationScope | undefined): string {
+  if (!GodotFiles.supported) return '';
+  const v = workspace.getConfiguration('godotFiles.documentation', configScope).get<string>('version') ?? '';
+  if (!/^[\w.-]*$/.test(v)) {
+    console.error(`Godot Files :: Invalid docs version: ${JSON.stringify(v)}`);
+    return ''; // validation just to be safe against some arbitrary string going into a URL
+  }
+  return v;
+}
 const latestApi: { [major: number]: string } = { 2: '2.1', 3: '3.6' };
 const versions = {
   'en': ['4.*', '3.*', '2.1'],
@@ -148,17 +157,24 @@ function apiVersion(gdVersion: GodotVersion | null, locale: DocsLocale) {
   }
   return 'stable'; // fallback to stable, which redirects in all locales
 }
+function docsVariant(
+  gdVersion: GodotVersion | null, configScope: ConfigurationScope | undefined
+) {
+  const locale = docsLocale(configScope);
+  let version = docsVersion(configScope);
+  if (version == '') version = apiVersion(gdVersion, locale);
+  return { locale, version };
+}
 const pos0 = new Position(0, 0);
 export async function apiDocs(
   document: TextDocument, className: string, memberName: string, token: CancellationToken | null
 ) {
   const viewer = getViewerConfig(document);
   if (viewer != 'godot-tools' && await isOnline(onlineDocsHost)) {
-    const locale = docsLocale(document);
     const gdVersion = await godotVersionOfDocument(document);
     if (token?.isCancellationRequested) return null;
     try {
-      const docUri = apiDocsPageUri(className, memberName, gdVersion, locale, viewer);
+      const docUri = apiDocsPageUri(className, memberName, gdVersion, viewer, document);
       if (viewer == 'webview')
         GodotDocumentationProvider.detectedDotnetBuffer.set(docUri.toString(), !!gdVersion?.dotnet);
       return new Location(docUri, pos0);
@@ -172,9 +188,10 @@ export async function apiDocs(
   return null;
 }
 function apiDocsPageUri(
-  className: string, memberName: string, gdVersion: GodotVersion | null, locale: DocsLocale, viewer: string,
+  className: string, memberName: string, gdVersion: GodotVersion | null, viewer: string,
+  configScope: ConfigurationScope | undefined,
 ) {
-  const version = apiVersion(gdVersion, locale);
+  const { locale, version } = docsVariant(gdVersion, configScope);
   const classLower = className.toLowerCase();
   const page = `classes/class_${classLower}.html`;
   const urlFragment = '#class-' + classLower + (!memberName ? '' :
@@ -383,16 +400,16 @@ export async function openApiDocs() {
     else window.showErrorMessage(`Could not open API documentation online or from godot-tools extension.`);
     return;
   }
-  const locale = docsLocale(configScope);
-  const version = apiVersion(gdVersion, locale);
   let docUri: Uri;
   if (cursorWord?.match(/^(?:@?[A-Z]\w*[a-z]\w*|bool|int|float|JSON(?:RPC)?|UPNP|OS|IP|XRVRS)$/)) {
-    docUri = apiDocsPageUri(cursorWord, '', gdVersion, locale, viewer);
+    docUri = apiDocsPageUri(cursorWord, '', gdVersion, viewer, configScope);
   } else if (cursorWord?.match(/^@?[a-z_A-Z]\w*$/)) {
+    const { locale, version } = docsVariant(gdVersion, configScope);
     const urlPath = `${locale}/${version}/search.html`, title = 'Search';
     const urlQuery = `?q=${encodeURIComponent(cursorWord)}&check_keywords=yes&area=default`;
     docUri = docsPageUri(viewer, urlPath, title, urlQuery, '');
   } else {
+    const { locale, version } = docsVariant(gdVersion, configScope);
     const urlPath = `${locale}/${version}/classes/index.html`, title = 'All classes';
     if (viewer == 'browser') {
       const url = `https://${onlineDocsHost}/${urlPath}`;

@@ -7,6 +7,7 @@ export default class GodotContentTextProvider implements TextDocumentContentProv
   async provideTextDocumentContent(uri: Uri, token: CancellationToken): Promise<string | null> {
     const { path } = uri;
     if (path.match(/^.*?\/godot\.docs\.(?:[\w-]+):\//)) {
+      // Used when peeking a definition or reopening a docs page with a text editor
       const { urlPath, title, urlFragment } = GodotDocumentationProvider.parseUri(uri);
       const url = `https://${onlineDocsHost}/${urlPath}${urlFragment}`;
       return `${title}\n\n${url}\n`;
