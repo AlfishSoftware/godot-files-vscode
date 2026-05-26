@@ -191,10 +191,15 @@ Features in early access are ready for use, but **restricted to supporters** at 
 
 The features below are currently restricted.
 
-### International Godot Documentation
-🔒 You can browse the online manuals in languages other than English (except on the `godot-tools` viewer).  
-🔧 Choose your language in `godotFiles.documentation.locale` or leave it as `auto` to use the IDE language.  
-✳️ Note that translations from the community are often incomplete (partial, outdated, not all versions supported) and the API is currently still in English for most languages.
+### Godot Documentation Viewer Improvements
+- **International Godot documentation**:  
+	🔒 You can browse the online manuals in languages other than English (except on the `godot-tools` viewer).  
+	🔧 Choose your language in `godotFiles.documentation.locale` or leave it as `auto` to use the IDE language.  
+	✳️ Note that translations from the community are often incomplete (partial, outdated, not all versions supported) and the API is currently still in English for most languages.
+
+- **Override the API version used in the Godot documentation**:  
+	🔒 Particularly useful for pre-release (dev, beta, rc) and custom builds of Godot. For example, you can make it browse the `latest` version of the docs.  
+	🔧 Set `godotFiles.documentation.version` in your project's workspace settings. You can also use `stable` or `latest`, or leave it empty (the default) if you still want to auto-detect the version of the project.
 
 ### GDShader Language Features
 After a huge effort, very basic support for GDShader language features is finally available.  

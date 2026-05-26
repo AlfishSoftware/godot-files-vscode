@@ -4,6 +4,12 @@
 Features currently in early access are marked with 🔒 as they're restricted to [supporters].  
 Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're unlocked for everyone since that version.
 
+## [0.1.9] - 2026-05-25
+### Security
+- Updated webpack dependency and addressed a minor warning again.
+### Added
+- 🔒 Docs: Allow overriding the project's API version, useful for pre-release and custom builds of Godot.
+
 ## [0.1.8] - 2026-04-15
 ### Security
 - Updated dependencies again (webpack and ts-loader). The code for desktop IDEs is again unaffected.
@@ -211,7 +217,8 @@ Features previously in early access are marked with ***vX.Y.Z*** 🔓 as they're
 - GDAsset: Image and font previews by hovering references and paths.
 - GDAsset: Hover resource references to show GDScript preload code.
 
-[Unreleased]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.1.8...develop
+[Unreleased]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.1.9...develop
+[0.1.9]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.1.8...v0.1.9
 [0.1.8]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.1.7...v0.1.8
 [0.1.7]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/AlfishSoftware/godot-files-vscode/compare/v0.1.5...v0.1.6

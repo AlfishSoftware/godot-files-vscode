@@ -1,7 +1,7 @@
 {
 	"publisher": "alfish",
 	"name": "godot-files",
-	"version": "0.1.8",
+	"version": "0.1.9",
 	"license": "Unlicense",
 	"displayName": "Godot Files",
 	"description": "Additional features for some Godot files, better syntax-coloring and very basic GDShader support.",
@@ -463,9 +463,33 @@
 							}
 						},
 						"markdownDescription": "Paths to Godot cache files in each platform. The defaults should work in most cases. Add a path when using a Godot installation in [self-contained mode](https://docs.godotengine.org/en/stable/tutorials/io/data_paths.html#self-contained-mode). You can also remove paths you don't need in your OS for better performance.\n\nThe keys are platform ids as returned by NodeJS: `win32` (Windows), `darwin` (macOS), `linux`.\n\nEach key maps to an array of path strings. A starting `~/` in the path is equivalent to `${userHome}/`. Substitution is also supported for `${workspaceFolder}` and `${env:VARIABLE}`. Glob patterns are *not* allowed. The order in the array doesn't matter, since all paths are always scanned to get the most recent cache file."
+					}
+				}
+			},
+			{
+				"title": "Documentation",
+				"properties": {
+					"godotFiles.documentation.viewer": {
+						"order": 0,
+						"scope": "machine-overridable",
+						"type": "string",
+						"default": "webview",
+						"markdownDescription": "Specifies how the [Godot Documentation](command:godotFiles.openApiDocs) is opened when online.\n\nThis viewer is used when going to a class definition from a GDAsset file.\n\nOn other Godot files like GDScript, it's only used when triggering the **Open Godot API Documentation** command directly. This command opens the class list if nothing is selected, or a class page or a search page when an identifier is under the text cursor or a text is selected (if not using the `godot-tools` viewer).",
+						"enum": [
+							"browser",
+							"simple-browser",
+							"webview",
+							"godot-tools"
+						],
+						"markdownEnumDescriptions": [
+							"Use **your browser** to open the documentation URL externally.",
+							"Use the built-in **Simple Browser** extension to open the documentation URL in an IDE tab.\n\n ✳️ Cannot open multiple tabs. The tab is always reused.\n\n 💻 On web IDEs, this option is not supported and uses `browser` as a fallback.",
+							"Use a **tab in the IDE** to open the documentation website.\n\n ✳️ Any future website changes could potentially break this, so use a different viewer if you notice issues.\n\n ✳️ The search page uses `simple-browser` instead.\n\n 💻 On web IDEs, this option is not supported and uses `browser` as a fallback.",
+							"Use the official **godot-tools** extension to open API documentation in a tab.\n\n ✳️ Requires the Godot Editor to be running and connected to that extension.\n\n ✳️ Only English is supported.\n\n ✳️ Always used as a fallback for the other viewers when you're offline."
+						]
 					},
 					"godotFiles.documentation.locale": {
-						"order": 100,
+						"order": 1,
 						"scope": "machine-overridable",
 						"type": "string",
 						"default": "auto",
@@ -505,24 +529,12 @@
 							"Chinese (Traditional) | 繁體中文"
 						]
 					},
-					"godotFiles.documentation.viewer": {
-						"order": 100,
-						"scope": "machine-overridable",
+					"godotFiles.documentation.version": {
+						"order": 2,
+						"scope": "resource",
 						"type": "string",
-						"default": "webview",
-						"markdownDescription": "Specifies how the [Godot Documentation](command:godotFiles.openApiDocs) is opened when online.\n\nThis viewer is used when going to a class definition from a GDAsset file.\n\nOn other Godot files like GDScript, it's only used when triggering the **Open Godot API Documentation** command directly. This command opens the class list if nothing is selected, or a class page or a search page when an identifier is under the text cursor or a text is selected (if not using the `godot-tools` viewer).",
-						"enum": [
-							"browser",
-							"simple-browser",
-							"webview",
-							"godot-tools"
-						],
-						"markdownEnumDescriptions": [
-							"Use **your browser** to open the documentation URL externally.",
-							"Use the built-in **Simple Browser** extension to open the documentation URL in an IDE tab.\n\n ✳️ Cannot open multiple tabs. The tab is always reused.\n\n 💻 On web IDEs, this option is not supported and uses `browser` as a fallback.",
-							"Use a **tab in the IDE** to open the documentation website.\n\n ✳️ Any future website changes could potentially break this, so use a different viewer if you notice issues.\n\n ✳️ The search page uses `simple-browser` instead.\n\n 💻 On web IDEs, this option is not supported and uses `browser` as a fallback.",
-							"Use the official **godot-tools** extension to open API documentation in a tab.\n\n ✳️ Requires the Godot Editor to be running and connected to that extension.\n\n ✳️ Only English is supported.\n\n ✳️ Always used as a fallback for the other viewers when you're offline."
-						]
+						"default": "",
+						"markdownDescription": "Overrides the Godot API version to use in the [Godot Documentation](command:godotFiles.openApiDocs). Leave this empty to auto-detect the version from the project. Or you can set this (in your project's settings) to a value like `latest` or `stable`, or to a specific version (which must be available in your chosen locale). This is particularly useful for custom builds of Godot and for the next pre-releases (dev, beta, rc) which still use `latest` for documentation. Ignored by the `godot-tools` viewer.\n\n🔒 Exclusive to [early access](command:godotFiles.unlockEarlyAccess) (otherwise, it can only be auto-detected)."
 					},
 					"godotFiles.documentation.webview.hideSidebar": {
 						"order": 101,
@@ -688,7 +700,7 @@
 		"@types/vscode": "~1.105.0",
 		"ts-loader": "^9.5.7",
 		"typescript": "^5.9.3",
-		"webpack": "^5.106.2",
+		"webpack": "^5.107.2",
 		"webpack-cli": "^6.0.1"
 	},
 	"dependencies": {
