@@ -46,7 +46,7 @@ There are special donation tiers if you also want to [get your profile picture l
 [<img width="64" height="64" src="https://avatars.githubusercontent.com/u/159775249?s=64" alt="@atelieralice"/>](https://github.com/atelieralice) <!-- 11! -->
 [<img width="64" height="64" src="https://avatars.githubusercontent.com/u/997300?s=64" alt="@fryingpanjoe"/>](https://github.com/fryingpanjoe) <!-- 13! -->
 [<img width="64" height="64" src="https://avatars.githubusercontent.com/u/17725121?s=64" alt="@lsdmtr"/>](https://github.com/lsdmtr) <!-- 16! -->
-[![ ](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-17.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-17.html)
+[<img width="64" height="64" src="https://avatars.githubusercontent.com/u/162939951?s=64" alt="@BrainOnOxygen"/>](https://github.com/BrainOnOxygen) <!-- 17! -->
 [![ ](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-18.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-18.html)
 [![ ](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-19.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-19.html)
 [![ ](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-20.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-20.html)
@@ -219,7 +219,7 @@ It's completely independent from Godot Editor and **doesn't require Godot to be 
 
 Note that you will only get error squiggles for the checks above, as analyzers for **semantic errors are not implemented yet** (so no type errors, name errors, control flow errors, usage errors, etc). This means files that show no errors here can still raise errors in the Godot Editor. This work is only the beginning.
 
-The preprocessor produces sourcemapping for all ranges within `#include` and macro expansions, allowing to refer to the actual source from an included file (e.g. in errors).
+The preprocessor internally computes sourcemapping for all ranges within `#include` and macro expansions, allowing to refer to the actual source from an included file (e.g. in errors).
 
 ![Showcasing how GDShader preprocessor can sourcemap errors back to the included file](docs/showcase-gdshader-srcmap-error.png)
 
