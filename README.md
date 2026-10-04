@@ -47,7 +47,7 @@ There are special donation tiers if you also want to [get your profile picture l
 [<img width="64" height="64" src="https://avatars.githubusercontent.com/u/997300?s=64" alt="@fryingpanjoe"/>](https://github.com/fryingpanjoe) <!-- 13! -->
 [<img width="64" height="64" src="https://avatars.githubusercontent.com/u/17725121?s=64" alt="@lsdmtr"/>](https://github.com/lsdmtr) <!-- 16! -->
 [<img width="64" height="64" src="https://avatars.githubusercontent.com/u/162939951?s=64" alt="@BrainOnOxygen"/>](https://github.com/BrainOnOxygen) <!-- 17! -->
-[![ ](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-18.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-18.html)
+[<img width="64" height="64" src="https://avatars.githubusercontent.com/u/44052517?s=64" alt="@Tralexium"/>](https://github.com/Tralexium) <!-- 18! -->
 [![ ](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-19.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-19.html)
 [![ ](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-20.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-20.html)
 [![ ](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-21.png)](https://alfish.bitbucket.io/VSCode/godot-files/sponsor/user-21.html)
